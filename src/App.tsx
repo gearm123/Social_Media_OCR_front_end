@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import './App.css'
 import {
+  buildPass1BubbleSummaryText,
   defaultImageBubbleHint,
   type ImageBubbleHint,
 } from './bubbleSummary'
+import {
+  apiBase,
+  createJob,
+  fetchArtifact,
+  waitForJob,
+} from './api'
 import { fileKey } from './fileUtils'
 import { IphoneBubbleSequence } from './IphoneBubbleSequence'
 import { MessengerBackdrop } from './MessengerBackdrop'
@@ -54,6 +61,10 @@ function App() {
   const [previews, setPreviews] = useState<PreviewItem[]>([])
   const [hints, setHints] = useState<Record<string, ImageBubbleHint>>({})
   const [dragActive, setDragActive] = useState(false)
+  const [processing, setProcessing] = useState(false)
+  const [jobMessage, setJobMessage] = useState<string | null>(null)
+  const [jobError, setJobError] = useState<string | null>(null)
+  const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
 
   const replaceFilesFromList = useCallback((list: FileList | File[] | null) => {
     if (!list || (list instanceof FileList && !list.length)) return
@@ -140,7 +151,57 @@ function App() {
   const clearAll = () => {
     setFiles([])
     setHints({})
+    setJobMessage(null)
+    setJobError(null)
+    setResultImageUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
     if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const runProcess = async () => {
+    if (files.length === 0) return
+    const base = apiBase()
+    if (!base) {
+      setJobError(
+        'Set VITE_API_BASE_URL (e.g. http://127.0.0.1:8000) in .env for local API, then restart dev server.',
+      )
+      return
+    }
+    setProcessing(true)
+    setJobError(null)
+    setJobMessage('Uploading…')
+    setResultImageUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+    try {
+      const bubbleSummaryText = buildPass1BubbleSummaryText(files, hints)
+      const created = await createJob(files, { bubbleSummaryText })
+      const jobId = created.job_id
+      if (!jobId) throw new Error('No job_id in response')
+      setJobMessage('Processing on server…')
+      const done = await waitForJob(jobId)
+      if (done.status === 'failed') {
+        const msg = done.error || 'Pipeline failed'
+        const tail = done.traceback ? `\n\n${String(done.traceback).slice(0, 800)}` : ''
+        throw new Error(msg + tail)
+      }
+      const path = done.artifact_urls?.final_image
+      if (!path) throw new Error('No final_image in job result')
+      setJobMessage('Loading result…')
+      const blob = await fetchArtifact(path)
+      const url = URL.createObjectURL(blob)
+      setResultImageUrl(url)
+      setJobMessage(null)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setJobError(msg)
+      setJobMessage(null)
+    } finally {
+      setProcessing(false)
+    }
   }
 
   const updateHint = useCallback((k: string, patch: Partial<ImageBubbleHint>) => {
@@ -194,17 +255,17 @@ function App() {
               <button
                 type="button"
                 className="btn process"
-                disabled={files.length === 0}
+                disabled={files.length === 0 || processing}
                 title={
                   files.length === 0
                     ? 'Upload at least one image to process'
-                    : 'Send to backend (coming soon)'
+                    : apiBase()
+                      ? 'Run translation job on the API'
+                      : 'Configure VITE_API_BASE_URL in .env'
                 }
-                onClick={() => {
-                  /* POST /jobs integration */
-                }}
+                onClick={() => void runProcess()}
               >
-                Process
+                {processing ? 'Working…' : 'Process'}
               </button>
             </div>
             <input
@@ -339,6 +400,21 @@ function App() {
                     </figure>
                   )
                 })}
+              </div>
+            </section>
+          ) : null}
+
+          {jobMessage ? <p className="job-status job-status--info">{jobMessage}</p> : null}
+          {jobError ? (
+            <p className="job-status job-status--error" role="alert">
+              {jobError}
+            </p>
+          ) : null}
+          {resultImageUrl ? (
+            <section className="job-result" aria-label="Translated chat result">
+              <h2 className="job-result__title">Result</h2>
+              <div className="job-result__frame">
+                <img src={resultImageUrl} alt="Translated conversation render" />
               </div>
             </section>
           ) : null}

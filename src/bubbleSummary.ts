@@ -17,42 +17,38 @@ export function defaultImageBubbleHint(): ImageBubbleHint {
 }
 
 /**
- * Builds the multiline string expected by the Python pipeline (`pass1_bubble_input.txt` style).
- * For images with no count, uses a minimal placeholder (1 bubble, sender) so image index stays aligned.
- * When count is set but sequence is disabled, repeats `receiver` as a neutral default line per bubble.
+ * Builds the compact multiline string expected by the Python API (`_parse_bubble_summary_text` in main.py):
+ * for each image, two lines — bubble count (integer), then roles comma-separated (`sender` / `receiver`).
+ * This matches the on-disk `pass1_bubble_input.txt` style (counts + `r,s` lines are accepted server-side too).
+ *
+ * Local CLI still uses `pass1_bubble_input.txt` when present; the API uses this form field instead.
  */
 export function buildPass1BubbleSummaryText(
   files: File[],
   hints: Record<string, ImageBubbleHint>,
 ): string {
-  const blocks: string[] = []
+  const lines: string[] = []
 
   for (let i = 0; i < files.length; i++) {
     const f = files[i]
     const h = hints[fileKey(f)] ?? defaultImageBubbleHint()
-    const img = i + 1
 
     if (h.messageCount == null || h.messageCount < 1) {
-      blocks.push(`in image ${img}`)
-      blocks.push(`i count 1 message bubbles`)
-      blocks.push('sender')
+      lines.push('1')
+      lines.push('sender')
       continue
     }
 
     const n = Math.min(99, Math.max(1, Math.floor(h.messageCount)))
-    blocks.push(`in image ${img}`)
-    blocks.push(`i count ${n} message bubbles`)
+    lines.push(String(n))
 
-    if (h.sequenceEnabled && h.sequence.length === n) {
-      for (const role of h.sequence) {
-        blocks.push(role)
-      }
-    } else {
-      for (let j = 0; j < n; j++) {
-        blocks.push('receiver')
-      }
-    }
+    const roles: BubbleRole[] =
+      h.sequenceEnabled && h.sequence.length === n
+        ? h.sequence
+        : Array.from({ length: n }, () => 'receiver' as BubbleRole)
+
+    lines.push(roles.join(','))
   }
 
-  return blocks.join('\n')
+  return lines.join('\n')
 }
