@@ -65,6 +65,7 @@ function App() {
   const [jobMessage, setJobMessage] = useState<string | null>(null)
   const [jobError, setJobError] = useState<string | null>(null)
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
+  const [resultExpanded, setResultExpanded] = useState(false)
 
   const replaceFilesFromList = useCallback((list: FileList | File[] | null) => {
     if (!list || (list instanceof FileList && !list.length)) return
@@ -153,12 +154,40 @@ function App() {
     setHints({})
     setJobMessage(null)
     setJobError(null)
+    setResultExpanded(false)
     setResultImageUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev)
       return null
     })
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
+
+  const downloadResultPng = useCallback(() => {
+    if (!resultImageUrl) return
+    const a = document.createElement('a')
+    a.href = resultImageUrl
+    a.download = 'translated_conversation.png'
+    a.rel = 'noopener'
+    a.click()
+  }, [resultImageUrl])
+
+  useEffect(() => {
+    if (!processing && !resultExpanded) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [processing, resultExpanded])
+
+  useEffect(() => {
+    if (!resultExpanded) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setResultExpanded(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [resultExpanded])
 
   const runProcess = async () => {
     if (files.length === 0) return
@@ -170,6 +199,7 @@ function App() {
       return
     }
     setProcessing(true)
+    setResultExpanded(false)
     setJobError(null)
     setJobMessage('Uploading…')
     setResultImageUrl((prev) => {
@@ -404,7 +434,6 @@ function App() {
             </section>
           ) : null}
 
-          {jobMessage ? <p className="job-status job-status--info">{jobMessage}</p> : null}
           {jobError ? (
             <p className="job-status job-status--error" role="alert">
               {jobError}
@@ -412,14 +441,80 @@ function App() {
           ) : null}
           {resultImageUrl ? (
             <section className="job-result" aria-label="Translated chat result">
-              <h2 className="job-result__title">Result</h2>
-              <div className="job-result__frame">
-                <img src={resultImageUrl} alt="Translated conversation render" />
+              <div className="job-result__header">
+                <h2 className="job-result__title">Result</h2>
+                <div className="job-result__toolbar">
+                  <button
+                    type="button"
+                    className="btn ghost btn--compact"
+                    onClick={() => setResultExpanded(true)}
+                  >
+                    Expand
+                  </button>
+                  <button type="button" className="btn primary btn--compact" onClick={downloadResultPng}>
+                    Download PNG
+                  </button>
+                </div>
               </div>
+              <button
+                type="button"
+                className="job-result__preview"
+                onClick={() => setResultExpanded(true)}
+                aria-label="Open full size preview"
+              >
+                <img src={resultImageUrl} alt="Translated conversation render" />
+              </button>
+              <p className="job-result__hint">Click the image or Expand for a full-screen view.</p>
             </section>
           ) : null}
         </div>
       </div>
+
+      {processing ? (
+        <div
+          className="process-loading"
+          role="alertdialog"
+          aria-busy="true"
+          aria-live="polite"
+          aria-labelledby="process-loading-title"
+        >
+          <div className="process-loading__panel">
+            <div className="process-loading__spinner" aria-hidden />
+            <p id="process-loading-title" className="process-loading__title">
+              Working on your chat…
+            </p>
+            <p className="process-loading__msg">{jobMessage || 'Please wait…'}</p>
+          </div>
+        </div>
+      ) : null}
+
+      {resultExpanded && resultImageUrl ? (
+        <div className="result-lightbox" role="dialog" aria-modal="true" aria-label="Full size result">
+          <button
+            type="button"
+            className="result-lightbox__backdrop"
+            aria-label="Close preview"
+            onClick={() => setResultExpanded(false)}
+          />
+          <div className="result-lightbox__chrome">
+            <div className="result-lightbox__toolbar">
+              <button type="button" className="btn ghost btn--compact" onClick={downloadResultPng}>
+                Download PNG
+              </button>
+              <button
+                type="button"
+                className="btn primary btn--compact"
+                onClick={() => setResultExpanded(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="result-lightbox__stage">
+              <img src={resultImageUrl} alt="Translated conversation full size" />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   )
 }

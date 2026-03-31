@@ -1,3 +1,9 @@
+# Social Media OCR — frontend
+
+Translate Chat UI (Vite + React + TypeScript). **Production** is hosted on [Netlify](https://www.netlify.com/) and builds from the `trunk` branch of this repo ([live site](https://socialmessageocr.netlify.app)). Configure **`VITE_API_BASE_URL`** in Netlify → Site configuration → Environment variables, then trigger a deploy.
+
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
