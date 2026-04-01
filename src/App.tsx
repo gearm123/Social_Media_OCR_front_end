@@ -5,7 +5,10 @@ import {
   defaultImageBubbleHint,
   type ImageBubbleHint,
 } from './bubbleSummary'
+import { AuthModal } from './AuthModal'
 import { apiBase, createJob, fetchArtifact, waitForJob } from './api'
+import { fetchMe, type UserMe } from './authApi'
+import { clearSession, getAccessToken } from './authStorage'
 import { fileKey } from './fileUtils'
 import { sortImageFilesByNameSequence } from './sortUploadedImages'
 import { IphoneBubbleSequence } from './IphoneBubbleSequence'
@@ -98,6 +101,27 @@ function App() {
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
   const [resultExpanded, setResultExpanded] = useState(false)
   const [previewLightbox, setPreviewLightbox] = useState<PreviewLightbox | null>(null)
+  const [authUser, setAuthUser] = useState<UserMe | null>(null)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin')
+
+  const refreshAuth = useCallback(() => {
+    const t = getAccessToken()
+    if (!t) {
+      setAuthUser(null)
+      return
+    }
+    void fetchMe()
+      .then(setAuthUser)
+      .catch(() => {
+        clearSession()
+        setAuthUser(null)
+      })
+  }, [])
+
+  useEffect(() => {
+    refreshAuth()
+  }, [refreshAuth])
 
   const replaceFilesFromList = useCallback((list: FileList | File[] | null) => {
     if (!list || (list instanceof FileList && !list.length)) return
@@ -331,6 +355,58 @@ function App() {
 
   return (
     <>
+      <div className="app-auth-bar">
+        {!apiUrlConfigured ? (
+          <span className="app-auth-bar__muted">Sign in requires API URL</span>
+        ) : authUser ? (
+          <>
+            <span className="app-auth-bar__name" title={authUser.email}>
+              {authUser.username ?? authUser.email}
+            </span>
+            <button
+              type="button"
+              className="btn ghost btn--compact"
+              onClick={() => {
+                clearSession()
+                setAuthUser(null)
+              }}
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="btn ghost btn--compact"
+              onClick={() => {
+                setAuthModalTab('signin')
+                setAuthModalOpen(true)
+              }}
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              className="btn primary btn--compact"
+              onClick={() => {
+                setAuthModalTab('signup')
+                setAuthModalOpen(true)
+              }}
+            >
+              Sign up
+            </button>
+          </>
+        )}
+      </div>
+
+      <AuthModal
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onSuccess={refreshAuth}
+        initialTab={authModalTab}
+      />
+
       {resultImageUrl ? null : <MessengerBackdrop />}
       {dragActive && !resultImageUrl ? (
         <div className="drag-page-hint" aria-hidden>

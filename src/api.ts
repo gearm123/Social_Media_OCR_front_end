@@ -1,3 +1,10 @@
+import { getAccessToken } from './authStorage'
+
+function authHeaders(): Record<string, string> {
+  const t = getAccessToken()
+  return t ? { Authorization: `Bearer ${t}` } : {}
+}
+
 /** Backend base URL, no trailing slash. Set in `.env` as VITE_API_BASE_URL */
 export function apiBase(): string {
   const base = import.meta.env.VITE_API_BASE_URL as string | undefined
@@ -55,7 +62,12 @@ export async function createJob(
   const tid = setTimeout(() => controller.abort(), timeoutMs)
   let r: Response
   try {
-    r = await fetch(`${base}/jobs`, { method: 'POST', body: fd, signal: controller.signal })
+    r = await fetch(`${base}/jobs`, {
+      method: 'POST',
+      body: fd,
+      signal: controller.signal,
+      headers: authHeaders(),
+    })
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
       throw new Error(
@@ -86,7 +98,10 @@ export async function getJob(jobId: string): Promise<JobStatusResponse> {
   const tid = setTimeout(() => controller.abort(), 60_000)
   let r: Response
   try {
-    r = await fetch(`${base}/jobs/${encodeURIComponent(jobId)}`, { signal: controller.signal })
+    r = await fetch(`${base}/jobs/${encodeURIComponent(jobId)}`, {
+      signal: controller.signal,
+      headers: authHeaders(),
+    })
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
       throw new Error('Polling timed out — check API URL and network.')
@@ -126,7 +141,7 @@ export async function fetchArtifact(path: string): Promise<Blob> {
   const controller = new AbortController()
   const tid = setTimeout(() => controller.abort(), 120_000)
   try {
-    const r = await fetch(url, { signal: controller.signal })
+    const r = await fetch(url, { signal: controller.signal, headers: authHeaders() })
     if (!r.ok) {
       const t = await r.text()
       throw new Error(`Artifact fetch failed: ${r.status} ${t}`)
