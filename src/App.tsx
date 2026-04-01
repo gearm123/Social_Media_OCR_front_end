@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import './App.css'
 import {
   buildPass1BubbleSummaryText,
@@ -13,6 +13,17 @@ import { fileKey } from './fileUtils'
 import { sortImageFilesByNameSequence } from './sortUploadedImages'
 import { IphoneBubbleSequence } from './IphoneBubbleSequence'
 import { MessengerBackdrop } from './MessengerBackdrop'
+import {
+  FREE_RUNS_MAX,
+  canMultiImageUpload,
+  freeRunsRemaining,
+  processBlockReason,
+  readBillingSnapshot,
+  recordSuccessfulJob,
+  unlimitedActive,
+} from './billingStorage'
+import { PaywallModal } from './PaywallModal'
+import { PricingModal } from './PricingModal'
 
 /** Formats the pipeline is built around (OpenCV-friendly screenshots). */
 const ACCEPT_IMAGES =
@@ -104,6 +115,13 @@ function App() {
   const [authUser, setAuthUser] = useState<UserMe | null>(null)
   const [authModalOpen, setAuthModalOpen] = useState(false)
   const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin')
+  const [billingTick, setBillingTick] = useState(0)
+  const [pricingOpen, setPricingOpen] = useState(false)
+  const [paywallOpen, setPaywallOpen] = useState(false)
+  const [paywallReason, setPaywallReason] = useState<'free_exhausted' | 'multi_on_free'>('free_exhausted')
+  const [uploadBillingNotice, setUploadBillingNotice] = useState<string | null>(null)
+
+  const billing = useMemo(() => readBillingSnapshot(), [billingTick])
 
   const refreshAuth = useCallback(() => {
     const t = getAccessToken()
@@ -126,7 +144,16 @@ function App() {
   const replaceFilesFromList = useCallback((list: FileList | File[] | null) => {
     if (!list || (list instanceof FileList && !list.length)) return
     const arr = Array.from(list as FileList | File[])
-    const deduped = dedupeImageFiles(arr)
+    let deduped = dedupeImageFiles(arr)
+    const snap = readBillingSnapshot()
+    if (!canMultiImageUpload(snap) && deduped.length > 1) {
+      deduped = [deduped[0]]
+      setUploadBillingNotice(
+        'Free plan allows one image per run. The first image was kept — choose a plan for multi-image jobs.',
+      )
+    } else {
+      setUploadBillingNotice(null)
+    }
     setResultImageUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev)
       return null
@@ -216,6 +243,7 @@ function App() {
     preProcessSnapshotRef.current = null
     setFiles([])
     setHints({})
+    setUploadBillingNotice(null)
     setLoadingPrimary(null)
     setJobError(null)
     setResultExpanded(false)
@@ -297,8 +325,18 @@ function App() {
 
   const apiUrlConfigured = Boolean(apiBase())
 
+  const blockReason = processBlockReason(billing, files.length)
+
   const runProcess = async () => {
     if (files.length === 0) return
+    const snap = readBillingSnapshot()
+    const br = processBlockReason(snap, files.length)
+    if (br === 'free_exhausted' || br === 'multi_on_free') {
+      setPaywallReason(br)
+      setPaywallOpen(true)
+      return
+    }
+    if (br !== 'none') return
     const base = apiBase()
     if (!base) {
       setJobError(
@@ -336,6 +374,8 @@ function App() {
       const url = URL.createObjectURL(blob)
       setResultImageUrl(url)
       setLoadingPrimary(null)
+      recordSuccessfulJob()
+      setBillingTick((t) => t + 1)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       console.error('[Process]', e)
@@ -353,8 +393,55 @@ function App() {
     }))
   }, [])
 
+  const multiUploadAllowed = canMultiImageUpload(billing)
+  const hasPaidAccess = unlimitedActive(billing) || billing.paidJobCredits > 0
+  const freeExhausted = !hasPaidAccess && billing.freeRunsUsed >= FREE_RUNS_MAX
+  const freeLeft = freeRunsRemaining(billing)
+  const proUntil = billing.unlimitedUntil
+    ? new Date(billing.unlimitedUntil).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : null
+
+  useEffect(() => {
+    if (!pricingOpen && !paywallOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      setPricingOpen(false)
+      setPaywallOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [pricingOpen, paywallOpen])
+
   return (
     <>
+      <div className="app-billing-strip" aria-label="Usage and plans">
+        {unlimitedActive(billing) && proUntil ? (
+          <span className="app-billing-strip__text" title={billing.unlimitedUntil ?? undefined}>
+            Pro until {proUntil}
+          </span>
+        ) : billing.paidJobCredits > 0 ? (
+          <span className="app-billing-strip__text">
+            {billing.paidJobCredits} full-run credit{billing.paidJobCredits === 1 ? '' : 's'}
+          </span>
+        ) : (
+          <span className="app-billing-strip__text">
+            Free · {freeLeft}/{FREE_RUNS_MAX} runs · 1 image each
+          </span>
+        )}
+        <button
+          type="button"
+          className="btn ghost btn--compact"
+          onClick={() => setPricingOpen(true)}
+        >
+          Plans
+        </button>
+      </div>
+
       <div className="app-auth-bar">
         {!apiUrlConfigured ? (
           <span className="app-auth-bar__muted">Sign in requires API URL</span>
@@ -407,6 +494,19 @@ function App() {
         initialTab={authModalTab}
       />
 
+      <PricingModal
+        open={pricingOpen}
+        onClose={() => setPricingOpen(false)}
+        onApplied={() => setBillingTick((t) => t + 1)}
+      />
+
+      <PaywallModal
+        open={paywallOpen}
+        reason={paywallReason}
+        onClose={() => setPaywallOpen(false)}
+        onViewPlans={() => setPricingOpen(true)}
+      />
+
       {resultImageUrl ? null : <MessengerBackdrop />}
       {dragActive && !resultImageUrl ? (
         <div className="drag-page-hint" aria-hidden>
@@ -428,6 +528,50 @@ function App() {
                 <button type="button" className="btn danger-outline" onClick={clearAll}>
                   Reset
                 </button>
+              </div>
+              <div
+                className={`billing-explainer billing-explainer--compact${hasPaidAccess ? ' billing-explainer--unlocked' : ''}${freeExhausted ? ' billing-explainer--exhausted' : ''}`}
+                aria-label="Usage and plans"
+              >
+                <div className="billing-explainer__inner">
+                  <div className="billing-explainer__copy">
+                    <span className="billing-explainer__eyebrow">Usage</span>
+                    <p className="billing-explainer__line">
+                      {hasPaidAccess ? (
+                        <>
+                          <span className="billing-explainer__status billing-explainer__status--on">Active</span>
+                          <span className="billing-explainer__sep" aria-hidden>
+                            ·
+                          </span>
+                          {unlimitedActive(billing) ? (
+                            <span>Multi-image &amp; unlimited</span>
+                          ) : (
+                            <span>{billing.paidJobCredits} credit{billing.paidJobCredits === 1 ? '' : 's'}</span>
+                          )}
+                        </>
+                      ) : freeExhausted ? (
+                        <span>Free limit reached</span>
+                      ) : (
+                        <>
+                          <span className="billing-explainer__status">Free</span>
+                          <span className="billing-explainer__sep" aria-hidden>
+                            ·
+                          </span>
+                          <span>
+                            {freeLeft}/{FREE_RUNS_MAX} runs, 1 image
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn--compact billing-explainer__cta billing-explainer__cta--pill"
+                    onClick={() => setPricingOpen(true)}
+                  >
+                    Plans
+                  </button>
+                </div>
               </div>
               <button
                 type="button"
@@ -456,6 +600,52 @@ function App() {
                     </span>
                   </p>
                 )}
+
+                <section
+                  className={`billing-explainer${hasPaidAccess ? ' billing-explainer--unlocked' : ''}${freeExhausted ? ' billing-explainer--exhausted' : ''}`}
+                  aria-label="Usage and plans"
+                >
+                  <div className="billing-explainer__inner">
+                    <div className="billing-explainer__copy">
+                      <span className="billing-explainer__eyebrow">Plans &amp; usage</span>
+                      <p className="billing-explainer__line">
+                        {hasPaidAccess ? (
+                          <>
+                            <span className="billing-explainer__status billing-explainer__status--on">Active</span>
+                            <span className="billing-explainer__sep" aria-hidden>
+                              ·
+                            </span>
+                            {unlimitedActive(billing) ? (
+                              <span>Unlimited &amp; multi-image</span>
+                            ) : (
+                              <span>{billing.paidJobCredits} full run credit{billing.paidJobCredits === 1 ? '' : 's'}</span>
+                            )}
+                          </>
+                        ) : freeExhausted ? (
+                          <span>Free runs used — open Plans to continue</span>
+                        ) : (
+                          <>
+                            <span className="billing-explainer__status">Free</span>
+                            <span className="billing-explainer__sep" aria-hidden>
+                              ·
+                            </span>
+                            <span>
+                              {freeLeft}/{FREE_RUNS_MAX} runs · 1 image · multi-image needs plan
+                            </span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn--compact billing-explainer__cta billing-explainer__cta--pill"
+                      onClick={() => setPricingOpen(true)}
+                    >
+                      View plans
+                    </button>
+                  </div>
+                </section>
+
                 <div className="hero-actions">
                   <button
                     type="button"
@@ -481,7 +671,11 @@ function App() {
                         ? 'Upload at least one image to process'
                         : !apiUrlConfigured
                           ? 'Set VITE_API_BASE_URL and redeploy (see banner below)'
-                          : 'Run translation job on the API'
+                          : blockReason === 'free_exhausted'
+                            ? 'Free runs used — open Plans or click Process to see options'
+                            : blockReason === 'multi_on_free'
+                              ? 'Multiple images require a plan'
+                              : 'Run translation job on the API'
                     }
                     onClick={() => void runProcess()}
                   >
@@ -491,6 +685,18 @@ function App() {
               </header>
 
               <div ref={jobIssuesRef} className="job-issues">
+            {uploadBillingNotice ? (
+              <div className="billing-upload-notice" role="status">
+                {uploadBillingNotice}{' '}
+                <button
+                  type="button"
+                  className="billing-upload-notice__link"
+                  onClick={() => setPricingOpen(true)}
+                >
+                  View plans
+                </button>
+              </div>
+            ) : null}
             {!apiUrlConfigured ? (
               <div className="api-warning-banner" role="status">
                 <strong>Backend not linked.</strong> The app cannot call the translation API until{' '}
@@ -645,7 +851,7 @@ function App() {
             className="sr-only"
             type="file"
             accept={ACCEPT_IMAGES}
-            multiple
+            multiple={multiUploadAllowed}
             onChange={(e) => onPickFiles(e.target.files)}
           />
         </div>
