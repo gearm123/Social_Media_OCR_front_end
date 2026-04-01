@@ -294,14 +294,14 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
   return (
     <div className="auth-modal" role="dialog" aria-modal="true" aria-label="Sign in">
       <button type="button" className="auth-modal__backdrop" aria-label="Close" onClick={onClose} />
-      <div className="auth-modal__panel">
+      <div className={`auth-modal__panel${tab === 'signup' ? ' auth-modal__panel--signup' : ''}`}>
         <div className="auth-modal__head">
           <div>
             <p className="auth-modal__eyebrow">Translate Chat</p>
             <h2 className="auth-modal__title">{tab === 'signup' ? 'Create your account' : 'Welcome back'}</h2>
             <p className="auth-modal__subtitle">
               {tab === 'signup'
-                ? 'Choose a username, then add email and a secure password.'
+                ? 'Fill in every field below — then tap the green button. You’ll be signed in automatically.'
                 : 'Sign in to sync jobs and unlock future features.'}
             </p>
           </div>
@@ -321,7 +321,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
               setFormErr(null)
             }}
           >
-            Sign in
+            <span className="auth-modal__tab-label">Sign in</span>
           </button>
           <button
             type="button"
@@ -333,7 +333,10 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
               setFormErr(null)
             }}
           >
-            Sign up
+            <span className="auth-modal__tab-label">Sign up</span>
+            <span className="auth-modal__tab-badge" aria-hidden>
+              New
+            </span>
           </button>
         </div>
 
@@ -344,9 +347,20 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
         ) : null}
 
         {tab === 'signup' ? (
-          <form className="auth-modal__form" onSubmit={onSubmitSignup}>
+          <form className="auth-modal__form auth-modal__form--signup" onSubmit={onSubmitSignup}>
+            <div className="auth-modal__signup-guide" role="note">
+              <span className="auth-modal__signup-guide__tag">Sign up</span>
+              <p className="auth-modal__signup-guide__text">
+                <strong>All four fields are required.</strong> Username: letters, numbers, _ or - only (3–32
+                characters). Password: at least 8 characters — type it twice to confirm.
+              </p>
+            </div>
+
+            <p className="auth-modal__group-head">Profile</p>
             <label className="auth-modal__label">
-              Username
+              <span className="auth-modal__label-row">
+                Username <span className="auth-modal__req">Required</span>
+              </span>
               <input
                 className="auth-modal__input"
                 name="username"
@@ -362,7 +376,9 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
               />
             </label>
             <label className="auth-modal__label">
-              Email
+              <span className="auth-modal__label-row">
+                Email <span className="auth-modal__req">Required</span>
+              </span>
               <input
                 className="auth-modal__input"
                 type="email"
@@ -374,8 +390,12 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
                 required
               />
             </label>
+
+            <p className="auth-modal__group-head">Password</p>
             <label className="auth-modal__label">
-              Password
+              <span className="auth-modal__label-row">
+                Password <span className="auth-modal__req">Required · 8+ chars</span>
+              </span>
               <input
                 className="auth-modal__input"
                 type="password"
@@ -389,7 +409,9 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
               />
             </label>
             <label className="auth-modal__label">
-              Confirm password
+              <span className="auth-modal__label-row">
+                Confirm password <span className="auth-modal__req">Required</span>
+              </span>
               <input
                 className="auth-modal__input"
                 type="password"
@@ -407,8 +429,8 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
                 {formErr}
               </p>
             ) : null}
-            <button type="submit" className="auth-modal__submit btn primary" disabled={busy}>
-              {busy ? 'Please wait…' : 'Create account'}
+            <button type="submit" className="auth-modal__submit auth-modal__submit--signup btn primary" disabled={busy}>
+              {busy ? 'Creating your account…' : 'Create account & sign me in'}
             </button>
           </form>
         ) : (
