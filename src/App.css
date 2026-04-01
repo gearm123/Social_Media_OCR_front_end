@@ -147,6 +147,54 @@
   align-items: center;
 }
 
+.api-endpoint-hint {
+  margin: 0.65rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--muted);
+  text-align: center;
+  word-break: break-all;
+}
+
+.api-endpoint-hint__code {
+  font-size: 0.68rem;
+  padding: 0.12rem 0.35rem;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.api-endpoint-hint--warn {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.job-issues {
+  margin-bottom: 0.35rem;
+}
+
+.api-warning-banner {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+}
+
+.api-warning-banner strong {
+  font-weight: 650;
+}
+
+.api-warning-banner code {
+  font-size: 0.78rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+
 .btn {
   font-family: inherit;
   font-size: 0.95rem;

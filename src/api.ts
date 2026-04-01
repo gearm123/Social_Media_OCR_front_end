@@ -50,7 +50,28 @@ export async function createJob(
     fd.append('language', lang)
   }
 
-  const r = await fetch(`${base}/jobs`, { method: 'POST', body: fd })
+  const controller = new AbortController()
+  const timeoutMs = 120_000
+  const tid = setTimeout(() => controller.abort(), timeoutMs)
+  let r: Response
+  try {
+    r = await fetch(`${base}/jobs`, { method: 'POST', body: fd, signal: controller.signal })
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new Error(
+        `Request timed out after ${timeoutMs / 1000}s. Check the API URL, CORS, and that the server is running (cold starts on free hosts can be slow — try again).`,
+      )
+    }
+    if (e instanceof TypeError && String(e.message).toLowerCase().includes('fetch')) {
+      throw new Error(
+        'Network error (could not reach the API). If this site uses HTTPS, the API URL must also be HTTPS. Confirm VITE_API_BASE_URL on Netlify and redeploy.',
+      )
+    }
+    throw e
+  } finally {
+    clearTimeout(tid)
+  }
+
   if (!r.ok) {
     const t = await r.text()
     throw new Error(`Create job failed: ${r.status} ${t}`)
@@ -61,7 +82,19 @@ export async function createJob(
 export async function getJob(jobId: string): Promise<JobStatusResponse> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
-  const r = await fetch(`${base}/jobs/${encodeURIComponent(jobId)}`)
+  const controller = new AbortController()
+  const tid = setTimeout(() => controller.abort(), 60_000)
+  let r: Response
+  try {
+    r = await fetch(`${base}/jobs/${encodeURIComponent(jobId)}`, { signal: controller.signal })
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new Error('Polling timed out — check API URL and network.')
+    }
+    throw e
+  } finally {
+    clearTimeout(tid)
+  }
   if (!r.ok) throw new Error(`Get job failed: ${r.status}`)
   return r.json() as Promise<JobStatusResponse>
 }
@@ -86,10 +119,21 @@ export async function fetchArtifact(path: string): Promise<Blob> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
   const url = path.startsWith('http') ? path : `${base}${path}`
-  const r = await fetch(url)
-  if (!r.ok) {
-    const t = await r.text()
-    throw new Error(`Artifact fetch failed: ${r.status} ${t}`)
+  const controller = new AbortController()
+  const tid = setTimeout(() => controller.abort(), 120_000)
+  try {
+    const r = await fetch(url, { signal: controller.signal })
+    if (!r.ok) {
+      const t = await r.text()
+      throw new Error(`Artifact fetch failed: ${r.status} ${t}`)
+    }
+    return r.blob()
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new Error('Downloading the result timed out.')
+    }
+    throw e
+  } finally {
+    clearTimeout(tid)
   }
-  return r.blob()
 }

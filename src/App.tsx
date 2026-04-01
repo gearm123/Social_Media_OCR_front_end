@@ -59,6 +59,7 @@ type PreviewLightbox = { url: string; name: string }
 function App() {
   const inputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const jobIssuesRef = useRef<HTMLDivElement>(null)
 
   const [files, setFiles] = useState<File[]>([])
   const [previews, setPreviews] = useState<PreviewItem[]>([])
@@ -200,12 +201,21 @@ function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [resultExpanded, previewOpen])
 
+  useEffect(() => {
+    if (!jobError) return
+    requestAnimationFrame(() => {
+      jobIssuesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
+  }, [jobError])
+
+  const apiUrlConfigured = Boolean(apiBase())
+
   const runProcess = async () => {
     if (files.length === 0) return
     const base = apiBase()
     if (!base) {
       setJobError(
-        'Set VITE_API_BASE_URL (e.g. http://127.0.0.1:8000) in .env for local API, then restart dev server.',
+        'Backend URL is not configured. On Netlify: Site configuration → Environment variables → add VITE_API_BASE_URL (your API root, HTTPS, no trailing slash) → trigger a new deploy. Local: put the same in .env and restart npm run dev.',
       )
       return
     }
@@ -239,6 +249,7 @@ function App() {
       setJobMessage(null)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
+      console.error('[Process]', e)
       setJobError(msg)
       setJobMessage(null)
     } finally {
@@ -297,19 +308,28 @@ function App() {
               <button
                 type="button"
                 className="btn process"
-                disabled={files.length === 0 || processing}
+                disabled={files.length === 0 || processing || !apiUrlConfigured}
                 title={
                   files.length === 0
                     ? 'Upload at least one image to process'
-                    : apiBase()
-                      ? 'Run translation job on the API'
-                      : 'Configure VITE_API_BASE_URL in .env'
+                    : !apiUrlConfigured
+                      ? 'Set VITE_API_BASE_URL and redeploy (see banner below)'
+                      : 'Run translation job on the API'
                 }
                 onClick={() => void runProcess()}
               >
                 {processing ? 'Working…' : 'Process'}
               </button>
             </div>
+            <p className="api-endpoint-hint" aria-live="polite">
+              {apiUrlConfigured ? (
+                <>
+                  API: <code className="api-endpoint-hint__code">{apiBase()}</code>
+                </>
+              ) : (
+                <span className="api-endpoint-hint--warn">API URL not set — Process is disabled until VITE_API_BASE_URL is configured.</span>
+              )}
+            </p>
             <input
               ref={fileInputRef}
               id={inputId}
@@ -320,6 +340,22 @@ function App() {
               onChange={(e) => onPickFiles(e.target.files)}
             />
           </header>
+
+          <div ref={jobIssuesRef} className="job-issues">
+            {!apiUrlConfigured ? (
+              <div className="api-warning-banner" role="status">
+                <strong>Backend not linked.</strong> The app cannot call the translation API until{' '}
+                <code>VITE_API_BASE_URL</code> is set at <strong>build time</strong> (Netlify environment
+                variables + redeploy, or local <code>.env</code> + restart dev server). Use an{' '}
+                <strong>https://</strong> URL if this site is served over HTTPS.
+              </div>
+            ) : null}
+            {jobError ? (
+              <p className="job-status job-status--error" role="alert">
+                {jobError}
+              </p>
+            ) : null}
+          </div>
 
           {files.length === 0 ? (
             <div className={`drop-zone ${dragActive ? 'drop-zone--active' : ''}`}>
@@ -457,11 +493,6 @@ function App() {
             </section>
           ) : null}
 
-          {jobError ? (
-            <p className="job-status job-status--error" role="alert">
-              {jobError}
-            </p>
-          ) : null}
           {resultImageUrl ? (
             <section className="job-result" aria-label="Translated chat result">
               <div className="job-result__header">
