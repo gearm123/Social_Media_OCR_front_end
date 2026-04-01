@@ -82,6 +82,8 @@ function App() {
   const inputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const jobIssuesRef = useRef<HTMLDivElement>(null)
+  /** Captured when Process starts so Back restores hints exactly as before that run. */
+  const preProcessSnapshotRef = useRef<Record<string, ImageBubbleHint> | null>(null)
 
   const [files, setFiles] = useState<File[]>([])
   const [previews, setPreviews] = useState<PreviewItem[]>([])
@@ -104,6 +106,7 @@ function App() {
       return null
     })
     setResultExpanded(false)
+    preProcessSnapshotRef.current = null
     setFiles(sortImageFilesByNameSequence(deduped))
   }, [])
 
@@ -184,6 +187,7 @@ function App() {
   }
 
   const clearAll = () => {
+    preProcessSnapshotRef.current = null
     setFiles([])
     setHints({})
     setLoadingPrimary(null)
@@ -197,7 +201,13 @@ function App() {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const dismissResult = useCallback(() => {
+  /** Close the result image and return to the upload UI with the same files and hints as before Process. */
+  const backFromResult = useCallback(() => {
+    const snap = preProcessSnapshotRef.current
+    if (snap) {
+      setHints(structuredClone(snap))
+    }
+    preProcessSnapshotRef.current = null
     setResultExpanded(false)
     setResultImageUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev)
@@ -219,13 +229,13 @@ function App() {
   const previewOpen = previewLightbox !== null
 
   useEffect(() => {
-    if (!processing && !resultExpanded && !previewOpen) return
+    if (!processing && !resultExpanded && !previewOpen && !resultImageUrl) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = prev
     }
-  }, [processing, resultExpanded, previewOpen])
+  }, [processing, resultExpanded, previewOpen, resultImageUrl])
 
   useEffect(() => {
     if (!resultExpanded && !previewOpen) return
@@ -275,6 +285,7 @@ function App() {
     setPreviewLightbox(null)
     setJobError(null)
     setLoadingPrimary('Uploading…')
+    preProcessSnapshotRef.current = structuredClone(hints)
     setResultImageUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev)
       return null
@@ -318,7 +329,7 @@ function App() {
 
   return (
     <>
-      <MessengerBackdrop />
+      {resultImageUrl ? null : <MessengerBackdrop />}
       {dragActive && !resultImageUrl ? (
         <div className="drag-page-hint" aria-hidden>
           <p className="drag-page-hint__text">
@@ -326,55 +337,29 @@ function App() {
           </p>
         </div>
       ) : null}
-      <div className="app-shell">
+      <div className={resultImageUrl ? 'app-shell app-shell--result-solo' : 'app-shell'}>
         <div
-          className={`app${resultImageUrl ? ' app--result-only' : ''}${!resultImageUrl && files.length > 0 ? ' app--has-files' : ''}`}
+          className={`app${resultImageUrl ? ' app--result-solo' : ''}${!resultImageUrl && files.length > 0 ? ' app--has-files' : ''}`}
         >
           {resultImageUrl ? (
-            <>
-              <header className="hero hero--result-only">
-                <p className="eyebrow">Translate Chat</p>
-                <h1>Your translated conversation</h1>
-                <p className="lede lede--result-only">
-                  Expand or download the image below. Your uploads and hints are kept until you go back or
-                  reset.
-                </p>
-                <div className="hero-actions hero-actions--result-nav">
-                  <button type="button" className="btn ghost" onClick={dismissResult}>
-                    Go back
-                  </button>
-                  <button type="button" className="btn danger-outline" onClick={clearAll}>
-                    Reset
-                  </button>
-                </div>
-              </header>
-              <section className="job-result job-result--solo" aria-label="Translated chat result">
-                <div className="job-result__header">
-                  <h2 className="job-result__title">Result</h2>
-                  <div className="job-result__toolbar">
-                    <button
-                      type="button"
-                      className="btn ghost btn--compact"
-                      onClick={() => setResultExpanded(true)}
-                    >
-                      Expand
-                    </button>
-                    <button type="button" className="btn primary btn--compact" onClick={downloadResultPng}>
-                      Download PNG
-                    </button>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="job-result__preview"
-                  onClick={() => setResultExpanded(true)}
-                  aria-label="Open full size preview"
-                >
-                  <img src={resultImageUrl} alt="Translated conversation render" />
+            <div className="result-solo" aria-label="Translated chat result">
+              <div className="result-solo__toolbar">
+                <button type="button" className="btn ghost" onClick={backFromResult}>
+                  Back
                 </button>
-                <p className="job-result__hint">Click the image or Expand for a full-screen view.</p>
-              </section>
-            </>
+                <button type="button" className="btn danger-outline" onClick={clearAll}>
+                  Reset
+                </button>
+              </div>
+              <button
+                type="button"
+                className="result-solo__image-hit"
+                onClick={() => setResultExpanded(true)}
+                aria-label="Open full size; download available there"
+              >
+                <img src={resultImageUrl} alt="Translated conversation" />
+              </button>
+            </div>
           ) : (
             <>
               <header className="hero">
