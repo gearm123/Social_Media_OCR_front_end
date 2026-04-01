@@ -5,12 +5,7 @@ import {
   defaultImageBubbleHint,
   type ImageBubbleHint,
 } from './bubbleSummary'
-import {
-  apiBase,
-  createJob,
-  fetchArtifact,
-  waitForJob,
-} from './api'
+import { apiBase, createJob, fetchArtifact, waitForJob } from './api'
 import { fileKey } from './fileUtils'
 import { sortImageFilesByNameSequence } from './sortUploadedImages'
 import { IphoneBubbleSequence } from './IphoneBubbleSequence'
@@ -28,6 +23,33 @@ function isImageFile(file: File): boolean {
 }
 
 const MAX_MESSAGE_BUBBLES = 30
+
+const PATIENCE_LINES = [
+  'Quality results take time.',
+  "You'll get to see what you want in a moment.",
+  'Hang in there.',
+]
+
+function stageHeadline(stage: string | undefined, status: string): string {
+  if (status === 'queued') return 'Starting…'
+  if (status === 'completed') return 'Wrapping up…'
+  switch (stage) {
+    case 'starting':
+      return 'Preparing…'
+    case 'transcribing':
+      return 'Transcribing…'
+    case 'polishing':
+      return 'Polishing…'
+    case 'bringing_together':
+      return 'Bringing it all together…'
+    case 'final_touches':
+      return 'Final touches…'
+    case 'pipeline':
+      return 'Processing…'
+    default:
+      return 'Processing…'
+  }
+}
 
 function resizeSequence(
   prev: ImageBubbleHint['sequence'],
@@ -66,7 +88,8 @@ function App() {
   const [hints, setHints] = useState<Record<string, ImageBubbleHint>>({})
   const [dragActive, setDragActive] = useState(false)
   const [processing, setProcessing] = useState(false)
-  const [jobMessage, setJobMessage] = useState<string | null>(null)
+  const [loadingPrimary, setLoadingPrimary] = useState<string | null>(null)
+  const [patienceIdx, setPatienceIdx] = useState(0)
   const [jobError, setJobError] = useState<string | null>(null)
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
   const [resultExpanded, setResultExpanded] = useState(false)
@@ -76,6 +99,11 @@ function App() {
     if (!list || (list instanceof FileList && !list.length)) return
     const arr = Array.from(list as FileList | File[])
     const deduped = dedupeImageFiles(arr)
+    setResultImageUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+    setResultExpanded(false)
     setFiles(sortImageFilesByNameSequence(deduped))
   }, [])
 
@@ -158,7 +186,7 @@ function App() {
   const clearAll = () => {
     setFiles([])
     setHints({})
-    setJobMessage(null)
+    setLoadingPrimary(null)
     setJobError(null)
     setResultExpanded(false)
     setPreviewLightbox(null)
@@ -168,6 +196,16 @@ function App() {
     })
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
+
+  const dismissResult = useCallback(() => {
+    setResultExpanded(false)
+    setResultImageUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+    setJobError(null)
+    setLoadingPrimary(null)
+  }, [])
 
   const downloadResultPng = useCallback(() => {
     if (!resultImageUrl) return
@@ -208,6 +246,19 @@ function App() {
     })
   }, [jobError])
 
+  useEffect(() => {
+    if (!processing) return
+    setPatienceIdx(0)
+  }, [processing])
+
+  useEffect(() => {
+    if (!processing) return
+    const t = window.setInterval(() => {
+      setPatienceIdx((i) => (i + 1) % PATIENCE_LINES.length)
+    }, 4500)
+    return () => clearInterval(t)
+  }, [processing])
+
   const apiUrlConfigured = Boolean(apiBase())
 
   const runProcess = async () => {
@@ -223,7 +274,7 @@ function App() {
     setResultExpanded(false)
     setPreviewLightbox(null)
     setJobError(null)
-    setJobMessage('Uploading…')
+    setLoadingPrimary('Uploading…')
     setResultImageUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev)
       return null
@@ -233,8 +284,9 @@ function App() {
       const created = await createJob(files, { bubbleSummaryText })
       const jobId = created.job_id
       if (!jobId) throw new Error('No job_id in response')
-      setJobMessage('Processing on server…')
-      const done = await waitForJob(jobId)
+      const done = await waitForJob(jobId, (j) => {
+        setLoadingPrimary(stageHeadline(j.stage, j.status))
+      })
       if (done.status === 'failed') {
         const msg = done.error || 'Pipeline failed'
         const tail = done.traceback ? `\n\n${String(done.traceback).slice(0, 800)}` : ''
@@ -242,16 +294,16 @@ function App() {
       }
       const path = done.artifact_urls?.final_image
       if (!path) throw new Error('No final_image in job result')
-      setJobMessage('Loading result…')
+      setLoadingPrimary('Loading result…')
       const blob = await fetchArtifact(path)
       const url = URL.createObjectURL(blob)
       setResultImageUrl(url)
-      setJobMessage(null)
+      setLoadingPrimary(null)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       console.error('[Process]', e)
       setJobError(msg)
-      setJobMessage(null)
+      setLoadingPrimary(null)
     } finally {
       setProcessing(false)
     }
@@ -267,7 +319,7 @@ function App() {
   return (
     <>
       <MessengerBackdrop />
-      {dragActive ? (
+      {dragActive && !resultImageUrl ? (
         <div className="drag-page-hint" aria-hidden>
           <p className="drag-page-hint__text">
             {files.length > 0 ? 'Drop to replace with new images' : 'Drop anywhere to add images'}
@@ -275,73 +327,115 @@ function App() {
         </div>
       ) : null}
       <div className="app-shell">
-        <div className={`app${files.length > 0 ? ' app--has-files' : ''}`}>
-          <header className="hero">
-            <p className="eyebrow">Translate Chat</p>
-            <h1>Turn chat screenshots into a translated conversation</h1>
-            {files.length === 0 ? (
-              <p className="lede">
-                Upload your screenshots in order (first file = first page). We support PNG, JPEG, WebP,
-                and BMP — the same formats the backend pipeline expects.
-              </p>
-            ) : (
-              <p className="lede lede--when-files">
-                <span className="lede--when-files__muted">
-                  Choose images again or drop files to <strong>replace</strong> this set · PNG, JPEG, WebP,
-                  BMP
-                </span>
-              </p>
-            )}
-            <div className="hero-actions">
-              <button
-                type="button"
-                className="btn primary"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                Choose images
-              </button>
-              {files.length > 0 ? (
-                <button type="button" className="btn ghost" onClick={clearAll}>
-                  Clear all
+        <div
+          className={`app${resultImageUrl ? ' app--result-only' : ''}${!resultImageUrl && files.length > 0 ? ' app--has-files' : ''}`}
+        >
+          {resultImageUrl ? (
+            <>
+              <header className="hero hero--result-only">
+                <p className="eyebrow">Translate Chat</p>
+                <h1>Your translated conversation</h1>
+                <p className="lede lede--result-only">
+                  Expand or download the image below. Your uploads and hints are kept until you go back or
+                  reset.
+                </p>
+                <div className="hero-actions hero-actions--result-nav">
+                  <button type="button" className="btn ghost" onClick={dismissResult}>
+                    Go back
+                  </button>
+                  <button type="button" className="btn danger-outline" onClick={clearAll}>
+                    Reset
+                  </button>
+                </div>
+              </header>
+              <section className="job-result job-result--solo" aria-label="Translated chat result">
+                <div className="job-result__header">
+                  <h2 className="job-result__title">Result</h2>
+                  <div className="job-result__toolbar">
+                    <button
+                      type="button"
+                      className="btn ghost btn--compact"
+                      onClick={() => setResultExpanded(true)}
+                    >
+                      Expand
+                    </button>
+                    <button type="button" className="btn primary btn--compact" onClick={downloadResultPng}>
+                      Download PNG
+                    </button>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="job-result__preview"
+                  onClick={() => setResultExpanded(true)}
+                  aria-label="Open full size preview"
+                >
+                  <img src={resultImageUrl} alt="Translated conversation render" />
                 </button>
-              ) : null}
-              <button
-                type="button"
-                className="btn process"
-                disabled={files.length === 0 || processing || !apiUrlConfigured}
-                title={
-                  files.length === 0
-                    ? 'Upload at least one image to process'
-                    : !apiUrlConfigured
-                      ? 'Set VITE_API_BASE_URL and redeploy (see banner below)'
-                      : 'Run translation job on the API'
-                }
-                onClick={() => void runProcess()}
-              >
-                {processing ? 'Working…' : 'Process'}
-              </button>
-            </div>
-            <p className="api-endpoint-hint" aria-live="polite">
-              {apiUrlConfigured ? (
-                <>
-                  API: <code className="api-endpoint-hint__code">{apiBase()}</code>
-                </>
-              ) : (
-                <span className="api-endpoint-hint--warn">API URL not set — Process is disabled until VITE_API_BASE_URL is configured.</span>
-              )}
-            </p>
-            <input
-              ref={fileInputRef}
-              id={inputId}
-              className="sr-only"
-              type="file"
-              accept={ACCEPT_IMAGES}
-              multiple
-              onChange={(e) => onPickFiles(e.target.files)}
-            />
-          </header>
+                <p className="job-result__hint">Click the image or Expand for a full-screen view.</p>
+              </section>
+            </>
+          ) : (
+            <>
+              <header className="hero">
+                <p className="eyebrow">Translate Chat</p>
+                <h1>Turn chat screenshots into a translated conversation</h1>
+                {files.length === 0 ? (
+                  <p className="lede">
+                    Upload your screenshots in order (first file = first page). We support PNG, JPEG, WebP,
+                    and BMP — the same formats the backend pipeline expects.
+                  </p>
+                ) : (
+                  <p className="lede lede--when-files">
+                    <span className="lede--when-files__muted">
+                      Choose images again or drop files to <strong>replace</strong> this set · PNG, JPEG, WebP,
+                      BMP
+                    </span>
+                  </p>
+                )}
+                <div className="hero-actions">
+                  <button
+                    type="button"
+                    className="btn primary"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Choose images
+                  </button>
+                  {files.length > 0 ? (
+                    <button type="button" className="btn ghost" onClick={clearAll}>
+                      Clear all
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="btn process"
+                    disabled={files.length === 0 || processing || !apiUrlConfigured}
+                    title={
+                      files.length === 0
+                        ? 'Upload at least one image to process'
+                        : !apiUrlConfigured
+                          ? 'Set VITE_API_BASE_URL and redeploy (see banner below)'
+                          : 'Run translation job on the API'
+                    }
+                    onClick={() => void runProcess()}
+                  >
+                    {processing ? 'Working…' : 'Process'}
+                  </button>
+                </div>
+                <p className="api-endpoint-hint" aria-live="polite">
+                  {apiUrlConfigured ? (
+                    <>
+                      API: <code className="api-endpoint-hint__code">{apiBase()}</code>
+                    </>
+                  ) : (
+                    <span className="api-endpoint-hint--warn">
+                      API URL not set — Process is disabled until VITE_API_BASE_URL is configured.
+                    </span>
+                  )}
+                </p>
+              </header>
 
-          <div ref={jobIssuesRef} className="job-issues">
+              <div ref={jobIssuesRef} className="job-issues">
             {!apiUrlConfigured ? (
               <div className="api-warning-banner" role="status">
                 <strong>Backend not linked.</strong> The app cannot call the translation API until{' '}
@@ -492,35 +586,18 @@ function App() {
               </div>
             </section>
           ) : null}
+            </>
+          )}
 
-          {resultImageUrl ? (
-            <section className="job-result" aria-label="Translated chat result">
-              <div className="job-result__header">
-                <h2 className="job-result__title">Result</h2>
-                <div className="job-result__toolbar">
-                  <button
-                    type="button"
-                    className="btn ghost btn--compact"
-                    onClick={() => setResultExpanded(true)}
-                  >
-                    Expand
-                  </button>
-                  <button type="button" className="btn primary btn--compact" onClick={downloadResultPng}>
-                    Download PNG
-                  </button>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="job-result__preview"
-                onClick={() => setResultExpanded(true)}
-                aria-label="Open full size preview"
-              >
-                <img src={resultImageUrl} alt="Translated conversation render" />
-              </button>
-              <p className="job-result__hint">Click the image or Expand for a full-screen view.</p>
-            </section>
-          ) : null}
+          <input
+            ref={fileInputRef}
+            id={inputId}
+            className="sr-only"
+            type="file"
+            accept={ACCEPT_IMAGES}
+            multiple
+            onChange={(e) => onPickFiles(e.target.files)}
+          />
         </div>
       </div>
 
@@ -535,9 +612,15 @@ function App() {
           <div className="process-loading__panel">
             <div className="process-loading__spinner" aria-hidden />
             <p id="process-loading-title" className="process-loading__title">
-              Working on your chat…
+              {loadingPrimary || 'Please wait…'}
             </p>
-            <p className="process-loading__msg">{jobMessage || 'Please wait…'}</p>
+            <p
+              key={patienceIdx}
+              className="process-loading__patience"
+              aria-live="polite"
+            >
+              {PATIENCE_LINES[patienceIdx]}
+            </p>
           </div>
         </div>
       ) : null}

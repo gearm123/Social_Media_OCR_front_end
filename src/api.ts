@@ -99,13 +99,17 @@ export async function getJob(jobId: string): Promise<JobStatusResponse> {
   return r.json() as Promise<JobStatusResponse>
 }
 
-const POLL_MS = 3000
-const MAX_POLLS = 240
+const POLL_MS = 2000
+const MAX_POLLS = 360
 
-/** Poll until status is `completed` or `failed`, or timeout (~12 min). */
-export async function waitForJob(jobId: string): Promise<JobStatusResponse> {
+/** Poll until status is `completed` or `failed`, or timeout (~12 min). `onPoll` runs after each GET. */
+export async function waitForJob(
+  jobId: string,
+  onPoll?: (j: JobStatusResponse) => void,
+): Promise<JobStatusResponse> {
   for (let i = 0; i < MAX_POLLS; i++) {
     const j = await getJob(jobId)
+    onPoll?.(j)
     if (j.status === 'completed' || j.status === 'failed') {
       return j
     }
