@@ -12,6 +12,7 @@ import {
   waitForJob,
 } from './api'
 import { fileKey } from './fileUtils'
+import { sortImageFilesByNameSequence } from './sortUploadedImages'
 import { IphoneBubbleSequence } from './IphoneBubbleSequence'
 import { MessengerBackdrop } from './MessengerBackdrop'
 
@@ -53,6 +54,8 @@ function dedupeImageFiles(incoming: File[]): File[] {
 
 type PreviewItem = { file: File; url: string }
 
+type PreviewLightbox = { url: string; name: string }
+
 function App() {
   const inputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -66,11 +69,13 @@ function App() {
   const [jobError, setJobError] = useState<string | null>(null)
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
   const [resultExpanded, setResultExpanded] = useState(false)
+  const [previewLightbox, setPreviewLightbox] = useState<PreviewLightbox | null>(null)
 
   const replaceFilesFromList = useCallback((list: FileList | File[] | null) => {
     if (!list || (list instanceof FileList && !list.length)) return
     const arr = Array.from(list as FileList | File[])
-    setFiles(dedupeImageFiles(arr))
+    const deduped = dedupeImageFiles(arr)
+    setFiles(sortImageFilesByNameSequence(deduped))
   }, [])
 
   /** Drop / drag anywhere on the page (capture on document so it works over any element). */
@@ -155,6 +160,7 @@ function App() {
     setJobMessage(null)
     setJobError(null)
     setResultExpanded(false)
+    setPreviewLightbox(null)
     setResultImageUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev)
       return null
@@ -171,23 +177,28 @@ function App() {
     a.click()
   }, [resultImageUrl])
 
+  const previewOpen = previewLightbox !== null
+
   useEffect(() => {
-    if (!processing && !resultExpanded) return
+    if (!processing && !resultExpanded && !previewOpen) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = prev
     }
-  }, [processing, resultExpanded])
+  }, [processing, resultExpanded, previewOpen])
 
   useEffect(() => {
-    if (!resultExpanded) return
+    if (!resultExpanded && !previewOpen) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setResultExpanded(false)
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      if (previewOpen) setPreviewLightbox(null)
+      else setResultExpanded(false)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [resultExpanded])
+  }, [resultExpanded, previewOpen])
 
   const runProcess = async () => {
     if (files.length === 0) return
@@ -200,6 +211,7 @@ function App() {
     }
     setProcessing(true)
     setResultExpanded(false)
+    setPreviewLightbox(null)
     setJobError(null)
     setJobMessage('Uploading…')
     setResultImageUrl((prev) => {
@@ -325,6 +337,8 @@ function App() {
             <section className="preview-section" aria-label="Uploaded images">
               <p className="hints-inline">
                 Optional: bubble count + sender/receiver order (top→bottom) improve accuracy — all optional.
+                When filenames include a clear sequence (e.g. IMAGE_1 … IMAGE_3), order is sorted automatically;
+                otherwise upload order is kept. Click a preview image to enlarge.
               </p>
               <div className="preview-row" role="list">
                 {previews.map((p, i) => {
@@ -340,10 +354,19 @@ function App() {
                       role="listitem"
                     >
                       <div className="preview-thumb">
+                        <button
+                          type="button"
+                          className="preview-thumb__zoom"
+                          aria-label={`Enlarge preview ${i + 1}: ${p.file.name}`}
+                          onClick={() =>
+                            setPreviewLightbox({ url: p.url, name: p.file.name })
+                          }
+                        >
+                          <img src={p.url} alt="" />
+                        </button>
                         <span className="preview-thumb__order" aria-hidden>
                           {i + 1}
                         </span>
-                        <img src={p.url} alt="" />
                       </div>
                       <figcaption>
                         <span className="preview-name" title={p.file.name}>
@@ -484,6 +507,34 @@ function App() {
               Working on your chat…
             </p>
             <p className="process-loading__msg">{jobMessage || 'Please wait…'}</p>
+          </div>
+        </div>
+      ) : null}
+
+      {previewLightbox ? (
+        <div className="result-lightbox" role="dialog" aria-modal="true" aria-label="Preview image">
+          <button
+            type="button"
+            className="result-lightbox__backdrop"
+            aria-label="Close preview"
+            onClick={() => setPreviewLightbox(null)}
+          />
+          <div className="result-lightbox__chrome">
+            <div className="result-lightbox__toolbar result-lightbox__toolbar--split">
+              <span className="preview-lightbox__name" title={previewLightbox.name}>
+                {previewLightbox.name}
+              </span>
+              <button
+                type="button"
+                className="btn primary btn--compact"
+                onClick={() => setPreviewLightbox(null)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="result-lightbox__stage">
+              <img src={previewLightbox.url} alt={previewLightbox.name} />
+            </div>
           </div>
         </div>
       ) : null}
