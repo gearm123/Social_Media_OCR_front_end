@@ -35,6 +35,51 @@ function loadScript(src: string): Promise<void> {
   })
 }
 
+function IconGoogle() {
+  return (
+    <svg className="auth-modal__oauth-icon" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      />
+    </svg>
+  )
+}
+
+function IconFacebook() {
+  return (
+    <svg className="auth-modal__oauth-icon" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="currentColor"
+        d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
+      />
+    </svg>
+  )
+}
+
+function IconApple() {
+  return (
+    <svg className="auth-modal__oauth-icon" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="currentColor"
+        d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"
+      />
+    </svg>
+  )
+}
+
 export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: Props) {
   const [tab, setTab] = useState<Tab>(initialTab)
   const [providers, setProviders] = useState<AuthProviders | null>(null)
@@ -101,7 +146,6 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
     [onClose, onSuccess],
   )
 
-  // Google Sign-In button
   useEffect(() => {
     if (!open || !providers?.google_client_id || !googleBtnRef.current) return
     const el = googleBtnRef.current
@@ -123,11 +167,10 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
           },
         })
         g.accounts.id.renderButton(el, {
-          type: 'standard',
+          type: 'icon',
           theme: 'outline',
           size: 'large',
-          text: 'continue_with',
-          width: 280,
+          shape: 'square',
         })
       } catch {
         if (!cancelled) setOauthErr('Could not load Google sign-in')
@@ -139,7 +182,6 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
     }
   }, [open, providers?.google_client_id, finishWithToken])
 
-  // Facebook SDK
   useEffect(() => {
     if (!open || !providers?.facebook_app_id) return
     const appId = providers.facebook_app_id
@@ -157,8 +199,9 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
   }, [open, providers?.facebook_app_id])
 
   const onFacebookClick = () => {
+    if (!providers?.facebook_app_id) return
     if (!window.FB) {
-      setOauthErr('Facebook SDK not ready yet — try again in a moment')
+      setOauthErr('Facebook is still loading — try again in a moment')
       return
     }
     window.FB.login(
@@ -247,22 +290,31 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
   const hasGoogle = Boolean(providers?.google_client_id)
   const hasFacebook = Boolean(providers?.facebook_app_id)
   const hasApple = Boolean(providers?.apple_client_id)
-  const hasAnyOAuth = hasGoogle || hasFacebook || hasApple
 
   return (
     <div className="auth-modal" role="dialog" aria-modal="true" aria-label="Sign in">
       <button type="button" className="auth-modal__backdrop" aria-label="Close" onClick={onClose} />
       <div className="auth-modal__panel">
         <div className="auth-modal__head">
-          <h2 className="auth-modal__title">{tab === 'signup' ? 'Create account' : 'Sign in'}</h2>
+          <div>
+            <p className="auth-modal__eyebrow">Translate Chat</p>
+            <h2 className="auth-modal__title">{tab === 'signup' ? 'Create your account' : 'Welcome back'}</h2>
+            <p className="auth-modal__subtitle">
+              {tab === 'signup'
+                ? 'Choose a username, then add email and a secure password.'
+                : 'Sign in to sync jobs and unlock future features.'}
+            </p>
+          </div>
           <button type="button" className="auth-modal__close" onClick={onClose} aria-label="Close">
             ×
           </button>
         </div>
 
-        <div className="auth-modal__tabs">
+        <div className="auth-modal__tabs" role="tablist">
           <button
             type="button"
+            role="tab"
+            aria-selected={tab === 'signin'}
             className={`auth-modal__tab${tab === 'signin' ? ' auth-modal__tab--active' : ''}`}
             onClick={() => {
               setTab('signin')
@@ -273,6 +325,8 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={tab === 'signup'}
             className={`auth-modal__tab${tab === 'signup' ? ' auth-modal__tab--active' : ''}`}
             onClick={() => {
               setTab('signup')
@@ -285,7 +339,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
 
         {providersErr ? (
           <p className="auth-modal__warn" role="status">
-            Could not load sign-in options: {providersErr}
+            Could not load provider config: {providersErr}
           </p>
         ) : null}
 
@@ -297,6 +351,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
                 className="auth-modal__input"
                 name="username"
                 autoComplete="username"
+                placeholder="your_name"
                 value={username}
                 onChange={(ev) => setUsername(ev.target.value)}
                 required
@@ -313,6 +368,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
                 type="email"
                 name="email"
                 autoComplete="email"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(ev) => setEmail(ev.target.value)}
                 required
@@ -325,6 +381,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
                 type="password"
                 name="password"
                 autoComplete="new-password"
+                placeholder="At least 8 characters"
                 value={password}
                 onChange={(ev) => setPassword(ev.target.value)}
                 required
@@ -338,6 +395,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
                 type="password"
                 name="password2"
                 autoComplete="new-password"
+                placeholder="Repeat password"
                 value={password2}
                 onChange={(ev) => setPassword2(ev.target.value)}
                 required
@@ -349,7 +407,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
                 {formErr}
               </p>
             ) : null}
-            <button type="submit" className="btn primary auth-modal__submit" disabled={busy}>
+            <button type="submit" className="auth-modal__submit btn primary" disabled={busy}>
               {busy ? 'Please wait…' : 'Create account'}
             </button>
           </form>
@@ -362,6 +420,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
                 type="email"
                 name="email"
                 autoComplete="email"
+                placeholder="you@example.com"
                 value={signinEmail}
                 onChange={(ev) => setSigninEmail(ev.target.value)}
                 required
@@ -374,6 +433,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
                 type="password"
                 name="password"
                 autoComplete="current-password"
+                placeholder="Your password"
                 value={signinPassword}
                 onChange={(ev) => setSigninPassword(ev.target.value)}
                 required
@@ -384,52 +444,82 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
                 {formErr}
               </p>
             ) : null}
-            <button type="submit" className="btn primary auth-modal__submit" disabled={busy}>
+            <button type="submit" className="auth-modal__submit btn primary" disabled={busy}>
               {busy ? 'Please wait…' : 'Sign in'}
             </button>
           </form>
         )}
 
-        {hasAnyOAuth ? (
-          <>
-            <p className="auth-modal__divider">
-              <span>or continue with</span>
-            </p>
-            <div id="fb-root" />
-            <div className="auth-modal__oauth">
-              {hasGoogle ? <div ref={googleBtnRef} className="auth-modal__google-host" /> : null}
-              {hasFacebook ? (
-                <button
-                  type="button"
-                  className="btn auth-modal__oauth-fb"
-                  disabled={busy}
-                  onClick={() => {
-                    setOauthErr(null)
-                    onFacebookClick()
-                  }}
-                >
-                  Facebook
-                </button>
-              ) : null}
-              {hasApple ? (
-                <button type="button" className="btn auth-modal__oauth-apple" disabled={busy} onClick={onAppleClick}>
-                  Apple
-                </button>
-              ) : null}
-            </div>
-            {oauthErr ? (
-              <p className="auth-modal__error" role="alert">
-                {oauthErr}
-              </p>
-            ) : null}
-            <p className="auth-modal__hint">
-              Social sign-in must be enabled on the API (Google / Facebook / Apple env vars). Configure return URLs
-              in each developer console to match this site&apos;s origin.
-            </p>
-          </>
-        ) : !providersErr ? (
-          <p className="auth-modal__hint">No social providers configured on the server — use email and password.</p>
+        <div className="auth-modal__divider" aria-hidden="true">
+          <span className="auth-modal__divider-line" />
+          <span className="auth-modal__divider-text">or continue with</span>
+          <span className="auth-modal__divider-line" />
+        </div>
+
+        <div id="fb-root" />
+        <div className="auth-modal__oauth-row">
+          <div className="auth-modal__oauth-cell">
+            {hasGoogle ? (
+              <div ref={googleBtnRef} className="auth-modal__google-host" title="Google" />
+            ) : (
+              <button
+                type="button"
+                className="auth-modal__oauth-fallback auth-modal__oauth-fallback--google"
+                disabled
+                title="Set GOOGLE_OAUTH_CLIENT_ID on the API to enable"
+              >
+                <IconGoogle />
+                <span>Google</span>
+              </button>
+            )}
+          </div>
+          <div className="auth-modal__oauth-cell">
+            <button
+              type="button"
+              className="auth-modal__oauth-fallback auth-modal__oauth-fallback--facebook"
+              disabled={busy || !hasFacebook}
+              title={
+                hasFacebook
+                  ? 'Continue with Facebook'
+                  : 'Set FACEBOOK_APP_ID on the API to enable'
+              }
+              onClick={() => {
+                if (!hasFacebook) return
+                setOauthErr(null)
+                onFacebookClick()
+              }}
+            >
+              <IconFacebook />
+              <span>Facebook</span>
+            </button>
+          </div>
+          <div className="auth-modal__oauth-cell">
+            <button
+              type="button"
+              className="auth-modal__oauth-fallback auth-modal__oauth-fallback--apple"
+              disabled={busy || !hasApple}
+              title={hasApple ? 'Continue with Apple' : 'Set APPLE_CLIENT_ID on the API to enable'}
+              onClick={() => {
+                if (!hasApple) return
+                void onAppleClick()
+              }}
+            >
+              <IconApple />
+              <span>Apple</span>
+            </button>
+          </div>
+        </div>
+
+        {oauthErr ? (
+          <p className="auth-modal__error auth-modal__error--oauth" role="alert">
+            {oauthErr}
+          </p>
         ) : null}
+
+        <p className="auth-modal__hint">
+          OAuth buttons need matching client IDs on your API. Disabled options will activate after you configure
+          Google, Facebook, or Apple in the server environment.
+        </p>
       </div>
     </div>
   )
