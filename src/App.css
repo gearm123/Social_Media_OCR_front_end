@@ -152,8 +152,8 @@
   margin-bottom: 0.65rem;
 }
 
-.app--has-files .hero h1 {
-  margin-bottom: 0.45rem;
+.app--has-files .hero-brand {
+  margin-bottom: 0.35rem;
 }
 
 .app--has-files .lede--when-files {
@@ -169,15 +169,6 @@
 .lede--when-files__muted strong {
   color: var(--text);
   font-weight: 600;
-}
-
-.hints-inline {
-  margin: 0 0 0.5rem;
-  padding: 0;
-  font-size: 0.68rem;
-  line-height: 1.35;
-  color: var(--muted);
-  text-align: center;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -207,21 +198,47 @@
   margin: 0 auto 1.5rem;
 }
 
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--muted);
-  margin: 0 0 0.75rem;
+.hero-brand {
+  margin: 0 0 0.5rem;
+  font-size: clamp(2.35rem, 7.5vw, 3.35rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, var(--accent) 88%, #1e1b4b) 0%,
+    var(--accent) 38%,
+    color-mix(in srgb, var(--accent) 65%, #0f766e) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 24px color-mix(in srgb, var(--accent) 18%, transparent));
 }
 
-.hero h1 {
-  font-size: clamp(1.45rem, 4vw, 1.85rem);
-  font-weight: 700;
-  line-height: 1.2;
+@media (prefers-color-scheme: dark) {
+  .hero-brand {
+    background: linear-gradient(
+      125deg,
+      color-mix(in srgb, var(--accent) 95%, #e0e7ff) 0%,
+      color-mix(in srgb, var(--accent) 80%, #5eead4) 55%,
+      color-mix(in srgb, var(--accent) 70%, #a5b4fc) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 2px 28px color-mix(in srgb, var(--accent) 25%, transparent));
+  }
+}
+
+.hero-tagline {
   margin: 0 0 1rem;
-  letter-spacing: -0.02em;
+  font-size: clamp(1rem, 2.4vw, 1.2rem);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text);
+  letter-spacing: -0.015em;
+  opacity: 0.92;
 }
 
 .lede {
@@ -237,28 +254,6 @@
   gap: 0.75rem;
   justify-content: center;
   align-items: center;
-}
-
-.api-endpoint-hint {
-  margin: 0.65rem 0 0;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  color: var(--muted);
-  text-align: center;
-  word-break: break-all;
-}
-
-.api-endpoint-hint__code {
-  font-size: 0.68rem;
-  padding: 0.12rem 0.35rem;
-  border-radius: 6px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-}
-
-.api-endpoint-hint--warn {
-  color: var(--warn);
-  font-weight: 600;
 }
 
 .job-issues {

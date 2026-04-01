@@ -25,9 +25,11 @@ function isImageFile(file: File): boolean {
 const MAX_MESSAGE_BUBBLES = 30
 
 const PATIENCE_LINES = [
-  'Quality results take time.',
-  "You'll get to see what you want in a moment.",
-  'Hang in there.',
+  "We're on it.",
+  'It will be worth the wait.',
+  'You can switch tabs while we work.',
+  'Adding a message sequence helps us understand your chat.',
+  'The more images, the more time.',
 ]
 
 function stageHeadline(stage: string | undefined, status: string): string {
@@ -363,8 +365,8 @@ function App() {
           ) : (
             <>
               <header className="hero">
-                <p className="eyebrow">Translate Chat</p>
-                <h1>Turn chat screenshots into a translated conversation</h1>
+                <h1 className="hero-brand">Translate Chat</h1>
+                <p className="hero-tagline">Turn chat screenshots into a translated conversation</p>
                 {files.length === 0 ? (
                   <p className="lede">
                     Upload your screenshots in order (first file = first page). We support PNG, JPEG, WebP,
@@ -386,11 +388,14 @@ function App() {
                   >
                     Choose images
                   </button>
-                  {files.length > 0 ? (
-                    <button type="button" className="btn ghost" onClick={clearAll}>
-                      Clear all
-                    </button>
-                  ) : null}
+                  <button
+                    type="button"
+                    className="btn danger-outline"
+                    onClick={clearAll}
+                    title="Remove all images and start over"
+                  >
+                    Reset
+                  </button>
                   <button
                     type="button"
                     className="btn process"
@@ -407,17 +412,6 @@ function App() {
                     {processing ? 'Working…' : 'Process'}
                   </button>
                 </div>
-                <p className="api-endpoint-hint" aria-live="polite">
-                  {apiUrlConfigured ? (
-                    <>
-                      API: <code className="api-endpoint-hint__code">{apiBase()}</code>
-                    </>
-                  ) : (
-                    <span className="api-endpoint-hint--warn">
-                      API URL not set — Process is disabled until VITE_API_BASE_URL is configured.
-                    </span>
-                  )}
-                </p>
               </header>
 
               <div ref={jobIssuesRef} className="job-issues">
@@ -450,11 +444,6 @@ function App() {
 
           {previews.length > 0 ? (
             <section className="preview-section" aria-label="Uploaded images">
-              <p className="hints-inline">
-                Optional: bubble count + sender/receiver order (top→bottom) improve accuracy — all optional.
-                When filenames include a clear sequence (e.g. IMAGE_1 … IMAGE_3), order is sorted automatically;
-                otherwise upload order is kept. Click a preview image to enlarge.
-              </p>
               <div className="preview-row" role="list">
                 {previews.map((p, i) => {
                   const k = fileKey(p.file)
