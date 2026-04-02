@@ -1931,6 +1931,16 @@
   justify-content: center;
 }
 
+.pricing-modal__error {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--err);
+  background: color-mix(in srgb, var(--err) 12%, transparent);
+  border-radius: 8px;
+}
+
 .pricing-modal__legal {
   margin: 0;
   font-size: 0.65rem;

@@ -1,4 +1,6 @@
-import { PRICING_PLANS, applyMockPurchase, type PricingPlanId } from './billingStorage'
+import { useEffect, useState } from 'react'
+import { startBillingCheckout } from './billingApi'
+import { PRICING_PLANS, type PricingPlanId } from './billingStorage'
 
 type Props = {
   open: boolean
@@ -6,13 +8,29 @@ type Props = {
   onApplied: () => void
 }
 
-export function PricingModal({ open, onClose, onApplied }: Props) {
+export function PricingModal({ open, onClose, onApplied: _onApplied }: Props) {
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setCheckoutError(null)
+      setCheckoutLoading(false)
+    }
+  }, [open])
+
   if (!open) return null
 
-  const onSelect = (id: PricingPlanId) => {
-    applyMockPurchase(id)
-    onApplied()
-    onClose()
+  const onSelect = async (id: PricingPlanId) => {
+    setCheckoutError(null)
+    setCheckoutLoading(true)
+    try {
+      const url = await startBillingCheckout(id)
+      window.location.href = url
+    } catch (e) {
+      setCheckoutLoading(false)
+      setCheckoutError(e instanceof Error ? e.message : String(e))
+    }
   }
 
   return (
@@ -25,8 +43,8 @@ export function PricingModal({ open, onClose, onApplied }: Props) {
               Choose a plan
             </h2>
             <p className="pricing-modal__subtitle">
-              Prices cover hosting (Netlify + Render) and API usage (Gemini + Vision). Checkout will be wired
-              next — for now selecting a plan unlocks features in this browser only (preview).
+              Sign in, then choose a plan. You will be redirected to secure Paddle checkout. After payment,
+              return here — entitlements sync from the server.
             </p>
           </div>
           <button type="button" className="pricing-modal__close" onClick={onClose} aria-label="Close">
@@ -50,17 +68,23 @@ export function PricingModal({ open, onClose, onApplied }: Props) {
               <button
                 type="button"
                 className={`btn pricing-card__cta${plan.featured ? ' primary' : ' ghost'}`}
-                onClick={() => onSelect(plan.id)}
+                disabled={checkoutLoading}
+                onClick={() => void onSelect(plan.id)}
               >
-                Select
+                {checkoutLoading ? 'Starting…' : 'Select'}
               </button>
             </article>
           ))}
         </div>
 
+        {checkoutError ? (
+          <p className="pricing-modal__error" role="alert">
+            {checkoutError}
+          </p>
+        ) : null}
+
         <p className="pricing-modal__legal">
-          Payment processing (e.g. Stripe) and server-side verification will be added in a later step. This
-          screen is for UX and pricing structure only.
+          Payments are processed by Paddle (merchant of record). Subscription and tax terms apply at checkout.
         </p>
       </div>
     </div>
