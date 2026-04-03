@@ -47,13 +47,21 @@ function mapCheckoutFetchError(e: unknown): Error {
   return e instanceof Error ? e : new Error(String(e))
 }
 
-/** Ensure we navigate to a valid absolute URL (Paddle returns full https URL to this site + ?_ptxn=…). */
+/**
+ * Resolve checkout target for navigation. Paddle may return an absolute https URL or a
+ * site-relative path like `/pay?_ptxn=…` — `new URL(s)` alone fails on relative paths.
+ */
 function normalizeCheckoutRedirectUrl(raw: string): string {
   const s = raw.trim()
   if (!s) throw new Error('No checkout URL from server')
   try {
-    return new URL(s).href
-  } catch {
+    const resolved = new URL(s, window.location.origin)
+    if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') {
+      throw new Error('Invalid checkout URL from server')
+    }
+    return resolved.href
+  } catch (e) {
+    if (e instanceof Error && e.message === 'Invalid checkout URL from server') throw e
     throw new Error('Invalid checkout URL from server')
   }
 }
