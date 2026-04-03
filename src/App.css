@@ -2869,6 +2869,45 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
+.pricing-modal__subscription-upsell {
+  margin: -0.25rem 0 1rem;
+  padding: 0;
+  max-width: 40rem;
+}
+
+.pricing-modal__subscription-upsell-link {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.45;
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pricing-modal__subscription-upsell-link:hover {
+  color: color-mix(in srgb, var(--accent) 82%, #1e3a8a);
+}
+
+.pricing-modal__subscription-upsell-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pricing-modal__subscription-upsell-link:hover {
+    color: color-mix(in srgb, var(--accent) 88%, #fff);
+  }
+}
+
 .pricing-modal__account-prompt {
   margin: 0 0 1rem;
   padding: 0.75rem 0.85rem;
@@ -2953,11 +2992,6 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, #0d9488 14%, transparent);
 }
 
-.pricing-card--guest-locked {
-  border-style: dashed;
-  opacity: 0.97;
-}
-
 .pricing-card__ribbon {
   position: absolute;
   top: 0.55rem;
@@ -2976,15 +3010,6 @@
   right: auto;
   left: 0.55rem;
   background: color-mix(in srgb, #0d9488 28%, transparent);
-  color: var(--text);
-}
-
-.pricing-card__ribbon--account {
-  right: auto;
-  left: 0.55rem;
-  top: auto;
-  bottom: 0.55rem;
-  background: color-mix(in srgb, var(--warn, #b45309) 22%, transparent);
   color: var(--text);
 }
 

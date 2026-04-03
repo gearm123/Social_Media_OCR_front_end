@@ -35,7 +35,11 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
   const [guestEmail, setGuestEmail] = useState('')
   const [subscriptionGuestPrompt, setSubscriptionGuestPrompt] = useState(false)
 
-  const visiblePlans = useMemo(() => getVisiblePricingPlans(), [])
+  const visiblePlans = useMemo(() => {
+    const all = getVisiblePricingPlans()
+    if (isGuest) return all.filter((p) => isOneTimePlan(p.id))
+    return all
+  }, [isGuest])
 
   useEffect(() => {
     if (open) {
@@ -104,8 +108,8 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
             <p className="pricing-modal__subtitle">
               {isGuest ? (
                 <>
-                  Without an account you can buy <strong>one-time</strong> credits (Single or Debug test) using the
-                  email below. <strong>Subscriptions</strong> require a free account — sign up or sign in first.
+                  Without an account, use the email below to buy a <strong>one-time</strong> run (Debug test or Single
+                  full run). You will be redirected to Paddle checkout.
                 </>
               ) : (
                 <>
@@ -136,6 +140,21 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
               disabled={checkoutLoading}
             />
           </div>
+        ) : null}
+
+        {isGuest ? (
+          <p className="pricing-modal__subscription-upsell">
+            <button
+              type="button"
+              className="pricing-modal__subscription-upsell-link"
+              onClick={() => {
+                onOpenAuth?.('signup')
+                onClose()
+              }}
+            >
+              Sign up for subscription options
+            </button>
+          </p>
         ) : null}
 
         {billingStatus?.paddle_configured === false ? (
@@ -181,29 +200,23 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
             const missingPrice = Boolean(
               billingStatus?.paddle_configured && billingStatus.prices?.[plan.id] === false,
             )
-            const guestSub = isGuest && isSubscriptionPlan(plan.id)
             const title =
               billingStatus?.paddle_configured === false
                 ? 'Server billing not ready'
                 : missingPrice
                   ? `Set the matching PADDLE_PRICE_* env var on the server for “${plan.name}”`
-                  : guestSub
-                    ? 'Sign up or sign in to subscribe'
-                    : undefined
+                  : undefined
             return (
               <article
                 key={plan.id}
                 className={`pricing-card${plan.featured ? ' pricing-card--featured' : ''}${
                   plan.id === 'debug' ? ' pricing-card--debug' : ''
-                }${guestSub ? ' pricing-card--guest-locked' : ''}`}
+                }`}
               >
                 {plan.id === 'debug' ? (
                   <span className="pricing-card__ribbon pricing-card__ribbon--test">Test</span>
                 ) : plan.featured ? (
                   <span className="pricing-card__ribbon">Popular</span>
-                ) : null}
-                {guestSub ? (
-                  <span className="pricing-card__ribbon pricing-card__ribbon--account">Account</span>
                 ) : null}
                 <h3 className="pricing-card__name">{plan.name}</h3>
                 <p className="pricing-card__price">
@@ -218,7 +231,7 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
                   title={title}
                   onClick={() => void onSelect(plan.id)}
                 >
-                  {checkoutLoading ? 'Starting…' : missingPrice ? 'Not configured' : guestSub ? 'Sign in to subscribe' : 'Select'}
+                  {checkoutLoading ? 'Starting…' : missingPrice ? 'Not configured' : 'Select'}
                 </button>
               </article>
             )
