@@ -230,6 +230,45 @@ export async function claimGuestPaidTransaction(transactionId: string): Promise<
   throw new Error(lastMsg)
 }
 
+const USER_CLAIM_RETRIES = 6
+const USER_CLAIM_RETRY_MS = 1500
+
+/** Signed-in: verify Paddle txn and refresh billing (single/debug one-time purchases on /pay). */
+export async function claimUserPaidTransaction(transactionId: string): Promise<void> {
+  const base = apiBase()
+  if (!base) throw new Error('VITE_API_BASE_URL is not set')
+  const t = getAccessToken()
+  if (!t) throw new Error('Sign in to claim this purchase')
+  let lastMsg = 'Request failed'
+  for (let attempt = 0; attempt < USER_CLAIM_RETRIES; attempt++) {
+    let r: Response
+    try {
+      r = await fetch(`${base}/billing/user-claim-transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${t}`,
+        },
+        body: JSON.stringify({ transaction_id: transactionId }),
+      })
+    } catch (e) {
+      throw mapCheckoutFetchError(e)
+    }
+    const text = await r.text()
+    if (r.ok) {
+      await syncBillingFromServer()
+      return
+    }
+    lastMsg = parseErrorDetail(text)
+    if (r.status === 409 && attempt < USER_CLAIM_RETRIES - 1) {
+      await new Promise((resolve) => setTimeout(resolve, USER_CLAIM_RETRY_MS))
+      continue
+    }
+    throw new Error(lastMsg)
+  }
+  throw new Error(lastMsg)
+}
+
 /** Anonymous users: align local snapshot with GET /billing/guest-status (after load / successful job). */
 export async function syncGuestBillingFromServer(): Promise<boolean> {
   const base = apiBase()

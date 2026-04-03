@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CheckoutEventNames, initializePaddle, type Paddle } from '@paddle/paddle-js'
-import { claimGuestPaidTransaction } from './billingApi'
+import { claimGuestPaidTransaction, claimUserPaidTransaction } from './billingApi'
+import { getAccessToken } from './authStorage'
 
 /**
  * Paddle default payment link target. URL from API is this page + ?_ptxn=<transaction_id>.
@@ -60,7 +61,11 @@ export default function PayCheckoutPage() {
             if (!tx) return
             void (async () => {
               try {
-                await claimGuestPaidTransaction(tx)
+                if (getAccessToken()) {
+                  await claimUserPaidTransaction(tx)
+                } else {
+                  await claimGuestPaidTransaction(tx)
+                }
                 if (!cancelled) window.location.assign('/')
               } catch (e) {
                 console.error('[billing] guest claim', e)

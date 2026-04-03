@@ -16,6 +16,7 @@ import {
 } from './api'
 import {
   claimGuestPaidTransaction,
+  claimUserPaidTransaction,
   syncBillingFromServer,
   syncGuestBillingFromServer,
 } from './billingApi'
@@ -323,17 +324,20 @@ function App() {
     }
   }, [])
 
-  /** If Paddle returns to home with ?_ptxn=, activate guest credits without opening /pay again. */
+  /** If Paddle returns to home with ?_ptxn=, activate credits without opening /pay again. */
   useEffect(() => {
     if (!apiBase()) return
     const q = new URLSearchParams(window.location.search)
     const tx = q.get('_ptxn')?.trim()
     if (!tx?.startsWith('txn_')) return
-    if (getAccessToken()) return
     let cancelled = false
     void (async () => {
       try {
-        await claimGuestPaidTransaction(tx)
+        if (getAccessToken()) {
+          await claimUserPaidTransaction(tx)
+        } else {
+          await claimGuestPaidTransaction(tx)
+        }
         if (cancelled) return
         window.history.replaceState({}, '', `${window.location.pathname}${window.location.hash}`)
         setBillingTick((t) => t + 1)
