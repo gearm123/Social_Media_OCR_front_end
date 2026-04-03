@@ -293,6 +293,32 @@ function App() {
     })
   }, [])
 
+  /** After guest Paddle checkout, webhooks can lag; re-fetch guest entitlements a few times and on focus. */
+  useEffect(() => {
+    if (!apiBase()) return
+    const syncGuest = () => {
+      if (getAccessToken()) return
+      void syncGuestBillingFromServer().then((ok) => {
+        if (ok) setBillingTick((t) => t + 1)
+      })
+    }
+    syncGuest()
+    const timeouts = [2000, 6000, 15000].map((ms) => window.setTimeout(syncGuest, ms))
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') syncGuest()
+    }
+    const onPageShow = (e: Event) => {
+      if ((e as PageTransitionEvent).persisted) syncGuest()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('pageshow', onPageShow)
+    return () => {
+      timeouts.forEach((id) => clearTimeout(id))
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pageshow', onPageShow)
+    }
+  }, [])
+
   const shakeBillingExplainerHero = useCallback(() => {
     const el = billingExplainerHeroRef.current
     if (!el) return
