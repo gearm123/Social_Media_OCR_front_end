@@ -51,6 +51,15 @@ const PATIENCE_LINES = [
   'The more images, the more time.',
 ]
 
+/** Live overlay timer: m:ss from Process click until loading ends. */
+function formatProcessElapsed(ms: number): string {
+  const t = Math.max(0, ms)
+  const totalSec = Math.floor(t / 1000)
+  const m = Math.floor(totalSec / 60)
+  const s = totalSec % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
 function stageHeadline(stage: string | undefined, status: string): string {
   if (status === 'queued') return 'Starting…'
   if (status === 'cancelled') return 'Cancelling…'
@@ -190,6 +199,7 @@ function App() {
   const [hints, setHints] = useState<Record<string, ImageBubbleHint>>({})
   const [dragActive, setDragActive] = useState(false)
   const [processing, setProcessing] = useState(false)
+  const [processElapsedMs, setProcessElapsedMs] = useState(0)
   const [loadingPrimary, setLoadingPrimary] = useState<string | null>(null)
   const [patienceIdx, setPatienceIdx] = useState(0)
   const [jobError, setJobError] = useState<string | null>(null)
@@ -473,6 +483,19 @@ function App() {
       setPatienceIdx((i) => (i + 1) % PATIENCE_LINES.length)
     }, 4500)
     return () => clearInterval(t)
+  }, [processing])
+
+  useEffect(() => {
+    if (!processing) {
+      setProcessElapsedMs(0)
+      return
+    }
+    const started = Date.now()
+    setProcessElapsedMs(0)
+    const id = window.setInterval(() => {
+      setProcessElapsedMs(Date.now() - started)
+    }, 250)
+    return () => clearInterval(id)
   }, [processing])
 
   const apiUrlConfigured = Boolean(apiBase())
@@ -1129,11 +1152,15 @@ function App() {
           aria-busy="true"
           aria-live="polite"
           aria-labelledby="process-loading-title"
+          aria-describedby="process-loading-timer"
         >
           <div className="process-loading__panel">
             <div className="process-loading__spinner" aria-hidden />
             <p id="process-loading-title" className="process-loading__title">
               {loadingPrimary || 'Please wait…'}
+            </p>
+            <p id="process-loading-timer" className="process-loading__timer" aria-live="polite">
+              Elapsed {formatProcessElapsed(processElapsedMs)}
             </p>
             <p
               key={patienceIdx}
