@@ -397,16 +397,51 @@ function App() {
     a.click()
   }, [resultImageUrl])
 
+  const shareResultPng = useCallback(async () => {
+    if (!resultImageUrl) return
+    try {
+      const res = await fetch(resultImageUrl)
+      const blob = await res.blob()
+      const type =
+        blob.type && blob.type !== 'application/octet-stream' ? blob.type : 'image/png'
+      const file = new File([blob], 'translated_conversation.png', { type })
+      const data: ShareData = {
+        files: [file],
+        title: 'Translated conversation',
+        text: 'Translated chat screenshot',
+      }
+      if (navigator.share && navigator.canShare?.(data)) {
+        await navigator.share(data)
+        return
+      }
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
+      console.warn('[share]', e)
+    }
+    try {
+      if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+        const res = await fetch(resultImageUrl)
+        const blob = await res.blob()
+        const t = blob.type?.startsWith('image/') ? blob.type : 'image/png'
+        await navigator.clipboard.write([new ClipboardItem({ [t]: blob })])
+        return
+      }
+    } catch {
+      /* fall through to download */
+    }
+    downloadResultPng()
+  }, [resultImageUrl, downloadResultPng])
+
   const previewOpen = previewLightbox !== null
 
   useEffect(() => {
-    if (!processing && !resultExpanded && !previewOpen && !resultImageUrl) return
+    if (!processing && !resultExpanded && !previewOpen) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = prev
     }
-  }, [processing, resultExpanded, previewOpen, resultImageUrl])
+  }, [processing, resultExpanded, previewOpen])
 
   useEffect(() => {
     if (!resultExpanded && !previewOpen) return
@@ -703,68 +738,8 @@ function App() {
           </p>
         </div>
       ) : null}
-      <div className={resultImageUrl ? 'app-shell app-shell--result-solo' : 'app-shell'}>
-        <div
-          className={`app${resultImageUrl ? ' app--result-solo' : ''}`}
-        >
-          {resultImageUrl ? (
-            <div className="result-solo" aria-label="Translated chat result">
-              <div className="result-solo__toolbar">
-                <button type="button" className="btn ghost" onClick={backFromResult}>
-                  Back
-                </button>
-                <button type="button" className="btn danger-outline" onClick={clearAll}>
-                  Reset
-                </button>
-              </div>
-              <div
-                className={`billing-explainer billing-explainer--compact${hasPaidAccess ? ' billing-explainer--unlocked' : ''}${freeExhausted ? ' billing-explainer--exhausted' : ''}`}
-                aria-label="Usage and plans"
-              >
-                <div className="billing-explainer__inner">
-                  <div className="billing-explainer__copy">
-                    <span className="billing-explainer__eyebrow">Plans &amp; usage</span>
-                    <div className="billing-explainer__split">
-                      <p className="billing-explainer__split-row">
-                        <span className="billing-explainer__dim">Plan</span>
-                        {subAccess ? (
-                          <span className="billing-explainer__status billing-explainer__status--on billing-explainer__status--inline">
-                            Active
-                          </span>
-                        ) : null}
-                        <span className="billing-explainer__value">{billingCopy.planLong}</span>
-                      </p>
-                      <p className="billing-explainer__split-row">
-                        <span className="billing-explainer__dim">Usage</span>
-                        <span className="billing-explainer__value">{billingCopy.usageLong}</span>
-                      </p>
-                    </div>
-                  </div>
-                  <span className="billing-explainer__cta-row">
-                    <button
-                      type="button"
-                      className="btn btn--compact billing-explainer__cta billing-explainer__cta--pill"
-                      onClick={() => setPricingOpen(true)}
-                    >
-                      Plans
-                    </button>
-                    <InfoPopover label="Plans, free tier, and billing" align="end">
-                      <PlansUsageInfoContent />
-                    </InfoPopover>
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="result-solo__image-hit"
-                onClick={() => setResultExpanded(true)}
-                aria-label="Open full size; download available there"
-              >
-                <img src={resultImageUrl} alt="Translated conversation" />
-              </button>
-            </div>
-          ) : (
-            <>
+      <div className="app-shell">
+        <div className="app">
               <header className="hero">
                 <div className="hero-title-block">
                   <h1 className="hero-brand">
@@ -877,52 +852,83 @@ function App() {
                   </div>
                 </div>
 
-                <div className="hero-actions">
-                  <button
-                    type="button"
-                    className="btn primary"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Choose images
-                  </button>
-                  <button
-                    type="button"
-                    className="btn danger-outline"
-                    onClick={clearAll}
-                    title="Remove all images and start over"
-                  >
-                    Reset
-                  </button>
-                  <button
-                    type="button"
-                    className="btn process"
-                    disabled={
-                      files.length === 0 ||
-                      processing ||
-                      !apiUrlConfigured ||
-                      blockReason !== 'none'
-                    }
-                    title={
-                      files.length === 0
-                        ? 'Upload at least one image to process'
-                        : !apiUrlConfigured
-                          ? 'Set VITE_API_BASE_URL at build time (see notice on the right)'
-                          : blockReason === 'quota_exhausted'
-                            ? 'Monthly run quota used — open Plans or wait for renewal'
-                            : blockReason === 'free_exhausted'
-                              ? 'Free try used — open Plans to purchase or subscribe'
-                              : blockReason === 'multi_on_free'
-                                ? 'Multiple images require a plan'
-                                : 'Run translation job on the API'
-                    }
-                    onClick={() => void runProcess()}
-                  >
-                    {processing ? 'Working…' : 'Process'}
-                  </button>
+                <div
+                  className={`hero-actions${resultImageUrl ? ' hero-actions--result' : ''}`}
+                >
+                  {resultImageUrl ? (
+                    <>
+                      <button type="button" className="btn ghost" onClick={backFromResult}>
+                        Back
+                      </button>
+                      <button type="button" className="btn primary" onClick={downloadResultPng}>
+                        Download PNG
+                      </button>
+                      <button
+                        type="button"
+                        className="btn ghost"
+                        onClick={() => void shareResultPng()}
+                        title="Share the image via your device (Messages, social apps, AirDrop, etc.). If sharing is not available, the image may copy to clipboard or download instead."
+                      >
+                        Share
+                      </button>
+                      <button
+                        type="button"
+                        className="btn danger-outline"
+                        onClick={clearAll}
+                        title="Clear the result and all uploads"
+                      >
+                        Start over
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="btn primary"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        Choose images
+                      </button>
+                      <button
+                        type="button"
+                        className="btn danger-outline"
+                        onClick={clearAll}
+                        title="Remove all images and start over"
+                      >
+                        Reset
+                      </button>
+                      <button
+                        type="button"
+                        className="btn process"
+                        disabled={
+                          files.length === 0 ||
+                          processing ||
+                          !apiUrlConfigured ||
+                          blockReason !== 'none'
+                        }
+                        title={
+                          files.length === 0
+                            ? 'Upload at least one image to process'
+                            : !apiUrlConfigured
+                              ? 'Set VITE_API_BASE_URL at build time (see notice on the right)'
+                              : blockReason === 'quota_exhausted'
+                                ? 'Monthly run quota used — open Plans or wait for renewal'
+                                : blockReason === 'free_exhausted'
+                                  ? 'Free try used — open Plans to purchase or subscribe'
+                                  : blockReason === 'multi_on_free'
+                                    ? 'Multiple images require a plan'
+                                    : 'Run translation job on the API'
+                        }
+                        onClick={() => void runProcess()}
+                      >
+                        {processing ? 'Working…' : 'Process'}
+                      </button>
+                    </>
+                  )}
                 </div>
               </header>
 
-              <div ref={jobIssuesRef} className="job-issues">
+          <div ref={jobIssuesRef} className="job-issues">
             {jobError ? (
               <p className="job-status job-status--error" role="alert">
                 {jobError}
@@ -930,13 +936,29 @@ function App() {
             ) : null}
           </div>
 
-          <div className={`upload-slot${files.length > 0 ? ' upload-slot--filled' : ''}`}>
+          <div
+            className={`upload-slot${
+              files.length > 0 || resultImageUrl ? ' upload-slot--filled' : ''
+            }`}
+          >
             <div
-              className={`drop-zone${dragActive ? ' drop-zone--active' : ''}${
-                files.length > 0 ? ' drop-zone--has-files' : ''
+              className={`drop-zone${dragActive && !resultImageUrl ? ' drop-zone--active' : ''}${
+                resultImageUrl ? ' drop-zone--has-result' : files.length > 0 ? ' drop-zone--has-files' : ''
               }`}
             >
-              {files.length === 0 ? (
+              {resultImageUrl ? (
+                <div className="drop-zone__result" aria-label="Translated chat result">
+                  <button
+                    type="button"
+                    className="drop-zone__result-expand"
+                    onClick={() => setResultExpanded(true)}
+                    aria-label="Expand translated result to full screen"
+                  >
+                    <img src={resultImageUrl} alt="Translated conversation" />
+                  </button>
+                  <p className="drop-zone__result-hint">Click the image to view full size</p>
+                </div>
+              ) : files.length === 0 ? (
                 <div className="drop-zone__inner">
                   <p className="drop-zone__title">Drag &amp; drop zone</p>
                   <p className="drop-zone__hint">
@@ -1076,8 +1098,6 @@ function App() {
             multiple={multiUploadAllowed}
             onChange={(e) => onPickFiles(e.target.files)}
           />
-            </>
-          )}
         </div>
       </div>
 
@@ -1149,17 +1169,27 @@ function App() {
             onClick={() => setResultExpanded(false)}
           />
           <div className="result-lightbox__chrome">
-            <div className="result-lightbox__toolbar">
-              <button type="button" className="btn ghost btn--compact" onClick={downloadResultPng}>
-                Download PNG
-              </button>
-              <button
-                type="button"
-                className="btn primary btn--compact"
-                onClick={() => setResultExpanded(false)}
-              >
-                Close
-              </button>
+            <div className="result-lightbox__toolbar result-lightbox__toolbar--split">
+              <span className="result-lightbox__heading">Translated result</span>
+              <div className="result-lightbox__toolbar-actions">
+                <button type="button" className="btn ghost btn--compact" onClick={downloadResultPng}>
+                  Download PNG
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost btn--compact"
+                  onClick={() => void shareResultPng()}
+                >
+                  Share
+                </button>
+                <button
+                  type="button"
+                  className="btn primary btn--compact"
+                  onClick={() => setResultExpanded(false)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
             <div className="result-lightbox__stage">
               <img src={resultImageUrl} alt="Translated conversation full size" />

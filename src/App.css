@@ -46,80 +46,14 @@
   align-items: stretch;
 }
 
-.app-shell--result-solo {
-  align-items: stretch;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-/* After a successful run: only the result image + Back / Reset (no upload UI). */
-.result-solo {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
-  min-width: 0;
-}
-
-.result-solo__toolbar {
-  flex-shrink: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.65rem;
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(255, 255, 255, 0.92);
-}
-
-@media (prefers-color-scheme: dark) {
-  .result-solo__toolbar {
-    background: rgba(30, 41, 59, 0.92);
-    border-bottom-color: rgba(148, 163, 184, 0.15);
-  }
-}
-
-.result-solo__image-hit {
-  flex: 1;
-  min-height: 0;
-  margin: 0;
-  padding: 0.75rem 1rem 1.25rem;
-  border: none;
-  background: transparent;
-  cursor: zoom-in;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0;
-}
-
-.result-solo__image-hit:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.result-solo__image-hit img {
-  display: block;
-  max-width: 100%;
-  width: auto;
-  height: auto;
-  max-height: calc(100vh - 5.5rem);
-  object-fit: contain;
-  border-radius: 12px;
-  box-shadow: 0 12px 48px rgba(15, 23, 42, 0.15);
-}
-
-@media (prefers-color-scheme: dark) {
-  .result-solo__image-hit img {
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
-  }
-}
-
+/* Main card: flex column so the drop zone (or previews / result) fills remaining height. */
 .app {
   width: 100%;
   max-width: 56rem;
-  padding: 0.85rem 1.25rem 0.9rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  padding-top: clamp(0.9rem, 2.4vh, 1.85rem);
+  padding-bottom: clamp(0.85rem, 2vh, 1.5rem);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(255, 255, 255, 0.65);
@@ -129,42 +63,12 @@
   backdrop-filter: blur(16px) saturate(1.2);
   -webkit-backdrop-filter: blur(16px) saturate(1.2);
   box-sizing: border-box;
-}
-
-/* Fill viewport height; let the drop zone (or previews) absorb extra space at the bottom. */
-.app:not(.app--result-solo) {
   display: flex;
   flex-direction: column;
   min-height: 0;
   max-height: 100%;
   flex: 1 1 auto;
   overflow: hidden;
-  padding-top: clamp(0.9rem, 2.4vh, 1.85rem);
-  padding-bottom: clamp(0.85rem, 2vh, 1.5rem);
-}
-
-.app--result-solo {
-  max-width: none;
-  width: 100%;
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: 100%;
-  overflow: hidden;
-  padding: 0;
-  border-radius: 0;
-  border: none;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  background: rgba(255, 255, 255, 0.78);
-  display: flex;
-  flex-direction: column;
-}
-
-@media (prefers-color-scheme: dark) {
-  .app--result-solo {
-    background: rgba(15, 23, 42, 0.75);
-  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -726,6 +630,83 @@
   }
 }
 
+/* Translated image lives in the slot; tap opens the full-screen lightbox. */
+.drop-zone--has-result {
+  --drop-result-cap: min(40vh, 360px);
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  background: color-mix(in srgb, var(--surface-2) 40%, rgba(255, 255, 255, 0.35));
+}
+
+@media (min-width: 720px) {
+  .drop-zone--has-result {
+    --drop-result-cap: min(42vh, 400px);
+  }
+}
+
+.drop-zone__result {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  width: 100%;
+  padding: 0.5rem 0.65rem 0.65rem;
+  box-sizing: border-box;
+  gap: 0.35rem;
+}
+
+.drop-zone__result-expand {
+  margin: 0;
+  padding: 0.25rem;
+  border: none;
+  border-radius: 12px;
+  background: var(--surface-2);
+  cursor: zoom-in;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 0 0 0 1px var(--border),
+    0 8px 28px rgba(15, 23, 42, 0.1);
+  transition: box-shadow 0.15s ease;
+}
+
+.drop-zone__result-expand:hover {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, var(--border)),
+    0 10px 32px rgba(15, 23, 42, 0.12);
+}
+
+.drop-zone__result-expand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.drop-zone__result-expand img {
+  display: block;
+  max-width: 100%;
+  max-height: var(--drop-result-cap);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  vertical-align: top;
+}
+
+.drop-zone__result-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.hero-actions--result {
+  justify-content: center;
+}
+
 @media (prefers-color-scheme: dark) {
   .drop-zone {
     background: rgba(30, 41, 59, 0.45);
@@ -841,19 +822,19 @@
 }
 
 /* After upload, reclaim a few vertical pixels so the main column fits common viewports without body scroll. */
-.app:not(.app--result-solo):has(.upload-slot--filled) {
+.app:has(.upload-slot--filled) {
   padding-bottom: clamp(0.55rem, 1.2vh, 1rem);
 }
 
-.app:not(.app--result-solo):has(.upload-slot--filled) .hero {
+.app:has(.upload-slot--filled) .hero {
   margin-bottom: clamp(0.4rem, 1.2vh, 0.85rem);
 }
 
-.app:not(.app--result-solo):has(.upload-slot--filled) .hero-title-block {
+.app:has(.upload-slot--filled) .hero-title-block {
   margin: 0 auto clamp(0.5rem, 2vh, 1.35rem);
 }
 
-.app:not(.app--result-solo):has(.upload-slot--filled) .hero-actions {
+.app:has(.upload-slot--filled) .hero-actions {
   margin-top: clamp(0.45rem, 1.4vh, 0.9rem);
 }
 
@@ -1703,6 +1684,25 @@
 
 .result-lightbox__toolbar--split {
   justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.result-lightbox__heading {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.95);
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+.result-lightbox__toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
   align-items: center;
 }
 
