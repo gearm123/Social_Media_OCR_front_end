@@ -38,6 +38,8 @@ export async function fetchHealth(): Promise<{ ok: boolean }> {
 export type CreateJobOptions = {
   bubbleSummaryText?: string | null
   language?: string | null
+  /** Abort upload/create request (e.g. user clicked Cancel before job_id exists). */
+  signal?: AbortSignal
 }
 
 export async function createJob(
@@ -63,12 +65,15 @@ export async function createJob(
   const controller = new AbortController()
   const timeoutMs = 120_000
   const tid = setTimeout(() => controller.abort(), timeoutMs)
+  const uploadSignal = options?.signal
+  const combinedSignal =
+    uploadSignal != null ? AbortSignal.any([controller.signal, uploadSignal]) : controller.signal
   let r: Response
   try {
     r = await fetch(`${base}/jobs`, {
       method: 'POST',
       body: fd,
-      signal: controller.signal,
+      signal: combinedSignal,
       headers: jobRequestHeaders(),
     })
   } catch (e) {
@@ -117,6 +122,20 @@ export async function getJob(jobId: string): Promise<JobStatusResponse> {
   return r.json() as Promise<JobStatusResponse>
 }
 
+/** Request cooperative cancel; the worker stops at the next stage boundary. */
+export async function cancelJob(jobId: string): Promise<void> {
+  const base = apiBase()
+  if (!base) throw new Error('VITE_API_BASE_URL is not set')
+  const r = await fetch(`${base}/jobs/${encodeURIComponent(jobId)}/cancel`, {
+    method: 'POST',
+    headers: jobRequestHeaders(),
+  })
+  if (r.ok) return
+  if (r.status === 409) return
+  const t = await r.text()
+  throw new Error(`Cancel job failed: ${r.status} ${t}`)
+}
+
 const POLL_MS = 2000
 const MAX_POLLS = 360
 
@@ -128,7 +147,7 @@ export async function waitForJob(
   for (let i = 0; i < MAX_POLLS; i++) {
     const j = await getJob(jobId)
     onPoll?.(j)
-    if (j.status === 'completed' || j.status === 'failed') {
+    if (j.status === 'completed' || j.status === 'failed' || j.status === 'cancelled') {
       return j
     }
     await new Promise((r) => setTimeout(r, POLL_MS))

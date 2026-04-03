@@ -1637,6 +1637,28 @@
   }
 }
 
+.process-loading__cancel {
+  margin-top: 1.15rem;
+  width: 100%;
+  justify-content: center;
+  font-size: 0.84rem;
+  font-weight: 650;
+  border-color: color-mix(in srgb, var(--err, #b91c1c) 35%, var(--border));
+  color: color-mix(in srgb, var(--err, #b91c1c) 88%, var(--text));
+}
+
+.process-loading__cancel:hover {
+  border-color: color-mix(in srgb, var(--err, #b91c1c) 55%, var(--border));
+  background: color-mix(in srgb, var(--err, #b91c1c) 10%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  .process-loading__cancel {
+    border-color: color-mix(in srgb, var(--err, #f87171) 40%, var(--border));
+    color: color-mix(in srgb, var(--err, #f87171) 95%, #fff);
+  }
+}
+
 /* Expanded result (lightbox) */
 .result-lightbox {
   position: fixed;

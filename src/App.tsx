@@ -6,7 +6,7 @@ import {
   type ImageBubbleHint,
 } from './bubbleSummary'
 import { AuthModal } from './AuthModal'
-import { apiBase, createJob, fetchArtifact, waitForJob } from './api'
+import { apiBase, cancelJob, createJob, fetchArtifact, waitForJob } from './api'
 import { syncBillingFromServer, syncGuestBillingFromServer } from './billingApi'
 import { fetchMe, type UserMe } from './authApi'
 import { clearSession, getAccessToken } from './authStorage'
@@ -53,6 +53,7 @@ const PATIENCE_LINES = [
 
 function stageHeadline(stage: string | undefined, status: string): string {
   if (status === 'queued') return 'Starting…'
+  if (status === 'cancelled') return 'Cancelling…'
   if (status === 'completed') return 'Wrapping up…'
   switch (stage) {
     case 'starting':
@@ -178,6 +179,9 @@ function App() {
   const inputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const jobIssuesRef = useRef<HTMLDivElement>(null)
+  const activeJobIdRef = useRef<string | null>(null)
+  const uploadAbortRef = useRef<AbortController | null>(null)
+  const executionCancelledRef = useRef(false)
   /** Captured when Process starts so Back restores hints exactly as before that run. */
   const preProcessSnapshotRef = useRef<Record<string, ImageBubbleHint> | null>(null)
 
@@ -481,6 +485,17 @@ function App() {
     return { planLong, usageLong }
   }, [billing, signedIn, subAccess, quotaStuck])
 
+  const cancelExecution = useCallback(() => {
+    executionCancelledRef.current = true
+    uploadAbortRef.current?.abort()
+    const id = activeJobIdRef.current
+    if (id) {
+      void cancelJob(id).catch(() => {
+        /* network / already finished */
+      })
+    }
+  }, [])
+
   const runProcess = async () => {
     if (files.length === 0) return
     const snap = readBillingSnapshot()
@@ -498,6 +513,9 @@ function App() {
       )
       return
     }
+    executionCancelledRef.current = false
+    activeJobIdRef.current = null
+    uploadAbortRef.current = new AbortController()
     setProcessing(true)
     setResultExpanded(false)
     setPreviewLightbox(null)
@@ -510,12 +528,19 @@ function App() {
     })
     try {
       const bubbleSummaryText = buildPass1BubbleSummaryText(files, hints)
-      const created = await createJob(files, { bubbleSummaryText })
+      const created = await createJob(files, {
+        bubbleSummaryText,
+        signal: uploadAbortRef.current.signal,
+      })
       const jobId = created.job_id
       if (!jobId) throw new Error('No job_id in response')
+      activeJobIdRef.current = jobId
       const done = await waitForJob(jobId, (j) => {
         setLoadingPrimary(stageHeadline(j.stage, j.status))
       })
+      if (done.status === 'cancelled') {
+        return
+      }
       if (done.status === 'failed') {
         const msg = done.error || 'Pipeline failed'
         const tail = done.traceback ? `\n\n${String(done.traceback).slice(0, 800)}` : ''
@@ -544,11 +569,18 @@ function App() {
       }
       setBillingTick((t) => t + 1)
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      console.error('[Process]', e)
-      setJobError(msg)
-      setLoadingPrimary(null)
+      if (executionCancelledRef.current) {
+        setJobError(null)
+        setLoadingPrimary(null)
+      } else {
+        const msg = e instanceof Error ? e.message : String(e)
+        console.error('[Process]', e)
+        setJobError(msg)
+        setLoadingPrimary(null)
+      }
     } finally {
+      activeJobIdRef.current = null
+      uploadAbortRef.current = null
       setProcessing(false)
     }
   }
@@ -1060,6 +1092,13 @@ function App() {
             >
               {PATIENCE_LINES[patienceIdx]}
             </p>
+            <button
+              type="button"
+              className="btn ghost process-loading__cancel"
+              onClick={cancelExecution}
+            >
+              Cancel execution
+            </button>
           </div>
         </div>
       ) : null}
