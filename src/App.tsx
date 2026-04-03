@@ -7,6 +7,7 @@ import {
 } from './bubbleSummary'
 import { AuthModal } from './AuthModal'
 import { apiBase, createJob, fetchArtifact, waitForJob } from './api'
+import { syncBillingFromServer, syncGuestBillingFromServer } from './billingApi'
 import { fetchMe, type UserMe } from './authApi'
 import { clearSession, getAccessToken } from './authStorage'
 import { fileKey } from './fileUtils'
@@ -17,10 +18,12 @@ import {
   FREE_RUNS_MAX,
   canMultiImageUpload,
   freeRunsRemaining,
+  hasSubscriptionAccess,
   processBlockReason,
   readBillingSnapshot,
   recordSuccessfulJob,
-  unlimitedActive,
+  subscriptionPeriodActive,
+  subscriptionRunsRemaining,
 } from './billingStorage'
 import { PaywallModal } from './PaywallModal'
 import { PricingModal } from './PricingModal'
@@ -118,7 +121,9 @@ function App() {
   const [billingTick, setBillingTick] = useState(0)
   const [pricingOpen, setPricingOpen] = useState(false)
   const [paywallOpen, setPaywallOpen] = useState(false)
-  const [paywallReason, setPaywallReason] = useState<'free_exhausted' | 'multi_on_free'>('free_exhausted')
+  const [paywallReason, setPaywallReason] = useState<
+    'free_exhausted' | 'multi_on_free' | 'quota_exhausted'
+  >('free_exhausted')
   const [uploadBillingNotice, setUploadBillingNotice] = useState<string | null>(null)
 
   const billing = useMemo(() => readBillingSnapshot(), [billingTick])
@@ -127,10 +132,23 @@ function App() {
     const t = getAccessToken()
     if (!t) {
       setAuthUser(null)
+      if (apiBase()) {
+        void syncGuestBillingFromServer()
+          .then(() => setBillingTick((x) => x + 1))
+          .catch(() => {
+            /* optional */
+          })
+      }
       return
     }
     void fetchMe()
-      .then(setAuthUser)
+      .then((u) => {
+        setAuthUser(u)
+        return syncBillingFromServer().catch(() => {
+          /* billing endpoint optional; stay signed in */
+        })
+      })
+      .then(() => setBillingTick((x) => x + 1))
       .catch(() => {
         clearSession()
         setAuthUser(null)
@@ -331,7 +349,7 @@ function App() {
     if (files.length === 0) return
     const snap = readBillingSnapshot()
     const br = processBlockReason(snap, files.length)
-    if (br === 'free_exhausted' || br === 'multi_on_free') {
+    if (br === 'free_exhausted' || br === 'multi_on_free' || br === 'quota_exhausted') {
       setPaywallReason(br)
       setPaywallOpen(true)
       return
@@ -374,7 +392,20 @@ function App() {
       const url = URL.createObjectURL(blob)
       setResultImageUrl(url)
       setLoadingPrimary(null)
-      recordSuccessfulJob()
+      if (getAccessToken()) {
+        try {
+          await syncBillingFromServer()
+        } catch (e) {
+          console.warn('[billing sync]', e)
+        }
+      } else {
+        try {
+          await syncGuestBillingFromServer()
+        } catch (e) {
+          console.warn('[guest billing sync]', e)
+          recordSuccessfulJob()
+        }
+      }
       setBillingTick((t) => t + 1)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -394,8 +425,14 @@ function App() {
   }, [])
 
   const multiUploadAllowed = canMultiImageUpload(billing)
-  const hasPaidAccess = unlimitedActive(billing) || billing.paidJobCredits > 0
-  const freeExhausted = !hasPaidAccess && billing.freeRunsUsed >= FREE_RUNS_MAX
+  const planUnlocked = hasSubscriptionAccess(billing) || billing.paidJobCredits > 0
+  const subscriptionStuck =
+    subscriptionPeriodActive(billing) &&
+    !hasSubscriptionAccess(billing) &&
+    billing.paidJobCredits <= 0
+  const hasPaidAccess = planUnlocked
+  const freeExhausted =
+    !planUnlocked && !subscriptionStuck && billing.freeRunsUsed >= FREE_RUNS_MAX
   const freeLeft = freeRunsRemaining(billing)
   const proUntil = billing.unlimitedUntil
     ? new Date(billing.unlimitedUntil).toLocaleDateString(undefined, {
@@ -420,9 +457,14 @@ function App() {
   return (
     <>
       <div className="app-billing-strip" aria-label="Usage and plans">
-        {unlimitedActive(billing) && proUntil ? (
+        {subscriptionStuck && proUntil ? (
           <span className="app-billing-strip__text" title={billing.unlimitedUntil ?? undefined}>
-            Pro until {proUntil}
+            Plan · monthly quota used · renews {proUntil}
+          </span>
+        ) : subscriptionPeriodActive(billing) && planUnlocked && proUntil ? (
+          <span className="app-billing-strip__text" title={billing.unlimitedUntil ?? undefined}>
+            Plan · {subscriptionRunsRemaining(billing)}/{billing.subscriptionRunsCap ?? 7} runs left this month ·
+            renews {proUntil}
           </span>
         ) : billing.paidJobCredits > 0 ? (
           <span className="app-billing-strip__text">
@@ -543,8 +585,13 @@ function App() {
                           <span className="billing-explainer__sep" aria-hidden>
                             ·
                           </span>
-                          {unlimitedActive(billing) ? (
-                            <span>Multi-image &amp; unlimited</span>
+                          {hasSubscriptionAccess(billing) ? (
+                            <span>
+                              Multi-image · {subscriptionRunsRemaining(billing)}/
+                              {billing.subscriptionRunsCap ?? 7} runs this month
+                            </span>
+                          ) : subscriptionStuck ? (
+                            <span>Monthly quota used — credits or next month</span>
                           ) : (
                             <span>{billing.paidJobCredits} credit{billing.paidJobCredits === 1 ? '' : 's'}</span>
                           )}
@@ -615,10 +662,17 @@ function App() {
                             <span className="billing-explainer__sep" aria-hidden>
                               ·
                             </span>
-                            {unlimitedActive(billing) ? (
-                              <span>Unlimited &amp; multi-image</span>
+                            {hasSubscriptionAccess(billing) ? (
+                              <span>
+                                Multi-image · {subscriptionRunsRemaining(billing)}/
+                                {billing.subscriptionRunsCap ?? 7} runs this month
+                              </span>
+                            ) : subscriptionStuck ? (
+                              <span>Monthly quota used — open Plans for credits</span>
                             ) : (
-                              <span>{billing.paidJobCredits} full run credit{billing.paidJobCredits === 1 ? '' : 's'}</span>
+                              <span>
+                                {billing.paidJobCredits} full run credit{billing.paidJobCredits === 1 ? '' : 's'}
+                              </span>
                             )}
                           </>
                         ) : freeExhausted ? (

@@ -1,19 +1,22 @@
 /**
- * Client-side billing preview (localStorage). Backend + real payments will replace this later.
- * Free tier: 3 successful runs, 1 image each. Paid: subscriptions = unlimited; "single" = 1 multi-image job credit.
+ * Billing snapshot: synced from GET /billing/me when signed in, else local defaults.
  */
 
-export const FREE_RUNS_MAX = 3
+/** Must match backend ``USER_FREE_RUNS_MAX`` / guest messaging (currently 1 free single-image run). */
+export const FREE_RUNS_MAX = 1
 
 const STORAGE_KEY = 'translate_chat_billing_v1'
 
 export type BillingSnapshot = {
   freeRunsUsed: number
+  /** Paddle subscription period end (access_until). Quota resets each calendar month while this is in the future. */
   unlimitedUntil: string | null
   paidJobCredits: number
+  subscriptionRunsCap: number
+  subscriptionRunsUsedThisMonth: number
 }
 
-export type PricingPlanId = 'single' | 'day' | 'month' | 'sixmo'
+export type PricingPlanId = 'single' | 'debug' | 'month' | 'sixmo' | 'year'
 
 export type PricingPlan = {
   id: PricingPlanId
@@ -25,45 +28,83 @@ export type PricingPlan = {
   featured?: boolean
 }
 
-/** Shown in UI — adjust when you connect real checkout. */
 export const PRICING_PLANS: PricingPlan[] = [
   {
     id: 'single',
     name: 'Single full run',
-    priceUsd: 4.99,
-    priceLabel: '$4.99',
+    priceUsd: 2.99,
+    priceLabel: '$2.99',
     periodHint: 'one-time',
-    blurb: 'One full translation with multiple screenshots in a single job — good to try the full pipeline.',
+    blurb: 'One multi-image job. No subscription.',
   },
   {
-    id: 'day',
-    name: 'Day pass',
-    priceUsd: 7.99,
-    priceLabel: '$7.99',
-    periodHint: '24 hours',
-    blurb: 'Unlimited jobs and multi-image uploads for 24 hours.',
+    id: 'debug',
+    name: 'Debug (test)',
+    priceUsd: 0.1,
+    priceLabel: '$0.10',
+    periodHint: 'one-time',
+    blurb: 'Cheap live checkout test — grants one full-run credit like Single. Use before wider launch.',
   },
   {
     id: 'month',
     name: 'Monthly',
-    priceUsd: 16.99,
-    priceLabel: '$16.99',
+    priceUsd: 8,
+    priceLabel: '$8',
     periodHint: 'per month',
-    blurb: 'Unlimited use for a month. Best for regular chat exports.',
+    blurb: 'Recurring monthly. Included runs per calendar month, then wait or buy a single run.',
     featured: true,
   },
   {
     id: 'sixmo',
     name: '6 months',
-    priceUsd: 79.99,
-    priceLabel: '$79.99',
+    priceUsd: 36,
+    priceLabel: '$36',
     periodHint: 'every 6 months',
-    blurb: 'Save vs monthly — unlimited translations for half a year.',
+    blurb: '$6/mo effective — billed $36 every six months. Same monthly run quota.',
+  },
+  {
+    id: 'year',
+    name: 'Annual',
+    priceUsd: 48,
+    priceLabel: '$48',
+    periodHint: 'per year',
+    blurb: '$4/mo effective — full year charged upfront, renews yearly. Same monthly run quota.',
   },
 ]
 
+/**
+ * Plans shown in the pricing UI. Debug is listed first while visible so checkout is easy to test.
+ * Set `VITE_SHOW_DEBUG_PRICE=false` before production builds to hide the debug tier.
+ */
+export function getVisiblePricingPlans(): PricingPlan[] {
+  const hideDebug = import.meta.env.VITE_SHOW_DEBUG_PRICE === 'false'
+  const list = hideDebug ? PRICING_PLANS.filter((p) => p.id !== 'debug') : [...PRICING_PLANS]
+  if (!hideDebug) {
+    const debug = list.find((p) => p.id === 'debug')
+    const rest = list.filter((p) => p.id !== 'debug')
+    if (debug) return [debug, ...rest]
+  }
+  return list
+}
+
+export type BillingMeResponse = {
+  access_until: string | null
+  subscription_active?: boolean
+  subscription_runs_cap: number
+  subscription_runs_used_this_month: number
+  subscription_runs_remaining: number
+  paid_job_credits: number
+  free_runs_used: number
+}
+
 function defaultSnapshot(): BillingSnapshot {
-  return { freeRunsUsed: 0, unlimitedUntil: null, paidJobCredits: 0 }
+  return {
+    freeRunsUsed: 0,
+    unlimitedUntil: null,
+    paidJobCredits: 0,
+    subscriptionRunsCap: 7,
+    subscriptionRunsUsedThisMonth: 0,
+  }
 }
 
 export function readBillingSnapshot(): BillingSnapshot {
@@ -75,13 +116,15 @@ export function readBillingSnapshot(): BillingSnapshot {
       freeRunsUsed: Math.min(FREE_RUNS_MAX, Math.max(0, Number(j.freeRunsUsed) || 0)),
       unlimitedUntil: typeof j.unlimitedUntil === 'string' ? j.unlimitedUntil : null,
       paidJobCredits: Math.max(0, Number(j.paidJobCredits) || 0),
+      subscriptionRunsCap: Math.max(1, Number(j.subscriptionRunsCap) || 7),
+      subscriptionRunsUsedThisMonth: Math.max(0, Number(j.subscriptionRunsUsedThisMonth) || 0),
     }
   } catch {
     return defaultSnapshot()
   }
 }
 
-function writeSnapshot(s: BillingSnapshot): void {
+export function writeSnapshot(s: BillingSnapshot): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s))
   } catch {
@@ -89,62 +132,101 @@ function writeSnapshot(s: BillingSnapshot): void {
   }
 }
 
-export function unlimitedActive(s: BillingSnapshot): boolean {
+/** Subscription paid through this instant (Paddle access_until). */
+export function subscriptionPeriodActive(s: BillingSnapshot): boolean {
   if (!s.unlimitedUntil) return false
   const t = new Date(s.unlimitedUntil).getTime()
   return Number.isFinite(t) && t > Date.now()
 }
 
-/** Multi-image uploads + unlimited runs (subscription / day pass). */
-export function hasUnlimitedAccess(s: BillingSnapshot): boolean {
-  return unlimitedActive(s)
+export function subscriptionRunsRemaining(s: BillingSnapshot): number {
+  if (!subscriptionPeriodActive(s)) return 0
+  const cap = s.subscriptionRunsCap ?? 7
+  const used = s.subscriptionRunsUsedThisMonth ?? 0
+  return Math.max(0, cap - used)
 }
 
-/** Can upload more than one image in one job. */
+/** Active subscription with at least one run left this month. */
+export function hasSubscriptionAccess(s: BillingSnapshot): boolean {
+  return subscriptionPeriodActive(s) && subscriptionRunsRemaining(s) > 0
+}
+
+/** @deprecated use subscriptionPeriodActive */
+export function unlimitedActive(s: BillingSnapshot): boolean {
+  return subscriptionPeriodActive(s)
+}
+
+export function hasUnlimitedAccess(s: BillingSnapshot): boolean {
+  return hasSubscriptionAccess(s)
+}
+
 export function canMultiImageUpload(s: BillingSnapshot): boolean {
-  return unlimitedActive(s) || s.paidJobCredits > 0
+  return s.paidJobCredits > 0 || hasSubscriptionAccess(s)
 }
 
 export function freeRunsRemaining(s: BillingSnapshot): number {
   return Math.max(0, FREE_RUNS_MAX - s.freeRunsUsed)
 }
 
-/**
- * Whether the user may start a job with the current file count.
- */
 export function canStartProcess(s: BillingSnapshot, fileCount: number): boolean {
   if (fileCount < 1) return false
-  if (unlimitedActive(s)) return true
+  if (hasSubscriptionAccess(s)) return true
   if (s.paidJobCredits > 0) return true
   return s.freeRunsUsed < FREE_RUNS_MAX && fileCount === 1
 }
 
-export function processBlockReason(
-  s: BillingSnapshot,
-  fileCount: number,
-): 'none' | 'no_files' | 'multi_on_free' | 'free_exhausted' {
+export type ProcessBlockReason =
+  | 'none'
+  | 'no_files'
+  | 'multi_on_free'
+  | 'free_exhausted'
+  | 'quota_exhausted'
+
+export function processBlockReason(s: BillingSnapshot, fileCount: number): ProcessBlockReason {
   if (fileCount < 1) return 'no_files'
-  if (unlimitedActive(s) || s.paidJobCredits > 0) return 'none'
+  if (subscriptionPeriodActive(s) && subscriptionRunsRemaining(s) <= 0 && s.paidJobCredits <= 0) {
+    return 'quota_exhausted'
+  }
+  if (hasSubscriptionAccess(s) || s.paidJobCredits > 0) return 'none'
   if (fileCount > 1) return 'multi_on_free'
   if (s.freeRunsUsed >= FREE_RUNS_MAX) return 'free_exhausted'
   return 'none'
 }
 
-/** Call after a successful pipeline result (frontend-only accounting). */
-export function recordSuccessfulJob(): BillingSnapshot {
-  const s = readBillingSnapshot()
-  if (unlimitedActive(s)) return s
-  if (s.paidJobCredits > 0) {
-    const next = { ...s, paidJobCredits: s.paidJobCredits - 1 }
-    writeSnapshot(next)
-    return next
+export function billingMeToSnapshot(me: BillingMeResponse): BillingSnapshot {
+  return {
+    freeRunsUsed: me.free_runs_used,
+    unlimitedUntil: me.access_until,
+    paidJobCredits: me.paid_job_credits,
+    subscriptionRunsCap: Math.max(1, me.subscription_runs_cap || 7),
+    subscriptionRunsUsedThisMonth: Math.max(0, me.subscription_runs_used_this_month || 0),
   }
-  const next = { ...s, freeRunsUsed: Math.min(FREE_RUNS_MAX, s.freeRunsUsed + 1) }
+}
+
+export function applySnapshotFromServer(me: BillingMeResponse): BillingSnapshot {
+  const next = billingMeToSnapshot(me)
   writeSnapshot(next)
   return next
 }
 
-/** Preview checkout: applies plan locally until real payment integration. */
+/** Apply GET /billing/guest-status for anonymous users (server is source of truth). */
+export function applyGuestSnapshotFromServer(g: {
+  free_runs_used: number
+  paid_job_credits: number
+  free_runs_max?: number
+}): BillingSnapshot {
+  const cap = Math.max(1, Number(g.free_runs_max) || FREE_RUNS_MAX)
+  const s = readBillingSnapshot()
+  const next: BillingSnapshot = {
+    ...s,
+    freeRunsUsed: Math.min(cap, Math.max(0, Number(g.free_runs_used) || 0)),
+    paidJobCredits: Math.max(0, Number(g.paid_job_credits) || 0),
+  }
+  writeSnapshot(next)
+  return next
+}
+
+/** Local-only preview when API unavailable (not used for enforced billing). */
 export function applyMockPurchase(planId: PricingPlanId): BillingSnapshot {
   const s = readBillingSnapshot()
   const now = Date.now()
@@ -152,24 +234,28 @@ export function applyMockPurchase(planId: PricingPlanId): BillingSnapshot {
 
   switch (planId) {
     case 'single':
+    case 'debug':
       next = { ...next, paidJobCredits: next.paidJobCredits + 1 }
-      break
-    case 'day':
-      next = {
-        ...next,
-        unlimitedUntil: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
-      }
       break
     case 'month':
       next = {
         ...next,
-        unlimitedUntil: new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        unlimitedUntil: new Date(now + 32 * 24 * 60 * 60 * 1000).toISOString(),
+        subscriptionRunsUsedThisMonth: 0,
       }
       break
     case 'sixmo':
       next = {
         ...next,
-        unlimitedUntil: new Date(now + 183 * 24 * 60 * 60 * 1000).toISOString(),
+        unlimitedUntil: new Date(now + 186 * 24 * 60 * 60 * 1000).toISOString(),
+        subscriptionRunsUsedThisMonth: 0,
+      }
+      break
+    case 'year':
+      next = {
+        ...next,
+        unlimitedUntil: new Date(now + 370 * 24 * 60 * 60 * 1000).toISOString(),
+        subscriptionRunsUsedThisMonth: 0,
       }
       break
     default:
@@ -182,4 +268,18 @@ export function applyMockPurchase(planId: PricingPlanId): BillingSnapshot {
 
 export function resetBillingPreview(): void {
   writeSnapshot(defaultSnapshot())
+}
+
+/** Guest / offline: bump local usage after a successful job (signed-in users should sync from server). */
+export function recordSuccessfulJob(): BillingSnapshot {
+  const s = readBillingSnapshot()
+  if (hasSubscriptionAccess(s)) return s
+  if (s.paidJobCredits > 0) {
+    const next = { ...s, paidJobCredits: s.paidJobCredits - 1 }
+    writeSnapshot(next)
+    return next
+  }
+  const next = { ...s, freeRunsUsed: Math.min(FREE_RUNS_MAX, s.freeRunsUsed + 1) }
+  writeSnapshot(next)
+  return next
 }

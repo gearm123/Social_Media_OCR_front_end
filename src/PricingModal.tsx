@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { startBillingCheckout } from './billingApi'
-import { PRICING_PLANS, type PricingPlanId } from './billingStorage'
+import { useEffect, useMemo, useState } from 'react'
+import { fetchBillingStatus, startBillingCheckout, type BillingStatusResponse } from './billingApi'
+import { getVisiblePricingPlans, type PricingPlanId } from './billingStorage'
 
 type Props = {
   open: boolean
@@ -8,15 +8,34 @@ type Props = {
   onApplied: () => void
 }
 
+function planSelectable(id: PricingPlanId, status: BillingStatusResponse | null | undefined): boolean {
+  if (status == null) return true
+  if (status.paddle_configured === false) return false
+  if (status.prices && id in status.prices && status.prices[id] === false) return false
+  return true
+}
+
 export function PricingModal({ open, onClose, onApplied: _onApplied }: Props) {
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [billingStatus, setBillingStatus] = useState<BillingStatusResponse | null>(null)
+
+  const visiblePlans = useMemo(() => getVisiblePricingPlans(), [])
 
   useEffect(() => {
     if (open) {
       setCheckoutError(null)
       setCheckoutLoading(false)
+      let cancelled = false
+      void fetchBillingStatus().then((s) => {
+        if (!cancelled) setBillingStatus(s)
+      })
+      return () => {
+        cancelled = true
+      }
     }
+    setBillingStatus(null)
+    return undefined
   }, [open])
 
   if (!open) return null
@@ -52,29 +71,54 @@ export function PricingModal({ open, onClose, onApplied: _onApplied }: Props) {
           </button>
         </div>
 
+        {billingStatus?.paddle_configured === false ? (
+          <p className="pricing-modal__warn" role="status">
+            Billing is not configured on the server yet (Paddle API key). Plans cannot be purchased until it is.
+          </p>
+        ) : null}
+
         <div className="pricing-modal__grid">
-          {PRICING_PLANS.map((plan) => (
-            <article
-              key={plan.id}
-              className={`pricing-card${plan.featured ? ' pricing-card--featured' : ''}`}
-            >
-              {plan.featured ? <span className="pricing-card__ribbon">Popular</span> : null}
-              <h3 className="pricing-card__name">{plan.name}</h3>
-              <p className="pricing-card__price">
-                <span className="pricing-card__amount">{plan.priceLabel}</span>
-                <span className="pricing-card__period">{plan.periodHint}</span>
-              </p>
-              <p className="pricing-card__blurb">{plan.blurb}</p>
-              <button
-                type="button"
-                className={`btn pricing-card__cta${plan.featured ? ' primary' : ' ghost'}`}
-                disabled={checkoutLoading}
-                onClick={() => void onSelect(plan.id)}
+          {visiblePlans.map((plan) => {
+            const ok = planSelectable(plan.id, billingStatus ?? undefined)
+            const missingPrice = Boolean(
+              billingStatus?.paddle_configured && billingStatus.prices?.[plan.id] === false,
+            )
+            const title =
+              billingStatus?.paddle_configured === false
+                ? 'Server billing not ready'
+                : missingPrice
+                  ? `Set the matching PADDLE_PRICE_* env var on the server for “${plan.name}”`
+                  : undefined
+            return (
+              <article
+                key={plan.id}
+                className={`pricing-card${plan.featured ? ' pricing-card--featured' : ''}${
+                  plan.id === 'debug' ? ' pricing-card--debug' : ''
+                }`}
               >
-                {checkoutLoading ? 'Starting…' : 'Select'}
-              </button>
-            </article>
-          ))}
+                {plan.id === 'debug' ? (
+                  <span className="pricing-card__ribbon pricing-card__ribbon--test">Test</span>
+                ) : plan.featured ? (
+                  <span className="pricing-card__ribbon">Popular</span>
+                ) : null}
+                <h3 className="pricing-card__name">{plan.name}</h3>
+                <p className="pricing-card__price">
+                  <span className="pricing-card__amount">{plan.priceLabel}</span>
+                  <span className="pricing-card__period">{plan.periodHint}</span>
+                </p>
+                <p className="pricing-card__blurb">{plan.blurb}</p>
+                <button
+                  type="button"
+                  className={`btn pricing-card__cta${plan.featured ? ' primary' : ' ghost'}`}
+                  disabled={checkoutLoading || !ok}
+                  title={title}
+                  onClick={() => void onSelect(plan.id)}
+                >
+                  {checkoutLoading ? 'Starting…' : missingPrice ? 'Not configured' : 'Select'}
+                </button>
+              </article>
+            )
+          })}
         </div>
 
         {checkoutError ? (

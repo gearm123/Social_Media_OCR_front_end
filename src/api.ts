@@ -1,8 +1,11 @@
 import { getAccessToken } from './authStorage'
+import { getOrCreateGuestBillingId } from './guestBillingId'
 
-function authHeaders(): Record<string, string> {
+/** Bearer when signed in; else ``X-Guest-Billing-Id`` for billing-enforced guest jobs. */
+function jobRequestHeaders(): Record<string, string> {
   const t = getAccessToken()
-  return t ? { Authorization: `Bearer ${t}` } : {}
+  if (t) return { Authorization: `Bearer ${t}` }
+  return { 'X-Guest-Billing-Id': getOrCreateGuestBillingId() }
 }
 
 /** Backend base URL, no trailing slash. Set in `.env` as VITE_API_BASE_URL */
@@ -66,7 +69,7 @@ export async function createJob(
       method: 'POST',
       body: fd,
       signal: controller.signal,
-      headers: authHeaders(),
+      headers: jobRequestHeaders(),
     })
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
@@ -100,7 +103,7 @@ export async function getJob(jobId: string): Promise<JobStatusResponse> {
   try {
     r = await fetch(`${base}/jobs/${encodeURIComponent(jobId)}`, {
       signal: controller.signal,
-      headers: authHeaders(),
+      headers: jobRequestHeaders(),
     })
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
@@ -141,7 +144,7 @@ export async function fetchArtifact(path: string): Promise<Blob> {
   const controller = new AbortController()
   const tid = setTimeout(() => controller.abort(), 120_000)
   try {
-    const r = await fetch(url, { signal: controller.signal, headers: authHeaders() })
+    const r = await fetch(url, { signal: controller.signal, headers: jobRequestHeaders() })
     if (!r.ok) {
       const t = await r.text()
       throw new Error(`Artifact fetch failed: ${r.status} ${t}`)

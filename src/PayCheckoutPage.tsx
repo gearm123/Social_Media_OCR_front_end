@@ -3,7 +3,7 @@ import { initializePaddle, type Paddle } from '@paddle/paddle-js'
 
 /**
  * Paddle default payment link target. URL from API is this page + ?_ptxn=<transaction_id>.
- * Set Netlify: VITE_PADDLE_CLIENT_TOKEN, VITE_PADDLE_ENV=production|sandbox
+ * Netlify: VITE_PADDLE_CLIENT_TOKEN = live client token; VITE_PADDLE_ENV=production (default).
  */
 export default function PayCheckoutPage() {
   const params = new URLSearchParams(window.location.search)

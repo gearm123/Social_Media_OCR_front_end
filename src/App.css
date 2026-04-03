@@ -1845,6 +1845,16 @@
   color: var(--text);
 }
 
+.pricing-modal__warn {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--warn, #b45309);
+  background: color-mix(in srgb, var(--warn, #b45309) 12%, transparent);
+  border-radius: 10px;
+}
+
 .pricing-modal__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
@@ -1875,6 +1885,11 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
+.pricing-card--debug {
+  border-color: color-mix(in srgb, #0d9488 42%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, #0d9488 14%, transparent);
+}
+
 .pricing-card__ribbon {
   position: absolute;
   top: 0.55rem;
@@ -1886,6 +1901,13 @@
   padding: 0.2rem 0.45rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--text);
+}
+
+.pricing-card__ribbon--test {
+  right: auto;
+  left: 0.55rem;
+  background: color-mix(in srgb, #0d9488 28%, transparent);
   color: var(--text);
 }
 

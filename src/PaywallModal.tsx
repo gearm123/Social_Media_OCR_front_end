@@ -1,4 +1,4 @@
-type PaywallReason = 'free_exhausted' | 'multi_on_free'
+type PaywallReason = 'free_exhausted' | 'multi_on_free' | 'quota_exhausted'
 
 type Props = {
   open: boolean
@@ -9,14 +9,19 @@ type Props = {
 
 const COPY: Record<PaywallReason, { title: string; body: string }> = {
   free_exhausted: {
-    title: 'Free tries used',
+    title: 'Free try used',
     body:
-      'You have used all 3 free single-image runs. Choose a plan to keep translating — including multi-image jobs and unlimited use on passes.',
+      'Your free single-image run is used. Sign in, choose a plan, or buy a single-run credit for multi-image jobs.',
   },
   multi_on_free: {
     title: 'Multiple images need a plan',
     body:
-      'On the free tier you can upload one screenshot per run. Upgrade with a single-run credit or a pass to combine several images in one job.',
+      'On the free tier you can upload one screenshot per run. Use an active subscription (with runs left), a single-run credit, or upgrade.',
+  },
+  quota_exhausted: {
+    title: 'Monthly runs used',
+    body:
+      'Your plan includes a limited number of full jobs per calendar month. Wait for the next month, buy a one-time run, or upgrade billing period in Plans.',
   },
 }
 
