@@ -9,11 +9,20 @@ const STORAGE_KEY = 'translate_chat_billing_v1'
 
 export type BillingSnapshot = {
   freeRunsUsed: number
+  /** From GET /billing/me or guest-status when present; defaults to FREE_RUNS_MAX. */
+  freeRunsMax?: number
   /** Paddle subscription period end (access_until). Quota resets each calendar month while this is in the future. */
   unlimitedUntil: string | null
   paidJobCredits: number
   subscriptionRunsCap: number
   subscriptionRunsUsedThisMonth: number
+}
+
+/** Effective free-try cap (server may send guest/user max separately). */
+export function freeRunsCap(s: BillingSnapshot): number {
+  const n = Number(s.freeRunsMax)
+  if (Number.isFinite(n) && n >= 1) return Math.floor(n)
+  return FREE_RUNS_MAX
 }
 
 export type PricingPlanId = 'single' | 'debug' | 'month' | 'sixmo' | 'year'
@@ -105,6 +114,7 @@ export type BillingMeResponse = {
   subscription_runs_remaining: number
   paid_job_credits: number
   free_runs_used: number
+  free_runs_max?: number
 }
 
 function defaultSnapshot(): BillingSnapshot {
@@ -122,8 +132,13 @@ export function readBillingSnapshot(): BillingSnapshot {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return defaultSnapshot()
     const j = JSON.parse(raw) as Partial<BillingSnapshot>
+    const maxRaw = Number(j.freeRunsMax)
+    const freeRunsMax =
+      Number.isFinite(maxRaw) && maxRaw >= 1 ? Math.floor(maxRaw) : undefined
+    const cap = freeRunsCap({ ...defaultSnapshot(), freeRunsMax })
     return {
-      freeRunsUsed: Math.min(FREE_RUNS_MAX, Math.max(0, Number(j.freeRunsUsed) || 0)),
+      freeRunsUsed: Math.min(cap, Math.max(0, Number(j.freeRunsUsed) || 0)),
+      freeRunsMax,
       unlimitedUntil: typeof j.unlimitedUntil === 'string' ? j.unlimitedUntil : null,
       paidJobCredits: Math.max(0, Number(j.paidJobCredits) || 0),
       subscriptionRunsCap: Math.max(1, Number(j.subscriptionRunsCap) || 7),
@@ -175,14 +190,16 @@ export function canMultiImageUpload(s: BillingSnapshot): boolean {
 }
 
 export function freeRunsRemaining(s: BillingSnapshot): number {
-  return Math.max(0, FREE_RUNS_MAX - s.freeRunsUsed)
+  const cap = freeRunsCap(s)
+  return Math.max(0, cap - s.freeRunsUsed)
 }
 
 export function canStartProcess(s: BillingSnapshot, fileCount: number): boolean {
   if (fileCount < 1) return false
   if (hasSubscriptionAccess(s)) return true
   if (s.paidJobCredits > 0) return true
-  return s.freeRunsUsed < FREE_RUNS_MAX && fileCount === 1
+  const cap = freeRunsCap(s)
+  return s.freeRunsUsed < cap && fileCount === 1
 }
 
 export type ProcessBlockReason =
@@ -199,13 +216,17 @@ export function processBlockReason(s: BillingSnapshot, fileCount: number): Proce
   }
   if (hasSubscriptionAccess(s) || s.paidJobCredits > 0) return 'none'
   if (fileCount > 1) return 'multi_on_free'
-  if (s.freeRunsUsed >= FREE_RUNS_MAX) return 'free_exhausted'
+  if (s.freeRunsUsed >= freeRunsCap(s)) return 'free_exhausted'
   return 'none'
 }
 
 export function billingMeToSnapshot(me: BillingMeResponse): BillingSnapshot {
+  const capRaw = Number(me.free_runs_max)
+  const freeRunsMax =
+    Number.isFinite(capRaw) && capRaw >= 1 ? Math.floor(capRaw) : undefined
   return {
     freeRunsUsed: me.free_runs_used,
+    freeRunsMax,
     unlimitedUntil: me.access_until,
     paidJobCredits: me.paid_job_credits,
     subscriptionRunsCap: Math.max(1, me.subscription_runs_cap || 7),
@@ -229,6 +250,7 @@ export function applyGuestSnapshotFromServer(g: {
   const base = defaultSnapshot()
   const next: BillingSnapshot = {
     ...base,
+    freeRunsMax: cap,
     freeRunsUsed: Math.min(cap, Math.max(0, Number(g.free_runs_used) || 0)),
     paidJobCredits: Math.max(0, Number(g.paid_job_credits) || 0),
   }
@@ -280,7 +302,7 @@ export function processBlockReasonForSession(
   }
   if (hasSubscriptionAccessForSession(s, signedIn) || s.paidJobCredits > 0) return 'none'
   if (fileCount > 1) return 'multi_on_free'
-  if (s.freeRunsUsed >= FREE_RUNS_MAX) return 'free_exhausted'
+  if (s.freeRunsUsed >= freeRunsCap(s)) return 'free_exhausted'
   return 'none'
 }
 
@@ -337,7 +359,8 @@ export function recordSuccessfulJob(): BillingSnapshot {
     writeSnapshot(next)
     return next
   }
-  const next = { ...s, freeRunsUsed: Math.min(FREE_RUNS_MAX, s.freeRunsUsed + 1) }
+  const cap = freeRunsCap(s)
+  const next = { ...s, freeRunsUsed: Math.min(cap, s.freeRunsUsed + 1) }
   writeSnapshot(next)
   return next
 }

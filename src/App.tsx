@@ -15,8 +15,8 @@ import { sortImageFilesByNameSequence } from './sortUploadedImages'
 import { IphoneBubbleSequence } from './IphoneBubbleSequence'
 import { MessengerBackdrop } from './MessengerBackdrop'
 import {
-  FREE_RUNS_MAX,
   canMultiImageUploadForSession,
+  freeRunsCap,
   freeRunsRemaining,
   hasPaidJobAccessForSession,
   hasSubscriptionAccessForSession,
@@ -461,6 +461,7 @@ function App() {
       : null
     const multi = canMultiImageUploadForSession(billing, signedIn)
     const fr = freeRunsRemaining(billing)
+    const freeCap = freeRunsCap(billing)
 
     let planLong = ''
     if (subAccess && proUntil) {
@@ -477,8 +478,8 @@ function App() {
 
     const freePart =
       fr > 0
-        ? `${fr} of ${FREE_RUNS_MAX} free try/tries left`
-        : `No free tries left (${FREE_RUNS_MAX}/${FREE_RUNS_MAX} used)`
+        ? `${fr} of ${freeCap} free try/tries left`
+        : `No free tries left (${freeCap}/${freeCap} used)`
     const uploadPart = multi ? 'Multi-image uploads' : 'Single-image only (1 per run)'
     const usageLong = `${freePart} · ${uploadPart}`
 
@@ -593,7 +594,8 @@ function App() {
   }, [])
 
   const hasPaidAccess = planUnlocked
-  const freeExhausted = !planUnlocked && !quotaStuck && billing.freeRunsUsed >= FREE_RUNS_MAX
+  const freeExhausted =
+    !planUnlocked && !quotaStuck && billing.freeRunsUsed >= freeRunsCap(billing)
 
   useEffect(() => {
     if (!pricingOpen && !paywallOpen) return
@@ -894,17 +896,24 @@ function App() {
                   <button
                     type="button"
                     className="btn process"
-                    disabled={files.length === 0 || processing || !apiUrlConfigured}
+                    disabled={
+                      files.length === 0 ||
+                      processing ||
+                      !apiUrlConfigured ||
+                      blockReason !== 'none'
+                    }
                     title={
                       files.length === 0
                         ? 'Upload at least one image to process'
                         : !apiUrlConfigured
                           ? 'Set VITE_API_BASE_URL at build time (see notice on the right)'
-                          : blockReason === 'free_exhausted'
-                            ? 'Free runs used — open Plans or click Process to see options'
-                            : blockReason === 'multi_on_free'
-                              ? 'Multiple images require a plan'
-                              : 'Run translation job on the API'
+                          : blockReason === 'quota_exhausted'
+                            ? 'Monthly run quota used — open Plans or wait for renewal'
+                            : blockReason === 'free_exhausted'
+                              ? 'Free try used — open Plans to purchase or subscribe'
+                              : blockReason === 'multi_on_free'
+                                ? 'Multiple images require a plan'
+                                : 'Run translation job on the API'
                     }
                     onClick={() => void runProcess()}
                   >
