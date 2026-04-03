@@ -48,14 +48,27 @@ function mapCheckoutFetchError(e: unknown): Error {
 }
 
 /**
+ * Paddle sometimes returns `hostname.tld/path?…` without a scheme. Resolving that with
+ * `new URL(s, origin)` treats the hostname as a single path segment → broken URLs like
+ * `https://site.com/hostname.tld/pay` (Netlify 200 on SPA shell, checkout never loads).
+ */
+function looksLikeSchemelessAbsoluteHttpUrl(s: string): boolean {
+  return /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}([/?#]|$)/i.test(s)
+}
+
+/**
  * Resolve checkout target for navigation. Paddle may return an absolute https URL or a
  * site-relative path like `/pay?_ptxn=…` — `new URL(s)` alone fails on relative paths.
  */
 function normalizeCheckoutRedirectUrl(raw: string): string {
-  const s = raw.trim()
+  let s = raw.trim()
   if (!s) throw new Error('No checkout URL from server')
+  if (!/^https?:\/\//i.test(s) && !s.startsWith('/') && looksLikeSchemelessAbsoluteHttpUrl(s)) {
+    s = `https://${s}`
+  }
   try {
-    const resolved = new URL(s, window.location.origin)
+    const resolved =
+      s.startsWith('http://') || s.startsWith('https://') ? new URL(s) : new URL(s, window.location.origin)
     if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') {
       throw new Error('Invalid checkout URL from server')
     }
