@@ -36,6 +36,7 @@ import {
 import { InfoPopover } from './InfoPopover'
 import { PaywallModal } from './PaywallModal'
 import { PricingModal } from './PricingModal'
+import { applyDocumentSeo, SEO_HOME_DESCRIPTION, SEO_SITE_NAME } from './seo'
 
 /** Formats the pipeline is built around (OpenCV-friendly screenshots). */
 const ACCEPT_IMAGES =
@@ -283,6 +284,14 @@ function App() {
   useEffect(() => {
     refreshAuth()
   }, [refreshAuth])
+
+  useEffect(() => {
+    applyDocumentSeo({
+      title: SEO_SITE_NAME,
+      description: SEO_HOME_DESCRIPTION,
+      path: '/',
+    })
+  }, [])
 
   const shakeBillingExplainerHero = useCallback(() => {
     const el = billingExplainerHeroRef.current
@@ -804,7 +813,7 @@ function App() {
           </p>
         </div>
       ) : null}
-      <div className="app-shell">
+      <main className="app-shell">
         <div className="app">
           <header className="app-top-bar">
             <nav className="app-top-bar__nav" aria-label="Help and feedback">
@@ -872,10 +881,11 @@ function App() {
                       <img
                         className="hero-brand__mark"
                         src="/translate-chat-mark.svg"
-                        alt=""
+                        alt="Translate Chat"
                         width={44}
                         height={44}
                         decoding="async"
+                        fetchPriority="high"
                       />
                       <span className="hero-brand__row">
                         <span className="hero-brand__translate">Translate</span>
@@ -1224,7 +1234,7 @@ function App() {
             onChange={(e) => onPickFiles(e.target.files)}
           />
         </div>
-      </div>
+      </main>
 
       {processing ? (
         <div
