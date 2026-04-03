@@ -67,18 +67,7 @@ function formatProcessElapsed(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-/** Rough wall-clock hint: ~2 min observed for one screenshot; more pages add Gemini + OCR time. */
-function formatPipelineEtaHint(imageCount: number): string {
-  const n = Math.max(1, imageCount)
-  if (n === 1) {
-    return 'Rough guide: one image often finishes in about 2 minutes — longer if the API is busy or files are very large.'
-  }
-  const lowMin = 2 + Math.floor((n - 1) * 0.9)
-  const highMin = 3 + Math.ceil((n - 1) * 1.2)
-  return `Rough guide: ${n} images often take about ${lowMin}–${highMin} minutes total (varies with load and size).`
-}
-
-/** Same assumptions as ``formatPipelineEtaHint``, in seconds, for the loading banner. */
+/** Wall-clock estimate in seconds (~2 min single image; multi-image scales with page count). */
 function pipelineEtaSecondsRange(imageCount: number): [number, number] {
   const n = Math.max(1, imageCount)
   if (n === 1) {
@@ -1216,7 +1205,7 @@ function App() {
           aria-busy="true"
           aria-live="polite"
           aria-labelledby="process-loading-title"
-          aria-describedby="process-loading-eta process-loading-progress-desc"
+          aria-describedby="process-loading-progress-desc"
         >
           <div className="process-loading__panel">
             <div className="process-loading__spinner" aria-hidden />
@@ -1236,9 +1225,6 @@ function App() {
                 style={{ width: `${Math.round(pipelineProgress * 100)}%` }}
               />
             </div>
-            <p id="process-loading-eta" className="process-loading__eta">
-              {formatPipelineEtaHint(processingImageCount)}
-            </p>
             <p id="process-loading-progress-desc" className="process-loading__timers" aria-live="polite">
               <span className="process-loading__timer-row">
                 Total time{' '}
