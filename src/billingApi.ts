@@ -43,6 +43,33 @@ function parseErrorDetail(text: string): string {
   return text.slice(0, 500) || 'Request failed'
 }
 
+/** Guest one-time checkout (requires email + X-Guest-Billing-Id). */
+export async function startGuestBillingCheckout(plan: string, email: string): Promise<string> {
+  const base = apiBase()
+  if (!base) throw new Error('VITE_API_BASE_URL is not set')
+  const id = getOrCreateGuestBillingId()
+  const r = await fetch(`${base}/billing/guest-checkout-session`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Guest-Billing-Id': id,
+    },
+    body: JSON.stringify({ plan, email: email.trim() }),
+  })
+  const text = await r.text()
+  if (!r.ok) {
+    throw new Error(parseErrorDetail(text))
+  }
+  let url: string | undefined
+  try {
+    url = (JSON.parse(text) as { url?: string }).url
+  } catch {
+    throw new Error('Invalid response from billing API')
+  }
+  if (!url) throw new Error('No checkout URL from server')
+  return url
+}
+
 /** Server creates a Paddle transaction; returns checkout URL (opens /pay?_ptxn=… on success). */
 export async function startBillingCheckout(plan: string): Promise<string> {
   const base = apiBase()

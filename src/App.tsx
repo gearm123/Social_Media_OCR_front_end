@@ -16,15 +16,17 @@ import { IphoneBubbleSequence } from './IphoneBubbleSequence'
 import { MessengerBackdrop } from './MessengerBackdrop'
 import {
   FREE_RUNS_MAX,
-  canMultiImageUpload,
+  canMultiImageUploadForSession,
   freeRunsRemaining,
-  hasSubscriptionAccess,
-  processBlockReason,
+  hasPaidJobAccessForSession,
+  hasSubscriptionAccessForSession,
+  processBlockReasonForSession,
   readBillingSnapshot,
   recordSuccessfulJob,
-  subscriptionPeriodActive,
+  subscriptionQuotaStuckForSession,
   subscriptionRunsRemaining,
 } from './billingStorage'
+import { InfoPopover } from './InfoPopover'
 import { PaywallModal } from './PaywallModal'
 import { PricingModal } from './PricingModal'
 
@@ -97,6 +99,81 @@ type PreviewItem = { file: File; url: string }
 
 type PreviewLightbox = { url: string; name: string }
 
+function ProductInfoContent() {
+  return (
+    <>
+      <p className="info-popover__lead">
+        We combine <strong>Gemini Pro</strong> with <strong>Google Vision OCR</strong> in a proprietary AI-powered
+        processing pipeline to deliver highly accurate results.
+      </p>
+      <ul className="info-popover__list info-popover__list--after-lead">
+        <li>Powered by state-of-the-art AI models for maximum accuracy and reliability</li>
+        <li>
+          Reconstructs full conversations including timestamps, call logs, and translated messages — all seamlessly
+          integrated into the original chat UI layout
+        </li>
+        <li>Supports major platforms including Facebook, Instagram, WhatsApp, Telegram, and LINE</li>
+        <li>Robust to real-world conditions, including cracked screens and imperfect image quality</li>
+        <li>Downloadable final output once processing is complete</li>
+        <li>Language-agnostic processing, supporting virtually any source language</li>
+      </ul>
+    </>
+  )
+}
+
+const PLATFORM_LOGO_SRC: { src: string; label: string }[] = [
+  { src: 'https://cdn.simpleicons.org/facebook/1877F2', label: 'Facebook' },
+  { src: 'https://cdn.simpleicons.org/instagram/E4405F', label: 'Instagram' },
+  { src: 'https://cdn.simpleicons.org/whatsapp/25D366', label: 'WhatsApp' },
+  { src: 'https://cdn.simpleicons.org/telegram/26A5E4', label: 'Telegram' },
+  { src: 'https://cdn.simpleicons.org/line/00B900', label: 'LINE' },
+]
+
+function HeroPlatformBanner() {
+  return (
+    <div className="hero-platform-banner" role="group" aria-label="Supported messaging platforms">
+      {PLATFORM_LOGO_SRC.map(({ src, label }) => (
+        <img
+          key={label}
+          className="hero-platform-banner__logo"
+          src={src}
+          alt={label}
+          width={28}
+          height={28}
+          loading="lazy"
+          decoding="async"
+        />
+      ))}
+    </div>
+  )
+}
+
+function PlansUsageInfoContent() {
+  return (
+    <>
+      <p className="info-popover__lead">
+        Guest access: Try the product with 1 free single-image run — no sign-up required
+      </p>
+      <p className="info-popover__para">
+        Sign up bonus: Create a free account to receive an additional single-image run
+      </p>
+      <p className="info-popover__subhead">Flexible payment options:</p>
+      <ul className="info-popover__list info-popover__list--tight">
+        <li>
+          <strong>One-time plan:</strong> Pay once to process a full multi-image job
+        </li>
+        <li>
+          <strong>Subscription plan:</strong> Unlock multi-image uploads, higher usage limits, and ongoing access to
+          the tool
+        </li>
+      </ul>
+      <p className="info-popover__foot">
+        Upgrade anytime to continue using the product beyond the free trials
+      </p>
+    </>
+  )
+}
+
 function App() {
   const inputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -159,27 +236,31 @@ function App() {
     refreshAuth()
   }, [refreshAuth])
 
-  const replaceFilesFromList = useCallback((list: FileList | File[] | null) => {
-    if (!list || (list instanceof FileList && !list.length)) return
-    const arr = Array.from(list as FileList | File[])
-    let deduped = dedupeImageFiles(arr)
-    const snap = readBillingSnapshot()
-    if (!canMultiImageUpload(snap) && deduped.length > 1) {
-      deduped = [deduped[0]]
-      setUploadBillingNotice(
-        'Free plan allows one image per run. The first image was kept — choose a plan for multi-image jobs.',
-      )
-    } else {
-      setUploadBillingNotice(null)
-    }
-    setResultImageUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev)
-      return null
-    })
-    setResultExpanded(false)
-    preProcessSnapshotRef.current = null
-    setFiles(sortImageFilesByNameSequence(deduped))
-  }, [])
+  const replaceFilesFromList = useCallback(
+    (list: FileList | File[] | null) => {
+      if (!list || (list instanceof FileList && !list.length)) return
+      const arr = Array.from(list as FileList | File[])
+      let deduped = dedupeImageFiles(arr)
+      const snap = readBillingSnapshot()
+      const signedIn = Boolean(getAccessToken())
+      if (!canMultiImageUploadForSession(snap, signedIn) && deduped.length > 1) {
+        deduped = [deduped[0]]
+        setUploadBillingNotice(
+          'Free plan allows one image per run. The first image was kept — choose a plan for multi-image jobs.',
+        )
+      } else {
+        setUploadBillingNotice(null)
+      }
+      setResultImageUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev)
+        return null
+      })
+      setResultExpanded(false)
+      preProcessSnapshotRef.current = null
+      setFiles(sortImageFilesByNameSequence(deduped))
+    },
+    [],
+  )
 
   /** Drop / drag anywhere on the page (capture on document so it works over any element). */
   useEffect(() => {
@@ -343,12 +424,53 @@ function App() {
 
   const apiUrlConfigured = Boolean(apiBase())
 
-  const blockReason = processBlockReason(billing, files.length)
+  const signedIn = Boolean(authUser)
+  const multiUploadAllowed = canMultiImageUploadForSession(billing, signedIn)
+  const planUnlocked = hasPaidJobAccessForSession(billing, signedIn)
+  const quotaStuck = subscriptionQuotaStuckForSession(billing, signedIn)
+  const subAccess = hasSubscriptionAccessForSession(billing, signedIn)
+  const blockReason = processBlockReasonForSession(billing, files.length, signedIn)
+
+  const billingCopy = useMemo(() => {
+    const cap = billing.subscriptionRunsCap ?? 7
+    const rem = subscriptionRunsRemaining(billing)
+    const proUntil = billing.unlimitedUntil
+      ? new Date(billing.unlimitedUntil).toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+      : null
+    const multi = canMultiImageUploadForSession(billing, signedIn)
+    const fr = freeRunsRemaining(billing)
+
+    let planLong = ''
+    if (subAccess && proUntil) {
+      planLong = `Active subscription · renews ${proUntil} · ${rem}/${cap} runs left this month`
+    } else if (quotaStuck && proUntil) {
+      planLong = `Subscription · monthly runs used · renews ${proUntil}`
+    } else if (billing.paidJobCredits > 0) {
+      planLong = `One-time credits · ${billing.paidJobCredits} full run${billing.paidJobCredits === 1 ? '' : 's'}`
+    } else if (!signedIn) {
+      planLong = 'No subscription (guest)'
+    } else {
+      planLong = 'No active subscription'
+    }
+
+    const freePart =
+      fr > 0
+        ? `${fr} of ${FREE_RUNS_MAX} free try/tries left`
+        : `No free tries left (${FREE_RUNS_MAX}/${FREE_RUNS_MAX} used)`
+    const uploadPart = multi ? 'Multi-image uploads' : 'Single-image only (1 per run)'
+    const usageLong = `${freePart} · ${uploadPart}`
+
+    return { planLong, usageLong }
+  }, [billing, signedIn, subAccess, quotaStuck])
 
   const runProcess = async () => {
     if (files.length === 0) return
     const snap = readBillingSnapshot()
-    const br = processBlockReason(snap, files.length)
+    const br = processBlockReasonForSession(snap, files.length, Boolean(getAccessToken()))
     if (br === 'free_exhausted' || br === 'multi_on_free' || br === 'quota_exhausted') {
       setPaywallReason(br)
       setPaywallOpen(true)
@@ -424,23 +546,8 @@ function App() {
     }))
   }, [])
 
-  const multiUploadAllowed = canMultiImageUpload(billing)
-  const planUnlocked = hasSubscriptionAccess(billing) || billing.paidJobCredits > 0
-  const subscriptionStuck =
-    subscriptionPeriodActive(billing) &&
-    !hasSubscriptionAccess(billing) &&
-    billing.paidJobCredits <= 0
   const hasPaidAccess = planUnlocked
-  const freeExhausted =
-    !planUnlocked && !subscriptionStuck && billing.freeRunsUsed >= FREE_RUNS_MAX
-  const freeLeft = freeRunsRemaining(billing)
-  const proUntil = billing.unlimitedUntil
-    ? new Date(billing.unlimitedUntil).toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    : null
+  const freeExhausted = !planUnlocked && !quotaStuck && billing.freeRunsUsed >= FREE_RUNS_MAX
 
   useEffect(() => {
     if (!pricingOpen && !paywallOpen) return
@@ -456,34 +563,6 @@ function App() {
 
   return (
     <>
-      <div className="app-billing-strip" aria-label="Usage and plans">
-        {subscriptionStuck && proUntil ? (
-          <span className="app-billing-strip__text" title={billing.unlimitedUntil ?? undefined}>
-            Plan · monthly quota used · renews {proUntil}
-          </span>
-        ) : subscriptionPeriodActive(billing) && planUnlocked && proUntil ? (
-          <span className="app-billing-strip__text" title={billing.unlimitedUntil ?? undefined}>
-            Plan · {subscriptionRunsRemaining(billing)}/{billing.subscriptionRunsCap ?? 7} runs left this month ·
-            renews {proUntil}
-          </span>
-        ) : billing.paidJobCredits > 0 ? (
-          <span className="app-billing-strip__text">
-            {billing.paidJobCredits} full-run credit{billing.paidJobCredits === 1 ? '' : 's'}
-          </span>
-        ) : (
-          <span className="app-billing-strip__text">
-            Free · {freeLeft}/{FREE_RUNS_MAX} runs · 1 image each
-          </span>
-        )}
-        <button
-          type="button"
-          className="btn ghost btn--compact"
-          onClick={() => setPricingOpen(true)}
-        >
-          Plans
-        </button>
-      </div>
-
       <div className="app-auth-bar">
         {!apiUrlConfigured ? (
           <span className="app-auth-bar__muted">Sign in requires API URL</span>
@@ -498,6 +577,9 @@ function App() {
               onClick={() => {
                 clearSession()
                 setAuthUser(null)
+                if (apiBase()) {
+                  void syncGuestBillingFromServer().then(() => setBillingTick((t) => t + 1))
+                }
               }}
             >
               Sign out
@@ -529,6 +611,17 @@ function App() {
         )}
       </div>
 
+      {!apiUrlConfigured ? (
+        <div
+          className="api-mini-notice"
+          role="status"
+          title="Set VITE_API_BASE_URL at build time (Netlify environment variables + redeploy, or local .env + restart dev server). Use an https:// URL when this site is served over HTTPS."
+        >
+          <span className="api-mini-notice__dot" aria-hidden />
+          <span className="api-mini-notice__text">Backend not linked</span>
+        </div>
+      ) : null}
+
       <AuthModal
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
@@ -540,6 +633,11 @@ function App() {
         open={pricingOpen}
         onClose={() => setPricingOpen(false)}
         onApplied={() => setBillingTick((t) => t + 1)}
+        isGuest={!authUser}
+        onOpenAuth={(tab) => {
+          setAuthModalTab(tab)
+          setAuthModalOpen(true)
+        }}
       />
 
       <PaywallModal
@@ -577,47 +675,35 @@ function App() {
               >
                 <div className="billing-explainer__inner">
                   <div className="billing-explainer__copy">
-                    <span className="billing-explainer__eyebrow">Usage</span>
-                    <p className="billing-explainer__line">
-                      {hasPaidAccess ? (
-                        <>
-                          <span className="billing-explainer__status billing-explainer__status--on">Active</span>
-                          <span className="billing-explainer__sep" aria-hidden>
-                            ·
+                    <span className="billing-explainer__eyebrow">Plans &amp; usage</span>
+                    <div className="billing-explainer__split">
+                      <p className="billing-explainer__split-row">
+                        <span className="billing-explainer__dim">Plan</span>
+                        {subAccess ? (
+                          <span className="billing-explainer__status billing-explainer__status--on billing-explainer__status--inline">
+                            Active
                           </span>
-                          {hasSubscriptionAccess(billing) ? (
-                            <span>
-                              Multi-image · {subscriptionRunsRemaining(billing)}/
-                              {billing.subscriptionRunsCap ?? 7} runs this month
-                            </span>
-                          ) : subscriptionStuck ? (
-                            <span>Monthly quota used — credits or next month</span>
-                          ) : (
-                            <span>{billing.paidJobCredits} credit{billing.paidJobCredits === 1 ? '' : 's'}</span>
-                          )}
-                        </>
-                      ) : freeExhausted ? (
-                        <span>Free limit reached</span>
-                      ) : (
-                        <>
-                          <span className="billing-explainer__status">Free</span>
-                          <span className="billing-explainer__sep" aria-hidden>
-                            ·
-                          </span>
-                          <span>
-                            {freeLeft}/{FREE_RUNS_MAX} runs, 1 image
-                          </span>
-                        </>
-                      )}
-                    </p>
+                        ) : null}
+                        <span className="billing-explainer__value">{billingCopy.planLong}</span>
+                      </p>
+                      <p className="billing-explainer__split-row">
+                        <span className="billing-explainer__dim">Usage</span>
+                        <span className="billing-explainer__value">{billingCopy.usageLong}</span>
+                      </p>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn--compact billing-explainer__cta billing-explainer__cta--pill"
-                    onClick={() => setPricingOpen(true)}
-                  >
-                    Plans
-                  </button>
+                  <span className="billing-explainer__cta-row">
+                    <button
+                      type="button"
+                      className="btn btn--compact billing-explainer__cta billing-explainer__cta--pill"
+                      onClick={() => setPricingOpen(true)}
+                    >
+                      Plans
+                    </button>
+                    <InfoPopover label="Plans, free tier, and billing" align="end">
+                      <PlansUsageInfoContent />
+                    </InfoPopover>
+                  </span>
                 </div>
               </div>
               <button
@@ -632,13 +718,116 @@ function App() {
           ) : (
             <>
               <header className="hero">
-                <h1 className="hero-brand">Translate Chat</h1>
-                <p className="hero-tagline">Turn chat screenshots into a translated conversation</p>
-                {files.length === 0 ? (
-                  <p className="lede">
-                    Upload your screenshots in order (first file = first page). We support PNG, JPEG, WebP,
-                    and BMP — the same formats the backend pipeline expects.
+                <div className="hero-title-block">
+                  <h1 className="hero-brand">
+                    <span className="hero-brand__lockup">
+                      <img
+                        className="hero-brand__mark"
+                        src="/translate-chat-mark.svg"
+                        alt=""
+                        width={44}
+                        height={44}
+                        decoding="async"
+                      />
+                      <span className="hero-brand__row">
+                        <span className="hero-brand__translate">Translate</span>
+                        <span className="hero-brand__chat-pill">Chat</span>
+                      </span>
+                    </span>
+                  </h1>
+                  <p className="hero-tagline">
+                    Turn your chat screenshots into a translated conversation
                   </p>
+                </div>
+
+                <section
+                  className={`billing-explainer billing-explainer--hero${hasPaidAccess ? ' billing-explainer--unlocked' : ''}${freeExhausted ? ' billing-explainer--exhausted' : ''}`}
+                  aria-label="Usage and plans"
+                >
+                  <div className="billing-explainer__inner">
+                    <div className="billing-explainer__copy">
+                      <span className="billing-explainer__eyebrow">Plans &amp; usage</span>
+                      <div className="billing-explainer__split">
+                        <p className="billing-explainer__split-row">
+                          <span className="billing-explainer__dim">Plan</span>
+                          {subAccess ? (
+                            <span className="billing-explainer__status billing-explainer__status--on billing-explainer__status--inline">
+                              Active
+                            </span>
+                          ) : null}
+                          <span className="billing-explainer__value">{billingCopy.planLong}</span>
+                        </p>
+                        <p className="billing-explainer__split-row">
+                          <span className="billing-explainer__dim">Usage</span>
+                          <span className="billing-explainer__value">{billingCopy.usageLong}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <span className="billing-explainer__cta-row">
+                      <button
+                        type="button"
+                        className="btn btn--compact billing-explainer__cta billing-explainer__cta--pill"
+                        onClick={() => setPricingOpen(true)}
+                      >
+                        View plans
+                      </button>
+                      <InfoPopover label="Plans, free tier, and billing" align="end">
+                        <PlansUsageInfoContent />
+                      </InfoPopover>
+                    </span>
+                  </div>
+                </section>
+
+                {files.length === 0 ? (
+                  <div className="lede-with-info lede-with-info--instructions">
+                    <div className="hero-instructions">
+                      <p className="hero-platform-lede">
+                        we translate your social media conversations for you
+                      </p>
+                      <div className="hero-instructions__platform-row">
+                        <HeroPlatformBanner />
+                        <InfoPopover label="What Translate Chat does">
+                          <ProductInfoContent />
+                        </InfoPopover>
+                      </div>
+                      <div className="hero-instructions__stack">
+                        <section className="hero-instruction-card" aria-label="Upload your screenshots">
+                          <h3 className="hero-instruction-card__name">
+                            <span className="hero-instruction-card__step" aria-hidden>
+                              1
+                            </span>
+                            Upload your screenshots
+                          </h3>
+                          <div className="hero-instruction-card__body">
+                            <p className="hero-instruction-card__line">
+                              Add images in conversation order — the first image should match the earliest part of the
+                              chat.
+                            </p>
+                            <p className="hero-instruction-card__line">We support PNG, JPEG, WebP, or BMP.</p>
+                          </div>
+                        </section>
+                        <section className="hero-instruction-card" aria-label="Improve translation quality">
+                          <h3 className="hero-instruction-card__name">
+                            <span className="hero-instruction-card__step" aria-hidden>
+                              2
+                            </span>
+                            Add details for higher quality translation
+                          </h3>
+                          <div className="hero-instruction-card__body">
+                            <p className="hero-instruction-card__line">
+                              For each image, enter the total number of messages (bubbles) that you see.
+                            </p>
+                            <p className="hero-instruction-card__line">
+                              Set the message sequence (who sent each bubble — sender vs receiver).
+                            </p>
+                            <p className="hero-instruction-card__line hero-instruction-card__line--emphasis">
+                              This added guidance helps produce the best results.
+                            </p>
+                          </div>
+                        </section>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <p className="lede lede--when-files">
                     <span className="lede--when-files__muted">
@@ -647,58 +836,6 @@ function App() {
                     </span>
                   </p>
                 )}
-
-                <section
-                  className={`billing-explainer${hasPaidAccess ? ' billing-explainer--unlocked' : ''}${freeExhausted ? ' billing-explainer--exhausted' : ''}`}
-                  aria-label="Usage and plans"
-                >
-                  <div className="billing-explainer__inner">
-                    <div className="billing-explainer__copy">
-                      <span className="billing-explainer__eyebrow">Plans &amp; usage</span>
-                      <p className="billing-explainer__line">
-                        {hasPaidAccess ? (
-                          <>
-                            <span className="billing-explainer__status billing-explainer__status--on">Active</span>
-                            <span className="billing-explainer__sep" aria-hidden>
-                              ·
-                            </span>
-                            {hasSubscriptionAccess(billing) ? (
-                              <span>
-                                Multi-image · {subscriptionRunsRemaining(billing)}/
-                                {billing.subscriptionRunsCap ?? 7} runs this month
-                              </span>
-                            ) : subscriptionStuck ? (
-                              <span>Monthly quota used — open Plans for credits</span>
-                            ) : (
-                              <span>
-                                {billing.paidJobCredits} full run credit{billing.paidJobCredits === 1 ? '' : 's'}
-                              </span>
-                            )}
-                          </>
-                        ) : freeExhausted ? (
-                          <span>Free runs used — open Plans to continue</span>
-                        ) : (
-                          <>
-                            <span className="billing-explainer__status">Free</span>
-                            <span className="billing-explainer__sep" aria-hidden>
-                              ·
-                            </span>
-                            <span>
-                              {freeLeft}/{FREE_RUNS_MAX} runs · 1 image · multi-image needs plan
-                            </span>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn--compact billing-explainer__cta billing-explainer__cta--pill"
-                      onClick={() => setPricingOpen(true)}
-                    >
-                      View plans
-                    </button>
-                  </div>
-                </section>
 
                 <div className="hero-actions">
                   <button
@@ -724,7 +861,7 @@ function App() {
                       files.length === 0
                         ? 'Upload at least one image to process'
                         : !apiUrlConfigured
-                          ? 'Set VITE_API_BASE_URL and redeploy (see banner below)'
+                          ? 'Set VITE_API_BASE_URL at build time (see notice on the right)'
                           : blockReason === 'free_exhausted'
                             ? 'Free runs used — open Plans or click Process to see options'
                             : blockReason === 'multi_on_free'
@@ -749,14 +886,6 @@ function App() {
                 >
                   View plans
                 </button>
-              </div>
-            ) : null}
-            {!apiUrlConfigured ? (
-              <div className="api-warning-banner" role="status">
-                <strong>Backend not linked.</strong> The app cannot call the translation API until{' '}
-                <code>VITE_API_BASE_URL</code> is set at <strong>build time</strong> (Netlify environment
-                variables + redeploy, or local <code>.env</code> + restart dev server). Use an{' '}
-                <strong>https://</strong> URL if this site is served over HTTPS.
               </div>
             ) : null}
             {jobError ? (

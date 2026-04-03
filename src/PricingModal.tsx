@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchBillingStatus, startBillingCheckout, type BillingStatusResponse } from './billingApi'
-import { getVisiblePricingPlans, type PricingPlanId } from './billingStorage'
+import {
+  fetchBillingStatus,
+  startBillingCheckout,
+  startGuestBillingCheckout,
+  type BillingStatusResponse,
+} from './billingApi'
+import {
+  getVisiblePricingPlans,
+  isOneTimePlan,
+  isSubscriptionPlan,
+  type PricingPlanId,
+} from './billingStorage'
 
 type Props = {
   open: boolean
   onClose: () => void
   onApplied: () => void
+  /** When true, only one-time plans can be purchased; subscriptions prompt for sign-in. */
+  isGuest: boolean
+  onOpenAuth?: (tab: 'signin' | 'signup') => void
 }
 
 function planSelectable(id: PricingPlanId, status: BillingStatusResponse | null | undefined): boolean {
@@ -15,10 +28,12 @@ function planSelectable(id: PricingPlanId, status: BillingStatusResponse | null 
   return true
 }
 
-export function PricingModal({ open, onClose, onApplied: _onApplied }: Props) {
+export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, onOpenAuth }: Props) {
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [billingStatus, setBillingStatus] = useState<BillingStatusResponse | null>(null)
+  const [guestEmail, setGuestEmail] = useState('')
+  const [subscriptionGuestPrompt, setSubscriptionGuestPrompt] = useState(false)
 
   const visiblePlans = useMemo(() => getVisiblePricingPlans(), [])
 
@@ -26,6 +41,7 @@ export function PricingModal({ open, onClose, onApplied: _onApplied }: Props) {
     if (open) {
       setCheckoutError(null)
       setCheckoutLoading(false)
+      setSubscriptionGuestPrompt(false)
       let cancelled = false
       void fetchBillingStatus().then((s) => {
         if (!cancelled) setBillingStatus(s)
@@ -42,6 +58,30 @@ export function PricingModal({ open, onClose, onApplied: _onApplied }: Props) {
 
   const onSelect = async (id: PricingPlanId) => {
     setCheckoutError(null)
+    setSubscriptionGuestPrompt(false)
+
+    if (isGuest && isSubscriptionPlan(id)) {
+      setSubscriptionGuestPrompt(true)
+      return
+    }
+
+    if (isGuest && isOneTimePlan(id)) {
+      const em = guestEmail.trim()
+      if (!em || !em.includes('@')) {
+        setCheckoutError('Enter a valid email below — Paddle needs it for your receipt and to link your purchase.')
+        return
+      }
+      setCheckoutLoading(true)
+      try {
+        const url = await startGuestBillingCheckout(id, em)
+        window.location.href = url
+      } catch (e) {
+        setCheckoutLoading(false)
+        setCheckoutError(e instanceof Error ? e.message : String(e))
+      }
+      return
+    }
+
     setCheckoutLoading(true)
     try {
       const url = await startBillingCheckout(id)
@@ -62,8 +102,17 @@ export function PricingModal({ open, onClose, onApplied: _onApplied }: Props) {
               Choose a plan
             </h2>
             <p className="pricing-modal__subtitle">
-              Sign in, then choose a plan. You will be redirected to secure Paddle checkout. After payment,
-              return here — entitlements sync from the server.
+              {isGuest ? (
+                <>
+                  Without an account you can buy <strong>one-time</strong> credits (Single or Debug test) using the
+                  email below. <strong>Subscriptions</strong> require a free account — sign up or sign in first.
+                </>
+              ) : (
+                <>
+                  Choose a plan and you will be redirected to secure Paddle checkout. After payment, return here —
+                  entitlements sync from the server.
+                </>
+              )}
             </p>
           </div>
           <button type="button" className="pricing-modal__close" onClick={onClose} aria-label="Close">
@@ -71,10 +120,59 @@ export function PricingModal({ open, onClose, onApplied: _onApplied }: Props) {
           </button>
         </div>
 
+        {isGuest ? (
+          <div className="pricing-modal__guest-email">
+            <label htmlFor="pricing-guest-email" className="pricing-modal__guest-email-label">
+              Email for checkout & receipt
+            </label>
+            <input
+              id="pricing-guest-email"
+              type="email"
+              className="pricing-modal__guest-email-input"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={guestEmail}
+              onChange={(e) => setGuestEmail(e.target.value)}
+              disabled={checkoutLoading}
+            />
+          </div>
+        ) : null}
+
         {billingStatus?.paddle_configured === false ? (
           <p className="pricing-modal__warn" role="status">
             Billing is not configured on the server yet (Paddle API key). Plans cannot be purchased until it is.
           </p>
+        ) : null}
+
+        {subscriptionGuestPrompt ? (
+          <div className="pricing-modal__account-prompt" role="status">
+            <p className="pricing-modal__account-prompt-text">
+              Monthly and annual plans need a <strong>free account</strong> so we can manage your subscription and
+              usage. Sign up or sign in, then open Plans again.
+            </p>
+            <div className="pricing-modal__account-prompt-actions">
+              <button
+                type="button"
+                className="btn primary btn--compact"
+                onClick={() => {
+                  onOpenAuth?.('signup')
+                  onClose()
+                }}
+              >
+                Sign up
+              </button>
+              <button
+                type="button"
+                className="btn ghost btn--compact"
+                onClick={() => {
+                  onOpenAuth?.('signin')
+                  onClose()
+                }}
+              >
+                Sign in
+              </button>
+            </div>
+          </div>
         ) : null}
 
         <div className="pricing-modal__grid">
@@ -83,23 +181,29 @@ export function PricingModal({ open, onClose, onApplied: _onApplied }: Props) {
             const missingPrice = Boolean(
               billingStatus?.paddle_configured && billingStatus.prices?.[plan.id] === false,
             )
+            const guestSub = isGuest && isSubscriptionPlan(plan.id)
             const title =
               billingStatus?.paddle_configured === false
                 ? 'Server billing not ready'
                 : missingPrice
                   ? `Set the matching PADDLE_PRICE_* env var on the server for “${plan.name}”`
-                  : undefined
+                  : guestSub
+                    ? 'Sign up or sign in to subscribe'
+                    : undefined
             return (
               <article
                 key={plan.id}
                 className={`pricing-card${plan.featured ? ' pricing-card--featured' : ''}${
                   plan.id === 'debug' ? ' pricing-card--debug' : ''
-                }`}
+                }${guestSub ? ' pricing-card--guest-locked' : ''}`}
               >
                 {plan.id === 'debug' ? (
                   <span className="pricing-card__ribbon pricing-card__ribbon--test">Test</span>
                 ) : plan.featured ? (
                   <span className="pricing-card__ribbon">Popular</span>
+                ) : null}
+                {guestSub ? (
+                  <span className="pricing-card__ribbon pricing-card__ribbon--account">Account</span>
                 ) : null}
                 <h3 className="pricing-card__name">{plan.name}</h3>
                 <p className="pricing-card__price">
@@ -114,7 +218,7 @@ export function PricingModal({ open, onClose, onApplied: _onApplied }: Props) {
                   title={title}
                   onClick={() => void onSelect(plan.id)}
                 >
-                  {checkoutLoading ? 'Starting…' : missingPrice ? 'Not configured' : 'Select'}
+                  {checkoutLoading ? 'Starting…' : missingPrice ? 'Not configured' : guestSub ? 'Sign in to subscribe' : 'Select'}
                 </button>
               </article>
             )

@@ -18,6 +18,16 @@ export type BillingSnapshot = {
 
 export type PricingPlanId = 'single' | 'debug' | 'month' | 'sixmo' | 'year'
 
+/** One-time purchases (guests may buy without an account). */
+export function isOneTimePlan(id: PricingPlanId): boolean {
+  return id === 'single' || id === 'debug'
+}
+
+/** Recurring plans (require a signed-in account). */
+export function isSubscriptionPlan(id: PricingPlanId): boolean {
+  return id === 'month' || id === 'sixmo' || id === 'year'
+}
+
 export type PricingPlan = {
   id: PricingPlanId
   name: string
@@ -216,14 +226,62 @@ export function applyGuestSnapshotFromServer(g: {
   free_runs_max?: number
 }): BillingSnapshot {
   const cap = Math.max(1, Number(g.free_runs_max) || FREE_RUNS_MAX)
-  const s = readBillingSnapshot()
+  const base = defaultSnapshot()
   const next: BillingSnapshot = {
-    ...s,
+    ...base,
     freeRunsUsed: Math.min(cap, Math.max(0, Number(g.free_runs_used) || 0)),
     paidJobCredits: Math.max(0, Number(g.paid_job_credits) || 0),
   }
   writeSnapshot(next)
   return next
+}
+
+/** Subscription period only applies when signed in (guests never have server-side subscriptions in this app). */
+export function subscriptionPeriodActiveForSession(s: BillingSnapshot, signedIn: boolean): boolean {
+  return signedIn && subscriptionPeriodActive(s)
+}
+
+export function hasSubscriptionAccessForSession(s: BillingSnapshot, signedIn: boolean): boolean {
+  return signedIn && hasSubscriptionAccess(s)
+}
+
+export function canMultiImageUploadForSession(s: BillingSnapshot, signedIn: boolean): boolean {
+  if (!signedIn) return s.paidJobCredits > 0
+  return canMultiImageUpload(s)
+}
+
+export function hasPaidJobAccessForSession(s: BillingSnapshot, signedIn: boolean): boolean {
+  return hasSubscriptionAccessForSession(s, signedIn) || s.paidJobCredits > 0
+}
+
+/** Signed-in subscriber with an active period but no runs left this month and no credits. */
+export function subscriptionQuotaStuckForSession(s: BillingSnapshot, signedIn: boolean): boolean {
+  return (
+    signedIn &&
+    subscriptionPeriodActive(s) &&
+    !hasSubscriptionAccess(s) &&
+    s.paidJobCredits <= 0
+  )
+}
+
+export function processBlockReasonForSession(
+  s: BillingSnapshot,
+  fileCount: number,
+  signedIn: boolean,
+): ProcessBlockReason {
+  if (fileCount < 1) return 'no_files'
+  if (
+    signedIn &&
+    subscriptionPeriodActive(s) &&
+    subscriptionRunsRemaining(s) <= 0 &&
+    s.paidJobCredits <= 0
+  ) {
+    return 'quota_exhausted'
+  }
+  if (hasSubscriptionAccessForSession(s, signedIn) || s.paidJobCredits > 0) return 'none'
+  if (fileCount > 1) return 'multi_on_free'
+  if (s.freeRunsUsed >= FREE_RUNS_MAX) return 'free_exhausted'
+  return 'none'
 }
 
 /** Local-only preview when API unavailable (not used for enforced billing). */
