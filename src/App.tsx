@@ -6,7 +6,14 @@ import {
   type ImageBubbleHint,
 } from './bubbleSummary'
 import { AuthModal } from './AuthModal'
-import { apiBase, cancelJob, createJob, fetchArtifact, waitForJob } from './api'
+import {
+  apiBase,
+  cancelJob,
+  createJob,
+  fetchArtifact,
+  waitForJob,
+  type JobStatusResponse,
+} from './api'
 import { syncBillingFromServer, syncGuestBillingFromServer } from './billingApi'
 import { fetchMe, type UserMe } from './authApi'
 import { clearSession, getAccessToken } from './authStorage'
@@ -60,13 +67,39 @@ function formatProcessElapsed(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-function stageHeadline(stage: string | undefined, status: string): string {
-  if (status === 'queued') return 'Starting…'
+function stageHeadline(
+  stage: string | undefined,
+  status: string,
+  stageLabel?: string | null,
+): string {
+  const trimmed = stageLabel?.trim()
+  if (trimmed) return trimmed
+  if (status === 'queued') return 'Queued — waiting to start…'
   if (status === 'cancelled') return 'Cancelling…'
-  if (status === 'completed') return 'Wrapping up…'
+  if (status === 'completed') return 'Final image ready'
   switch (stage) {
     case 'starting':
-      return 'Preparing…'
+      return 'Starting…'
+    case 'artifact_cleaning':
+      return 'Cleaning artifacts…'
+    case 'status_bar_extract':
+      return 'Extracting status bar…'
+    case 'pass_1':
+      return 'Pass 1 — vision transcription…'
+    case 'pass_2_prep':
+      return 'Gathering OCR hints…'
+    case 'pass_2':
+      return 'Pass 2 — transcript refine…'
+    case 'pass_3':
+      return 'Pass 3 — reference resolution…'
+    case 'pass_4':
+      return 'Pass 4 — header & status bar…'
+    case 'finalizing':
+      return 'Writing outputs…'
+    case 'rendering':
+      return 'Rendering final images…'
+    case 'completed':
+      return 'Final image generated'
     case 'transcribing':
       return 'Transcribing…'
     case 'polishing':
@@ -201,6 +234,10 @@ function App() {
   const [processing, setProcessing] = useState(false)
   const [processElapsedMs, setProcessElapsedMs] = useState(0)
   const [loadingPrimary, setLoadingPrimary] = useState<string | null>(null)
+  const [pipelineProgress, setPipelineProgress] = useState(0)
+  const [phaseStartedAtMs, setPhaseStartedAtMs] = useState<number | null>(null)
+  const [phaseElapsedMs, setPhaseElapsedMs] = useState(0)
+  const lastJobStageRef = useRef<string>('')
   const [patienceIdx, setPatienceIdx] = useState(0)
   const [jobError, setJobError] = useState<string | null>(null)
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
@@ -488,15 +525,32 @@ function App() {
   useEffect(() => {
     if (!processing) {
       setProcessElapsedMs(0)
+      setPipelineProgress(0)
+      setPhaseStartedAtMs(null)
+      setPhaseElapsedMs(0)
+      lastJobStageRef.current = ''
       return
     }
     const started = Date.now()
     setProcessElapsedMs(0)
+    setPhaseStartedAtMs(Date.now())
+    lastJobStageRef.current = ''
     const id = window.setInterval(() => {
       setProcessElapsedMs(Date.now() - started)
     }, 250)
     return () => clearInterval(id)
   }, [processing])
+
+  useEffect(() => {
+    if (!processing || phaseStartedAtMs == null) {
+      setPhaseElapsedMs(0)
+      return
+    }
+    const tick = () => setPhaseElapsedMs(Date.now() - phaseStartedAtMs)
+    tick()
+    const id = window.setInterval(tick, 250)
+    return () => clearInterval(id)
+  }, [processing, phaseStartedAtMs])
 
   const apiUrlConfigured = Boolean(apiBase())
 
@@ -616,13 +670,28 @@ function App() {
       if (!jobId) throw new Error('No job_id in response')
       activeJobIdRef.current = jobId
       const abortSignal = uploadAbortRef.current.signal
-      const done = await waitForJob(
-        jobId,
-        (j) => {
-          setLoadingPrimary(stageHeadline(j.stage, j.status))
-        },
-        { signal: abortSignal },
-      )
+
+      const syncJobStatusToUi = (j: JobStatusResponse) => {
+        if (typeof j.progress === 'number' && Number.isFinite(j.progress)) {
+          setPipelineProgress(Math.max(0, Math.min(1, j.progress)))
+        }
+        setLoadingPrimary(stageHeadline(j.stage, j.status, j.stage_label))
+        const st = j.stage ?? ''
+        if (st && st !== lastJobStageRef.current) {
+          lastJobStageRef.current = st
+          if (j.phase_started_at) {
+            const parsed = Date.parse(j.phase_started_at)
+            setPhaseStartedAtMs(Number.isNaN(parsed) ? Date.now() : parsed)
+          } else {
+            setPhaseStartedAtMs(Date.now())
+          }
+        }
+      }
+
+      // POST /jobs already returns queued status + stage_label; apply before first poll.
+      syncJobStatusToUi(created)
+
+      const done = await waitForJob(jobId, syncJobStatusToUi, { signal: abortSignal })
       if (done.status === 'cancelled') {
         return
       }
@@ -645,10 +714,11 @@ function App() {
           console.warn('[billing sync]', e)
         }
       } else {
-        try {
-          await syncGuestBillingFromServer()
-        } catch (e) {
-          console.warn('[guest billing sync]', e)
+        await syncGuestBillingFromServer()
+        const usedGuestFreeTrial =
+          String(done.billing_consumption || '').toLowerCase() === 'guest_free'
+        const snap = readBillingSnapshot()
+        if (usedGuestFreeTrial && freeRunsRemaining(snap) > 0 && snap.paidJobCredits <= 0) {
           recordSuccessfulJob()
         }
       }
@@ -683,18 +753,6 @@ function App() {
   const hasPaidAccess = planUnlocked
   const freeExhausted =
     !planUnlocked && !quotaStuck && billing.freeRunsUsed >= freeRunsCap(billing)
-
-  useEffect(() => {
-    if (!pricingOpen && !paywallOpen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      e.preventDefault()
-      setPricingOpen(false)
-      setPaywallOpen(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [pricingOpen, paywallOpen])
 
   return (
     <>
@@ -1160,15 +1218,36 @@ function App() {
           aria-busy="true"
           aria-live="polite"
           aria-labelledby="process-loading-title"
-          aria-describedby="process-loading-timer"
+          aria-describedby="process-loading-progress-desc"
         >
           <div className="process-loading__panel">
             <div className="process-loading__spinner" aria-hidden />
             <p id="process-loading-title" className="process-loading__title">
               {loadingPrimary || 'Please wait…'}
             </p>
-            <p id="process-loading-timer" className="process-loading__timer" aria-live="polite">
-              Elapsed {formatProcessElapsed(processElapsedMs)}
+            <div
+              className="process-loading__bar-track"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(pipelineProgress * 100)}
+              aria-label="Pipeline progress"
+            >
+              <div
+                className="process-loading__bar-fill"
+                style={{ width: `${Math.round(pipelineProgress * 100)}%` }}
+              />
+            </div>
+            <p id="process-loading-progress-desc" className="process-loading__timers" aria-live="polite">
+              <span className="process-loading__timer-row">
+                This step <span className="process-loading__timer-value">{formatProcessElapsed(phaseElapsedMs)}</span>
+              </span>
+              <span className="process-loading__timer-sep" aria-hidden>
+                ·
+              </span>
+              <span className="process-loading__timer-row">
+                Total <span className="process-loading__timer-value">{formatProcessElapsed(processElapsedMs)}</span>
+              </span>
             </p>
             <p
               key={patienceIdx}

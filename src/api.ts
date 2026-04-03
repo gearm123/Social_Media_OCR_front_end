@@ -37,6 +37,16 @@ export type JobStatusResponse = {
   job_id: string
   status: string
   stage?: string
+  /** Human-readable pipeline step (preferred over mapping `stage` on the client). */
+  stage_label?: string
+  /** Approximate overall completion 0–1 from the worker. */
+  progress?: number
+  /** Seconds since pipeline start (from server clock). */
+  pipeline_elapsed_sec?: number
+  /** ISO timestamp when the current `stage` began (new value when phase changes). */
+  phase_started_at?: string
+  /** Set at job creation when billing is enforced (`guest_free`, `guest_credit`, etc.). */
+  billing_consumption?: string | null
   error?: string
   traceback?: string
   artifact_urls?: Record<string, string>
@@ -184,8 +194,8 @@ export async function cancelJob(jobId: string): Promise<void> {
   throw new Error(`Cancel job failed: ${r.status} ${t}`)
 }
 
-const POLL_MS = 2000
-const MAX_POLLS = 360
+const POLL_MS = 1000
+const MAX_POLLS = 720
 
 /** Poll until status is `completed` or `failed`, or timeout (~12 min). `onPoll` runs after each GET. */
 export async function waitForJob(

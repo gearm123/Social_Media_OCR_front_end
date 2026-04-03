@@ -29,6 +29,24 @@ export async function fetchBillingStatus(): Promise<BillingStatusResponse | null
   }
 }
 
+const CHECKOUT_FETCH_MS = 60_000
+
+function checkoutAbortSignal(): AbortSignal | undefined {
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    return AbortSignal.timeout(CHECKOUT_FETCH_MS)
+  }
+  return undefined
+}
+
+function mapCheckoutFetchError(e: unknown): Error {
+  if (e instanceof Error && e.name === 'AbortError') {
+    return new Error(
+      `Checkout request timed out after ${CHECKOUT_FETCH_MS / 1000}s. Check your network, VPN, and that the API URL is reachable.`,
+    )
+  }
+  return e instanceof Error ? e : new Error(String(e))
+}
+
 function parseErrorDetail(text: string): string {
   try {
     const j = JSON.parse(text) as { detail?: unknown }
@@ -48,14 +66,20 @@ export async function startGuestBillingCheckout(plan: string, email: string): Pr
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
   const id = getOrCreateGuestBillingId()
-  const r = await fetch(`${base}/billing/guest-checkout-session`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Guest-Billing-Id': id,
-    },
-    body: JSON.stringify({ plan, email: email.trim() }),
-  })
+  let r: Response
+  try {
+    r = await fetch(`${base}/billing/guest-checkout-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Guest-Billing-Id': id,
+      },
+      body: JSON.stringify({ plan, email: email.trim() }),
+      signal: checkoutAbortSignal(),
+    })
+  } catch (e) {
+    throw mapCheckoutFetchError(e)
+  }
   const text = await r.text()
   if (!r.ok) {
     throw new Error(parseErrorDetail(text))
@@ -77,14 +101,20 @@ export async function startBillingCheckout(plan: string): Promise<string> {
   const t = getAccessToken()
   if (!t) throw new Error('Sign in to purchase a plan.')
 
-  const r = await fetch(`${base}/billing/checkout-session`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${t}`,
-    },
-    body: JSON.stringify({ plan }),
-  })
+  let r: Response
+  try {
+    r = await fetch(`${base}/billing/checkout-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${t}`,
+      },
+      body: JSON.stringify({ plan }),
+      signal: checkoutAbortSignal(),
+    })
+  } catch (e) {
+    throw mapCheckoutFetchError(e)
+  }
   const text = await r.text()
   if (!r.ok) {
     throw new Error(parseErrorDetail(text))
@@ -127,14 +157,24 @@ export type BillingGuestStatusResponse = {
 }
 
 /** Anonymous users: align local snapshot with GET /billing/guest-status (after load / successful job). */
-export async function syncGuestBillingFromServer(): Promise<void> {
+export async function syncGuestBillingFromServer(): Promise<boolean> {
   const base = apiBase()
-  if (!base) return
+  if (!base) return false
   const id = getOrCreateGuestBillingId()
-  const r = await fetch(`${base}/billing/guest-status`, {
-    headers: { 'X-Guest-Billing-Id': id },
-  })
-  if (!r.ok) return
-  const j = (await r.json()) as BillingGuestStatusResponse
-  applyGuestSnapshotFromServer(j)
+  let r: Response
+  try {
+    r = await fetch(`${base}/billing/guest-status`, {
+      headers: { 'X-Guest-Billing-Id': id },
+    })
+  } catch {
+    return false
+  }
+  if (!r.ok) return false
+  try {
+    const j = (await r.json()) as BillingGuestStatusResponse
+    applyGuestSnapshotFromServer(j)
+    return true
+  } catch {
+    return false
+  }
 }
