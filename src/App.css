@@ -1545,11 +1545,11 @@
   color: var(--muted);
 }
 
-/* Full-screen loading while job runs */
+/* Full-screen loading while job runs — above auth bar (4100), API notice (4050), modals (4300). */
 .process-loading {
   position: fixed;
   inset: 0;
-  z-index: 4000;
+  z-index: 8000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1560,6 +1560,9 @@
 }
 
 .process-loading__panel {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
   max-width: 22rem;
   width: 100%;
   padding: 1.75rem 1.5rem;
@@ -1649,11 +1652,11 @@
   }
 }
 
-/* Expanded result (lightbox) */
+/* Expanded result (lightbox) — above process-loading when both could stack. */
 .result-lightbox {
   position: fixed;
   inset: 0;
-  z-index: 5000;
+  z-index: 9000;
   display: flex;
   align-items: center;
   justify-content: center;

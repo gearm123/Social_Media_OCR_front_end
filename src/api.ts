@@ -78,6 +78,9 @@ export async function createJob(
     })
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
+      if (uploadSignal?.aborted) {
+        throw e
+      }
       throw new Error(
         `Request timed out after ${timeoutMs / 1000}s. Check the API URL, CORS, and that the server is running (cold starts on free hosts can be slow — try again).`,
       )
@@ -99,19 +102,30 @@ export async function createJob(
   return r.json() as Promise<JobStatusResponse>
 }
 
-export async function getJob(jobId: string): Promise<JobStatusResponse> {
+export async function getJob(
+  jobId: string,
+  options?: { signal?: AbortSignal },
+): Promise<JobStatusResponse> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
-  const controller = new AbortController()
-  const tid = setTimeout(() => controller.abort(), 60_000)
+  const timeoutController = new AbortController()
+  const tid = setTimeout(() => timeoutController.abort(), 60_000)
+  const userSignal = options?.signal
+  const combinedSignal =
+    userSignal != null
+      ? AbortSignal.any([timeoutController.signal, userSignal])
+      : timeoutController.signal
   let r: Response
   try {
     r = await fetch(`${base}/jobs/${encodeURIComponent(jobId)}`, {
-      signal: controller.signal,
+      signal: combinedSignal,
       headers: jobRequestHeaders(),
     })
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
+      if (userSignal?.aborted) {
+        throw e
+      }
       throw new Error('Polling timed out — check API URL and network.')
     }
     throw e
@@ -120,6 +134,24 @@ export async function getJob(jobId: string): Promise<JobStatusResponse> {
   }
   if (!r.ok) throw new Error(`Get job failed: ${r.status}`)
   return r.json() as Promise<JobStatusResponse>
+}
+
+function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'))
+      return
+    }
+    const onAbort = () => {
+      window.clearTimeout(tid)
+      reject(new DOMException('Aborted', 'AbortError'))
+    }
+    const tid = window.setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
 }
 
 /** Request cooperative cancel; the worker stops at the next stage boundary. */
@@ -143,27 +175,34 @@ const MAX_POLLS = 360
 export async function waitForJob(
   jobId: string,
   onPoll?: (j: JobStatusResponse) => void,
+  options?: { signal?: AbortSignal },
 ): Promise<JobStatusResponse> {
+  const sig = options?.signal
   for (let i = 0; i < MAX_POLLS; i++) {
-    const j = await getJob(jobId)
+    const j = await getJob(jobId, { signal: sig })
     onPoll?.(j)
     if (j.status === 'completed' || j.status === 'failed' || j.status === 'cancelled') {
       return j
     }
-    await new Promise((r) => setTimeout(r, POLL_MS))
+    await delay(POLL_MS, sig)
   }
   throw new Error('Job timed out while waiting for completion')
 }
 
 /** `path` from `artifact_urls` (e.g. `/jobs/{id}/artifacts/final_image`). */
-export async function fetchArtifact(path: string): Promise<Blob> {
+export async function fetchArtifact(path: string, options?: { signal?: AbortSignal }): Promise<Blob> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
   const url = path.startsWith('http') ? path : `${base}${path}`
-  const controller = new AbortController()
-  const tid = setTimeout(() => controller.abort(), 120_000)
+  const timeoutController = new AbortController()
+  const tid = setTimeout(() => timeoutController.abort(), 120_000)
+  const userSignal = options?.signal
+  const combinedSignal =
+    userSignal != null
+      ? AbortSignal.any([timeoutController.signal, userSignal])
+      : timeoutController.signal
   try {
-    const r = await fetch(url, { signal: controller.signal, headers: jobRequestHeaders() })
+    const r = await fetch(url, { signal: combinedSignal, headers: jobRequestHeaders() })
     if (!r.ok) {
       const t = await r.text()
       throw new Error(`Artifact fetch failed: ${r.status} ${t}`)
@@ -171,6 +210,9 @@ export async function fetchArtifact(path: string): Promise<Blob> {
     return r.blob()
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
+      if (userSignal?.aborted) {
+        throw e
+      }
       throw new Error('Downloading the result timed out.')
     }
     throw e

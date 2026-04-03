@@ -615,9 +615,14 @@ function App() {
       const jobId = created.job_id
       if (!jobId) throw new Error('No job_id in response')
       activeJobIdRef.current = jobId
-      const done = await waitForJob(jobId, (j) => {
-        setLoadingPrimary(stageHeadline(j.stage, j.status))
-      })
+      const abortSignal = uploadAbortRef.current.signal
+      const done = await waitForJob(
+        jobId,
+        (j) => {
+          setLoadingPrimary(stageHeadline(j.stage, j.status))
+        },
+        { signal: abortSignal },
+      )
       if (done.status === 'cancelled') {
         return
       }
@@ -629,7 +634,7 @@ function App() {
       const path = done.artifact_urls?.final_image
       if (!path) throw new Error('No final_image in job result')
       setLoadingPrimary('Loading result…')
-      const blob = await fetchArtifact(path)
+      const blob = await fetchArtifact(path, { signal: abortSignal })
       const url = URL.createObjectURL(blob)
       setResultImageUrl(url)
       setLoadingPrimary(null)
@@ -649,7 +654,10 @@ function App() {
       }
       setBillingTick((t) => t + 1)
     } catch (e) {
-      if (executionCancelledRef.current) {
+      const userStopped =
+        executionCancelledRef.current ||
+        (e instanceof DOMException && e.name === 'AbortError')
+      if (userStopped) {
         setJobError(null)
         setLoadingPrimary(null)
       } else {
