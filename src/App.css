@@ -3326,3 +3326,27 @@
   justify-content: flex-end;
   gap: 0.5rem;
 }
+
+.app-legal-footer {
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--muted) 35%, transparent);
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.app-legal-footer__link {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.app-legal-footer__link:hover {
+  color: var(--text);
+}
+
+.app-legal-footer__sep {
+  margin: 0 0.35rem;
+  opacity: 0.65;
+}

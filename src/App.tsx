@@ -1292,6 +1292,30 @@ function App() {
             multiple={multiUploadAllowed}
             onChange={(e) => onPickFiles(e.target.files)}
           />
+
+          {apiUrlConfigured ? (
+            <footer className="app-legal-footer">
+              <a
+                className="app-legal-footer__link"
+                href={`${apiBase()}/legal/terms`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Terms
+              </a>
+              <span className="app-legal-footer__sep" aria-hidden>
+                ·
+              </span>
+              <a
+                className="app-legal-footer__link"
+                href={`${apiBase()}/legal/privacy`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Privacy
+              </a>
+            </footer>
+          ) : null}
         </div>
       </main>
 
