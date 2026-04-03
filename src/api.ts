@@ -17,6 +17,22 @@ export function apiBase(): string {
   return ''
 }
 
+/**
+ * Max time to wait for POST /jobs (upload + server saving files + JSON response).
+ * Large screenshots on slow links or cold hosts can exceed 2 minutes; default 10 minutes.
+ * Override with VITE_CREATE_JOB_TIMEOUT_MS (milliseconds, min 30000, max 1800000).
+ */
+function createJobTimeoutMs(): number {
+  const raw = import.meta.env.VITE_CREATE_JOB_TIMEOUT_MS
+  if (raw != null && String(raw).trim() !== '') {
+    const n = parseInt(String(raw).trim(), 10)
+    if (Number.isFinite(n) && n >= 30_000) {
+      return Math.min(n, 1_800_000)
+    }
+  }
+  return 600_000
+}
+
 export type JobStatusResponse = {
   job_id: string
   status: string
@@ -63,7 +79,7 @@ export async function createJob(
   }
 
   const controller = new AbortController()
-  const timeoutMs = 120_000
+  const timeoutMs = createJobTimeoutMs()
   const tid = setTimeout(() => controller.abort(), timeoutMs)
   const uploadSignal = options?.signal
   const combinedSignal =
@@ -82,7 +98,7 @@ export async function createJob(
         throw e
       }
       throw new Error(
-        `Request timed out after ${timeoutMs / 1000}s. Check the API URL, CORS, and that the server is running (cold starts on free hosts can be slow — try again).`,
+        `Upload / create job timed out after ${timeoutMs / 1000}s (large images or a slow network need more time — set VITE_CREATE_JOB_TIMEOUT_MS on the build, e.g. 900000 for 15 minutes).`,
       )
     }
     if (e instanceof TypeError && String(e.message).toLowerCase().includes('fetch')) {
@@ -109,7 +125,7 @@ export async function getJob(
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
   const timeoutController = new AbortController()
-  const tid = setTimeout(() => timeoutController.abort(), 60_000)
+  const tid = setTimeout(() => timeoutController.abort(), 120_000)
   const userSignal = options?.signal
   const combinedSignal =
     userSignal != null
