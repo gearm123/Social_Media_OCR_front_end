@@ -14,7 +14,11 @@ import {
   waitForJob,
   type JobStatusResponse,
 } from './api'
-import { syncBillingFromServer, syncGuestBillingFromServer } from './billingApi'
+import {
+  claimGuestPaidTransaction,
+  syncBillingFromServer,
+  syncGuestBillingFromServer,
+} from './billingApi'
 import { fetchMe, type UserMe } from './authApi'
 import { clearSession, getAccessToken } from './authStorage'
 import { fileKey } from './fileUtils'
@@ -319,6 +323,29 @@ function App() {
     }
   }, [])
 
+  /** If Paddle returns to home with ?_ptxn=, activate guest credits without opening /pay again. */
+  useEffect(() => {
+    if (!apiBase()) return
+    const q = new URLSearchParams(window.location.search)
+    const tx = q.get('_ptxn')?.trim()
+    if (!tx?.startsWith('txn_')) return
+    if (getAccessToken()) return
+    let cancelled = false
+    void (async () => {
+      try {
+        await claimGuestPaidTransaction(tx)
+        if (cancelled) return
+        window.history.replaceState({}, '', `${window.location.pathname}${window.location.hash}`)
+        setBillingTick((t) => t + 1)
+      } catch {
+        /* Pay page or webhooks may still apply */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const shakeBillingExplainerHero = useCallback(() => {
     const el = billingExplainerHeroRef.current
     if (!el) return
@@ -600,7 +627,9 @@ function App() {
     } else if (quotaStuck && proUntil) {
       planLong = `Subscription · monthly runs used · renews ${proUntil}`
     } else if (billing.paidJobCredits > 0) {
-      planLong = `One-time credits · ${billing.paidJobCredits} full run${billing.paidJobCredits === 1 ? '' : 's'}`
+      planLong = !signedIn
+        ? `Guest · ${billing.paidJobCredits} paid full run${billing.paidJobCredits === 1 ? '' : 's'} (multi-image)`
+        : `One-time credits · ${billing.paidJobCredits} full run${billing.paidJobCredits === 1 ? '' : 's'}`
     } else if (!signedIn) {
       planLong = 'No subscription (guest)'
     } else {

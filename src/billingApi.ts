@@ -188,6 +188,48 @@ export type BillingGuestStatusResponse = {
   paid_job_credits: number
 }
 
+const GUEST_CLAIM_RETRIES = 6
+const GUEST_CLAIM_RETRY_MS = 1500
+
+/**
+ * After Paddle checkout completes in the browser: server verifies the transaction with Paddle
+ * and grants guest credits (covers slow/missing webhooks on small hosts).
+ */
+export async function claimGuestPaidTransaction(transactionId: string): Promise<BillingGuestStatusResponse> {
+  const base = apiBase()
+  if (!base) throw new Error('VITE_API_BASE_URL is not set')
+  const id = getOrCreateGuestBillingId()
+  let lastMsg = 'Request failed'
+  for (let attempt = 0; attempt < GUEST_CLAIM_RETRIES; attempt++) {
+    let r: Response
+    try {
+      r = await fetch(`${base}/billing/guest-claim-transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Guest-Billing-Id': id,
+        },
+        body: JSON.stringify({ transaction_id: transactionId }),
+      })
+    } catch (e) {
+      throw mapCheckoutFetchError(e)
+    }
+    const text = await r.text()
+    if (r.ok) {
+      const j = JSON.parse(text) as BillingGuestStatusResponse
+      applyGuestSnapshotFromServer(j)
+      return j
+    }
+    lastMsg = parseErrorDetail(text)
+    if (r.status === 409 && attempt < GUEST_CLAIM_RETRIES - 1) {
+      await new Promise((resolve) => setTimeout(resolve, GUEST_CLAIM_RETRY_MS))
+      continue
+    }
+    throw new Error(lastMsg)
+  }
+  throw new Error(lastMsg)
+}
+
 /** Anonymous users: align local snapshot with GET /billing/guest-status (after load / successful job). */
 export async function syncGuestBillingFromServer(): Promise<boolean> {
   const base = apiBase()
