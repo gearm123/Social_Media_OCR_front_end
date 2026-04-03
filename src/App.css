@@ -1661,23 +1661,6 @@
   color: color-mix(in srgb, var(--accent) 55%, var(--text));
 }
 
-.process-loading__patience {
-  margin: 0.65rem 0 0;
-  font-size: 0.82rem;
-  line-height: 1.45;
-  color: var(--muted);
-  animation: process-patience-fade 0.45s ease-out;
-}
-
-@keyframes process-patience-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 .process-loading__cancel {
   margin-top: 1.15rem;
   width: 100%;
