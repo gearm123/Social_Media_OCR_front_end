@@ -30,7 +30,7 @@ function planSelectable(id: PricingPlanId, status: BillingStatusResponse | null 
 
 export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, onOpenAuth }: Props) {
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [checkoutLoadingPlanId, setCheckoutLoadingPlanId] = useState<PricingPlanId | null>(null)
   const [billingStatus, setBillingStatus] = useState<BillingStatusResponse | null>(null)
   const [guestEmail, setGuestEmail] = useState('')
   const [subscriptionGuestPrompt, setSubscriptionGuestPrompt] = useState(false)
@@ -44,7 +44,7 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
   useEffect(() => {
     if (open) {
       setCheckoutError(null)
-      setCheckoutLoading(false)
+      setCheckoutLoadingPlanId(null)
       setSubscriptionGuestPrompt(false)
       let cancelled = false
       void fetchBillingStatus().then((s) => {
@@ -75,23 +75,23 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
         setCheckoutError('Enter a valid email below — Paddle needs it for your receipt and to link your purchase.')
         return
       }
-      setCheckoutLoading(true)
+      setCheckoutLoadingPlanId(id)
       try {
         const url = await startGuestBillingCheckout(id, em)
         window.location.href = url
       } catch (e) {
-        setCheckoutLoading(false)
+        setCheckoutLoadingPlanId(null)
         setCheckoutError(e instanceof Error ? e.message : String(e))
       }
       return
     }
 
-    setCheckoutLoading(true)
+    setCheckoutLoadingPlanId(id)
     try {
       const url = await startBillingCheckout(id)
       window.location.href = url
     } catch (e) {
-      setCheckoutLoading(false)
+      setCheckoutLoadingPlanId(null)
       setCheckoutError(e instanceof Error ? e.message : String(e))
     }
   }
@@ -137,7 +137,7 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
               placeholder="you@example.com"
               value={guestEmail}
               onChange={(e) => setGuestEmail(e.target.value)}
-              disabled={checkoutLoading}
+              disabled={checkoutLoadingPlanId !== null}
             />
           </div>
         ) : null}
@@ -227,11 +227,15 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
                 <button
                   type="button"
                   className={`btn pricing-card__cta${plan.featured ? ' primary' : ' ghost'}`}
-                  disabled={checkoutLoading || !ok}
+                  disabled={checkoutLoadingPlanId !== null || !ok}
                   title={title}
                   onClick={() => void onSelect(plan.id)}
                 >
-                  {checkoutLoading ? 'Starting…' : missingPrice ? 'Not configured' : 'Select'}
+                  {checkoutLoadingPlanId === plan.id
+                    ? 'Starting…'
+                    : missingPrice
+                      ? 'Not configured'
+                      : 'Select'}
                 </button>
               </article>
             )
