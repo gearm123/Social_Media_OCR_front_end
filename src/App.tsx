@@ -78,50 +78,48 @@ function formatPipelineEtaHint(imageCount: number): string {
   return `Rough guide: ${n} images often take about ${lowMin}–${highMin} minutes total (varies with load and size).`
 }
 
-function stageHeadline(
-  stage: string | undefined,
-  status: string,
-  stageLabel?: string | null,
-): string {
-  const trimmed = stageLabel?.trim()
-  if (trimmed) return trimmed
-  if (status === 'queued') return 'Queued — waiting to start…'
+/** Same assumptions as ``formatPipelineEtaHint``, in seconds, for the loading banner. */
+function pipelineEtaSecondsRange(imageCount: number): [number, number] {
+  const n = Math.max(1, imageCount)
+  if (n === 1) {
+    const s = 2 * 60
+    return [s, s]
+  }
+  const lowMin = 2 + Math.floor((n - 1) * 0.9)
+  const highMin = 3 + Math.ceil((n - 1) * 1.2)
+  return [lowMin * 60, highMin * 60]
+}
+
+function formatEstimatedTotalTime(imageCount: number): string {
+  const [lo, hi] = pipelineEtaSecondsRange(imageCount)
+  if (lo === hi) {
+    return `Est. total ~${formatProcessElapsed(lo * 1000)}`
+  }
+  return `Est. total ~${formatProcessElapsed(lo * 1000)}–${formatProcessElapsed(hi * 1000)}`
+}
+
+/** Short titles for the pipeline overlay (ignore verbose server ``stage_label``). */
+function processingOverlayHeadline(stage: string | undefined, status: string): string {
   if (status === 'cancelled') return 'Cancelling…'
-  if (status === 'completed') return 'Final image ready'
-  switch (stage) {
+  if (status === 'queued') return 'Starting…'
+  const st = stage ?? ''
+  switch (st) {
     case 'starting':
       return 'Starting…'
     case 'artifact_cleaning':
-      return 'Cleaning artifacts…'
     case 'status_bar_extract':
-      return 'Extracting status bar…'
     case 'pass_1':
-      return 'Pass 1 — vision transcription…'
+      return 'Transcribing'
     case 'pass_2_prep':
-      return 'Gathering OCR hints…'
     case 'pass_2':
-      return 'Pass 2 — transcript refine…'
+      return 'Polishing'
     case 'pass_3':
-      return 'Pass 3 — reference resolution…'
     case 'pass_4':
-      return 'Pass 4 — header & status bar…'
     case 'finalizing':
-      return 'Writing outputs…'
     case 'rendering':
-      return 'Rendering final images…'
-    case 'completed':
-      return 'Final image generated'
-    case 'transcribing':
-      return 'Transcribing…'
-    case 'polishing':
-      return 'Polishing…'
-    case 'bringing_together':
-      return 'Bringing it all together…'
-    case 'final_touches':
-      return 'Final touches…'
-    case 'pipeline':
-      return 'Processing…'
+      return 'Bringing it all together'
     default:
+      if (status === 'completed') return 'Final image ready'
       return 'Processing…'
   }
 }
@@ -248,9 +246,6 @@ function App() {
   const [processElapsedMs, setProcessElapsedMs] = useState(0)
   const [loadingPrimary, setLoadingPrimary] = useState<string | null>(null)
   const [pipelineProgress, setPipelineProgress] = useState(0)
-  const [phaseStartedAtMs, setPhaseStartedAtMs] = useState<number | null>(null)
-  const [phaseElapsedMs, setPhaseElapsedMs] = useState(0)
-  const lastJobStageRef = useRef<string>('')
   const [patienceIdx, setPatienceIdx] = useState(0)
   const [jobError, setJobError] = useState<string | null>(null)
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
@@ -539,31 +534,15 @@ function App() {
     if (!processing) {
       setProcessElapsedMs(0)
       setPipelineProgress(0)
-      setPhaseStartedAtMs(null)
-      setPhaseElapsedMs(0)
-      lastJobStageRef.current = ''
       return
     }
     const started = Date.now()
     setProcessElapsedMs(0)
-    setPhaseStartedAtMs(Date.now())
-    lastJobStageRef.current = ''
     const id = window.setInterval(() => {
       setProcessElapsedMs(Date.now() - started)
     }, 250)
     return () => clearInterval(id)
   }, [processing])
-
-  useEffect(() => {
-    if (!processing || phaseStartedAtMs == null) {
-      setPhaseElapsedMs(0)
-      return
-    }
-    const tick = () => setPhaseElapsedMs(Date.now() - phaseStartedAtMs)
-    tick()
-    const id = window.setInterval(tick, 250)
-    return () => clearInterval(id)
-  }, [processing, phaseStartedAtMs])
 
   const apiUrlConfigured = Boolean(apiBase())
 
@@ -689,17 +668,7 @@ function App() {
         if (typeof j.progress === 'number' && Number.isFinite(j.progress)) {
           setPipelineProgress(Math.max(0, Math.min(1, j.progress)))
         }
-        setLoadingPrimary(stageHeadline(j.stage, j.status, j.stage_label))
-        const st = j.stage ?? ''
-        if (st && st !== lastJobStageRef.current) {
-          lastJobStageRef.current = st
-          if (j.phase_started_at) {
-            const parsed = Date.parse(j.phase_started_at)
-            setPhaseStartedAtMs(Number.isNaN(parsed) ? Date.now() : parsed)
-          } else {
-            setPhaseStartedAtMs(Date.now())
-          }
-        }
+        setLoadingPrimary(processingOverlayHeadline(j.stage, j.status))
       }
 
       // POST /jobs already returns queued status + stage_label; apply before first poll.
@@ -716,7 +685,7 @@ function App() {
       }
       const path = done.artifact_urls?.final_image
       if (!path) throw new Error('No final_image in job result')
-      setLoadingPrimary('Loading result…')
+      setLoadingPrimary('Bringing it all together')
       const blob = await fetchArtifact(path, { signal: abortSignal })
       const url = URL.createObjectURL(blob)
       setResultImageUrl(url)
@@ -728,12 +697,27 @@ function App() {
           console.warn('[billing sync]', e)
         }
       } else {
-        await syncGuestBillingFromServer()
-        const usedGuestFreeTrial =
-          String(done.billing_consumption || '').toLowerCase() === 'guest_free'
-        const snap = readBillingSnapshot()
-        if (usedGuestFreeTrial && freeRunsRemaining(snap) > 0 && snap.paidJobCredits <= 0) {
-          recordSuccessfulJob()
+        const cons = String(done.billing_consumption || '').toLowerCase()
+        const imgCount =
+          typeof done.images_count === 'number' && Number.isFinite(done.images_count)
+            ? done.images_count
+            : files.length
+        const synced = await syncGuestBillingFromServer()
+        if (!synced) {
+          if (cons === 'guest_free' || cons === 'guest_credit') {
+            recordSuccessfulJob()
+          } else if (!cons && imgCount === 1) {
+            recordSuccessfulJob()
+          }
+        } else {
+          const snap = readBillingSnapshot()
+          if (
+            cons === 'guest_free' &&
+            snap.paidJobCredits <= 0 &&
+            freeRunsRemaining(snap) > 0
+          ) {
+            recordSuccessfulJob()
+          }
         }
       }
       setBillingTick((t) => t + 1)
@@ -1257,13 +1241,16 @@ function App() {
             </p>
             <p id="process-loading-progress-desc" className="process-loading__timers" aria-live="polite">
               <span className="process-loading__timer-row">
-                This step <span className="process-loading__timer-value">{formatProcessElapsed(phaseElapsedMs)}</span>
+                Total time{' '}
+                <span className="process-loading__timer-value">{formatProcessElapsed(processElapsedMs)}</span>
               </span>
               <span className="process-loading__timer-sep" aria-hidden>
                 ·
               </span>
               <span className="process-loading__timer-row">
-                Total <span className="process-loading__timer-value">{formatProcessElapsed(processElapsedMs)}</span>
+                <span className="process-loading__timer-value">
+                  {formatEstimatedTotalTime(processingImageCount)}
+                </span>
               </span>
             </p>
             <p

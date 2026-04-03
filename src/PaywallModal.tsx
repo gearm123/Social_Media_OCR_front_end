@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+
 type PaywallReason = 'free_exhausted' | 'multi_on_free' | 'quota_exhausted'
 
 type Props = {
@@ -26,6 +28,17 @@ const COPY: Record<PaywallReason, { title: string; body: string }> = {
 }
 
 export function PaywallModal({ open, reason, onClose, onViewPlans }: Props) {
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
   if (!open) return null
   const { title, body } = COPY[reason]
 

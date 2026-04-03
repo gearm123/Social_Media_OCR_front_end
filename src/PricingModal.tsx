@@ -28,7 +28,8 @@ function planSelectable(id: PricingPlanId, status: BillingStatusResponse | null 
   return true
 }
 
-export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, onOpenAuth }: Props) {
+export function PricingModal({ open, onClose, onApplied, isGuest, onOpenAuth }: Props) {
+  void onApplied
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [checkoutLoadingPlanId, setCheckoutLoadingPlanId] = useState<PricingPlanId | null>(null)
   const [billingStatus, setBillingStatus] = useState<BillingStatusResponse | null>(null)
@@ -58,7 +59,25 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
     return undefined
   }, [open])
 
+  /** Escape must not close during checkout — otherwise errors/redirects happen with the dialog already gone. */
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (checkoutLoadingPlanId !== null) {
+        e.preventDefault()
+        return
+      }
+      e.preventDefault()
+      onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, checkoutLoadingPlanId, onClose])
+
   if (!open) return null
+
+  const checkoutBusy = checkoutLoadingPlanId !== null
 
   const onSelect = async (id: PricingPlanId) => {
     setCheckoutError(null)
@@ -98,7 +117,13 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
 
   return (
     <div className="pricing-modal" role="dialog" aria-modal="true" aria-labelledby="pricing-modal-title">
-      <button type="button" className="pricing-modal__backdrop" aria-label="Close" onClick={onClose} />
+      <button
+        type="button"
+        className="pricing-modal__backdrop"
+        aria-label="Close"
+        disabled={checkoutBusy}
+        onClick={onClose}
+      />
       <div className="pricing-modal__panel">
         <div className="pricing-modal__head">
           <div>
@@ -119,7 +144,13 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
               )}
             </p>
           </div>
-          <button type="button" className="pricing-modal__close" onClick={onClose} aria-label="Close">
+          <button
+            type="button"
+            className="pricing-modal__close"
+            onClick={onClose}
+            disabled={checkoutBusy}
+            aria-label="Close"
+          >
             ×
           </button>
         </div>
@@ -138,6 +169,12 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
               value={guestEmail}
               onChange={(e) => setGuestEmail(e.target.value)}
               disabled={checkoutLoadingPlanId !== null}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return
+                e.preventDefault()
+                const id = visiblePlans[0]?.id
+                if (id) void onSelect(id)
+              }}
             />
           </div>
         ) : null}
@@ -241,6 +278,14 @@ export function PricingModal({ open, onClose, onApplied: _onApplied, isGuest, on
             )
           })}
         </div>
+
+        {checkoutBusy ? (
+          <p className="pricing-modal__status" role="status" aria-live="polite">
+            Redirecting to Paddle checkout… If nothing happens, check that this site’s URL matches{' '}
+            <code className="pricing-modal__inline-code">FRONTEND_URL</code> on the server and that{' '}
+            <code className="pricing-modal__inline-code">VITE_PADDLE_CLIENT_TOKEN</code> is set for this build.
+          </p>
+        ) : null}
 
         {checkoutError ? (
           <p className="pricing-modal__error" role="alert">
