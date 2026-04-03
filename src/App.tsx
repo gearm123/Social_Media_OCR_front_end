@@ -497,6 +497,9 @@ function App() {
     const multi = canMultiImageUploadForSession(billing, signedIn)
     const fr = freeRunsRemaining(billing)
     const freeCap = freeRunsCap(billing)
+    const uploadLine = multi
+      ? 'You can upload multiple images per run.'
+      : 'Single-image only — one image per run.'
 
     let planLong = ''
     if (subAccess && proUntil) {
@@ -511,12 +514,30 @@ function App() {
       planLong = 'No active subscription'
     }
 
-    const freePart =
-      fr > 0
-        ? `${fr} of ${freeCap} free try/tries left`
-        : `No free tries left (${freeCap}/${freeCap} used)`
-    const uploadPart = multi ? 'Multi-image uploads' : 'Single-image only (1 per run)'
-    const usageLong = `${freePart} · ${uploadPart}`
+    let usageLong = ''
+    if (subAccess) {
+      usageLong =
+        rem === 1
+          ? `1 run left this month (of ${cap}). ${uploadLine}`
+          : `${rem} runs left this month (of ${cap}). ${uploadLine}`
+    } else if (billing.paidJobCredits > 0) {
+      const n = billing.paidJobCredits
+      usageLong =
+        n === 1
+          ? `1 paid run available. ${uploadLine}`
+          : `${n} paid runs available. ${uploadLine}`
+    } else if (quotaStuck && proUntil) {
+      usageLong = `You've reached your monthly run limit — included runs renew when your subscription renews (${proUntil}). ${uploadLine}`
+    } else if (fr > 0) {
+      usageLong =
+        fr === 1 && freeCap === 1
+          ? `You have 1 free run left. ${uploadLine}`
+          : `You have ${fr} free ${fr === 1 ? 'run' : 'runs'} left (out of ${freeCap}). ${uploadLine}`
+    } else {
+      usageLong = signedIn
+        ? `You've reached your free run limit — open Plans to purchase runs or subscribe. ${uploadLine}`
+        : `You've reached your free guest try — open Plans to buy a run or sign up for more. ${uploadLine}`
+    }
 
     return { planLong, usageLong }
   }, [billing, signedIn, subAccess, quotaStuck])
