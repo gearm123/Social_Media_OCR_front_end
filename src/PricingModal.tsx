@@ -97,7 +97,7 @@ export function PricingModal({ open, onClose, onApplied, isGuest, onOpenAuth }: 
       setCheckoutLoadingPlanId(id)
       try {
         const url = await startGuestBillingCheckout(id, em)
-        window.location.href = url
+        window.location.replace(url)
       } catch (e) {
         setCheckoutLoadingPlanId(null)
         setCheckoutError(e instanceof Error ? e.message : String(e))
@@ -108,7 +108,7 @@ export function PricingModal({ open, onClose, onApplied, isGuest, onOpenAuth }: 
     setCheckoutLoadingPlanId(id)
     try {
       const url = await startBillingCheckout(id)
-      window.location.href = url
+      window.location.replace(url)
     } catch (e) {
       setCheckoutLoadingPlanId(null)
       setCheckoutError(e instanceof Error ? e.message : String(e))

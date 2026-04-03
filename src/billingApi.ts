@@ -47,6 +47,17 @@ function mapCheckoutFetchError(e: unknown): Error {
   return e instanceof Error ? e : new Error(String(e))
 }
 
+/** Ensure we navigate to a valid absolute URL (Paddle returns full https URL to this site + ?_ptxn=…). */
+function normalizeCheckoutRedirectUrl(raw: string): string {
+  const s = raw.trim()
+  if (!s) throw new Error('No checkout URL from server')
+  try {
+    return new URL(s).href
+  } catch {
+    throw new Error('Invalid checkout URL from server')
+  }
+}
+
 function parseErrorDetail(text: string): string {
   try {
     const j = JSON.parse(text) as { detail?: unknown }
@@ -91,7 +102,7 @@ export async function startGuestBillingCheckout(plan: string, email: string): Pr
     throw new Error('Invalid response from billing API')
   }
   if (!url) throw new Error('No checkout URL from server')
-  return url
+  return normalizeCheckoutRedirectUrl(url)
 }
 
 /** Server creates a Paddle transaction; returns checkout URL (opens /pay?_ptxn=… on success). */
@@ -126,7 +137,7 @@ export async function startBillingCheckout(plan: string): Promise<string> {
     throw new Error('Invalid response from billing API')
   }
   if (!url) throw new Error('No checkout URL from server')
-  return url
+  return normalizeCheckoutRedirectUrl(url)
 }
 
 export async function fetchBillingMe(): Promise<BillingMeResponse> {

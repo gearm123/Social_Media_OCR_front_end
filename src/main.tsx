@@ -6,6 +6,15 @@ import './index.css'
 
 const isPayRoute = /^\/pay\/?$/i.test(window.location.pathname)
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>{isPayRoute ? <PayCheckoutPage /> : <App />}</StrictMode>,
+const root = document.getElementById('root')!
+// Paddle.js + Checkout.open must not run under StrictMode's double effect mount; the first
+// mount's async init is cancelled and checkout never opens. Main app keeps StrictMode.
+createRoot(root).render(
+  isPayRoute ? (
+    <PayCheckoutPage />
+  ) : (
+    <StrictMode>
+      <App />
+    </StrictMode>
+  ),
 )

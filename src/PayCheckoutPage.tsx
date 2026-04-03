@@ -44,9 +44,11 @@ export default function PayCheckoutPage() {
           },
         })
       } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Failed to initialize Paddle'
+        console.error('[Paddle] initializePaddle failed', e)
         if (!cancelled) {
           setStatus('error')
-          setMessage(e instanceof Error ? e.message : 'Failed to initialize Paddle')
+          setMessage(msg)
         }
         return
       }
@@ -66,12 +68,16 @@ export default function PayCheckoutPage() {
         })
         if (!cancelled) {
           setStatus('ready')
-          setMessage('Complete payment in the window above. You can close this tab when done.')
+          setMessage(
+            'Complete payment in the Paddle window (overlay). If you do not see it, check the browser console, popup blocker, and that this domain is approved in Paddle for your client token.',
+          )
         }
       } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Failed to open checkout'
+        console.error('[Paddle] Checkout.open failed', e)
         if (!cancelled) {
           setStatus('error')
-          setMessage(e instanceof Error ? e.message : 'Failed to open checkout')
+          setMessage(msg)
         }
       }
     }

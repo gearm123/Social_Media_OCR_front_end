@@ -9,6 +9,9 @@
   # You can override with Netlify → Site configuration → Environment variables (same name), then redeploy.
   VITE_API_BASE_URL = "https://translate-chat-backend.onrender.com"
 
+# Paddle overlay checkout on /pay requires VITE_PADDLE_CLIENT_TOKEN (set in Netlify env + redeploy).
+# FRONTEND_URL on the API must match this site origin (Paddle default payment link / domain approval).
+
 # SPA: send all routes to index.html (safe for client-side routing later)
 [[redirects]]
   from = "/*"
