@@ -760,53 +760,64 @@ function App() {
 
   return (
     <>
-      <div className="app-auth-bar">
-        {!apiUrlConfigured ? (
-          <span className="app-auth-bar__muted">Sign in requires API URL</span>
-        ) : authUser ? (
-          <>
-            <span className="app-auth-bar__name" title={authUser.email}>
-              {authUser.username ?? authUser.email}
-            </span>
-            <button
-              type="button"
-              className="btn ghost btn--compact"
-              onClick={() => {
-                clearSession()
-                setAuthUser(null)
-                if (apiBase()) {
-                  void syncGuestBillingFromServer().then(() => setBillingTick((t) => t + 1))
-                }
-              }}
-            >
-              Sign out
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="btn ghost btn--compact"
-              onClick={() => {
-                setAuthModalTab('signin')
-                setAuthModalOpen(true)
-              }}
-            >
-              Sign in
-            </button>
-            <button
-              type="button"
-              className="btn primary btn--compact"
-              onClick={() => {
-                setAuthModalTab('signup')
-                setAuthModalOpen(true)
-              }}
-            >
-              Sign up
-            </button>
-          </>
-        )}
-      </div>
+      <header className="app-top-bar">
+        <nav className="app-top-bar__nav" aria-label="Help and feedback">
+          <a className="app-top-bar__link" href="/contact">
+            Contact
+          </a>
+          <a className="app-top-bar__link" href="/feedback">
+            Feedback
+          </a>
+        </nav>
+        <span className="app-top-bar__divider" aria-hidden />
+        <div className="app-top-bar__auth">
+          {!apiUrlConfigured ? (
+            <span className="app-auth-bar__muted">Sign in requires API URL</span>
+          ) : authUser ? (
+            <>
+              <span className="app-auth-bar__name" title={authUser.email}>
+                {authUser.username ?? authUser.email}
+              </span>
+              <button
+                type="button"
+                className="btn ghost btn--compact"
+                onClick={() => {
+                  clearSession()
+                  setAuthUser(null)
+                  if (apiBase()) {
+                    void syncGuestBillingFromServer().then(() => setBillingTick((t) => t + 1))
+                  }
+                }}
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn ghost btn--compact"
+                onClick={() => {
+                  setAuthModalTab('signin')
+                  setAuthModalOpen(true)
+                }}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                className="btn primary btn--compact"
+                onClick={() => {
+                  setAuthModalTab('signup')
+                  setAuthModalOpen(true)
+                }}
+              >
+                Sign up
+              </button>
+            </>
+          )}
+        </div>
+      </header>
 
       {!apiUrlConfigured ? (
         <div
