@@ -680,10 +680,27 @@ function App() {
       setResultImageUrl(url)
       setLoadingPrimary(null)
       if (getAccessToken()) {
+        let billingSynced = true
         try {
           await syncBillingFromServer()
         } catch (e) {
+          billingSynced = false
           console.warn('[billing sync]', e)
+        }
+        const cons = String(done.billing_consumption || '').toLowerCase()
+        if (!billingSynced) {
+          if (cons === 'free' || cons === 'credit') {
+            recordSuccessfulJob()
+          }
+        } else {
+          const snap = readBillingSnapshot()
+          if (
+            cons === 'free' &&
+            snap.paidJobCredits <= 0 &&
+            freeRunsRemaining(snap) > 0
+          ) {
+            recordSuccessfulJob()
+          }
         }
       } else {
         const cons = String(done.billing_consumption || '').toLowerCase()
