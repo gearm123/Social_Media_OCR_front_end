@@ -35,8 +35,10 @@
   position: relative;
   z-index: 1;
   box-sizing: border-box;
-  min-height: 100vh;
-  min-height: 100dvh;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
   padding: 0.65rem 1rem max(0.5rem, env(safe-area-inset-bottom, 0px));
   display: flex;
   justify-content: center;
@@ -47,7 +49,6 @@
 .app-shell--result-solo {
   align-items: stretch;
   padding: 0;
-  min-height: 100vh;
   box-sizing: border-box;
 }
 
@@ -55,8 +56,8 @@
 .result-solo {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: min(100vh, 900px);
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   min-width: 0;
 }
@@ -134,6 +135,10 @@
 .app:not(.app--result-solo) {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+  flex: 1 1 auto;
+  overflow: hidden;
   padding-top: clamp(0.9rem, 2.4vh, 1.85rem);
   padding-bottom: clamp(0.85rem, 2vh, 1.5rem);
 }
@@ -141,7 +146,10 @@
 .app--result-solo {
   max-width: none;
   width: 100%;
-  min-height: 100vh;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
   padding: 0;
   border-radius: 0;
   border: none;
@@ -157,29 +165,6 @@
   .app--result-solo {
     background: rgba(15, 23, 42, 0.75);
   }
-}
-
-.app--has-files .hero {
-  margin-bottom: 0.65rem;
-}
-
-.app--has-files .hero-brand {
-  margin-bottom: 0.35rem;
-}
-
-.app--has-files .lede--when-files {
-  margin-bottom: 0.65rem;
-  font-size: 0.78rem;
-  line-height: 1.4;
-}
-
-.lede--when-files__muted {
-  color: var(--muted);
-}
-
-.lede--when-files__muted strong {
-  color: var(--text);
-  font-weight: 600;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -692,14 +677,33 @@
   }
 }
 
-/* Drop zone (large visual target; actual drop works anywhere on the page) */
-.drop-zone {
+/* Single flex slot: empty = dashed drop zone grows to fill; with files = hug content (no extra scroll). */
+.upload-slot {
+  --upload-slot-cap: min(26vh, 220px);
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   margin-top: 0.25rem;
   margin-bottom: 0;
-  min-height: min(26vh, 220px);
+  min-height: var(--upload-slot-cap);
+  min-width: 0;
+}
+
+/* After upload: grow with the card so the dashed area reaches the bottom; previews use remaining height. */
+.upload-slot--filled {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Drop zone (large visual target; actual drop works anywhere on the page) */
+.drop-zone {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: var(--upload-slot-cap);
   border-radius: 18px;
   border: 2px dashed var(--border);
   background: rgba(241, 245, 249, 0.55);
@@ -707,6 +711,19 @@
     border-color 0.2s,
     background 0.2s,
     box-shadow 0.2s;
+}
+
+/* Inner swap only: slightly shorter strip than empty state keeps full page on-screen. */
+.drop-zone--has-files {
+  --drop-preview-cap: var(--upload-slot-cap);
+  /* Shorter than empty drop target so hero + slot fit without scrolling. */
+  --drop-thumb-h: min(18.5vh, 150px);
+}
+
+@media (min-width: 720px) {
+  .drop-zone--has-files {
+    --drop-thumb-h: min(19vh, 162px);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -723,7 +740,7 @@
 
 .drop-zone__inner {
   flex: 1;
-  min-height: min(26vh, 220px);
+  min-height: var(--upload-slot-cap, min(26vh, 220px));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -753,9 +770,120 @@
   font-weight: 600;
 }
 
-.preview-section {
+.drop-zone__previews {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  padding: 0.35rem 0.65rem 0.45rem;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.upload-slot--filled .drop-zone {
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
+}
+
+.upload-slot--filled .drop-zone__previews {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.upload-slot--filled .preview-section--in-drop {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.upload-slot--filled .preview-row--upload-slot {
+  flex: 1 1 auto;
+  /* min-height: 0 — critical: default `auto` uses content size and breaks inner scroll + grows the page */
+  min-height: 0;
+  max-height: none;
+  align-items: stretch;
+}
+
+.upload-slot--filled .preview-card--drop-pair {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+.upload-slot--filled .preview-drop-pair {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+/* Thumbnail column grows with the row so the preview fills down to the bottom of the drop zone. */
+.upload-slot--filled .preview-thumb-wrap {
+  align-self: stretch;
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+  width: auto;
+  aspect-ratio: 9 / 16;
+  max-width: min(38vw, 13.5rem);
+}
+
+.upload-slot--filled .preview-thumb--drop-pair .preview-thumb__zoom img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* After upload, reclaim a few vertical pixels so the main column fits common viewports without body scroll. */
+.app:not(.app--result-solo):has(.upload-slot--filled) {
+  padding-bottom: clamp(0.55rem, 1.2vh, 1rem);
+}
+
+.app:not(.app--result-solo):has(.upload-slot--filled) .hero {
+  margin-bottom: clamp(0.4rem, 1.2vh, 0.85rem);
+}
+
+.app:not(.app--result-solo):has(.upload-slot--filled) .hero-title-block {
+  margin: 0 auto clamp(0.5rem, 2vh, 1.35rem);
+}
+
+.app:not(.app--result-solo):has(.upload-slot--filled) .hero-actions {
+  margin-top: clamp(0.45rem, 1.4vh, 0.9rem);
+}
+
+.drop-zone__replace-hint {
+  flex-shrink: 0;
+  margin: 0 0 0.28rem;
+  padding: 0 0.2rem;
+  font-size: 0.68rem;
+  line-height: 1.28;
+  font-weight: 500;
+  color: var(--muted);
+  text-align: center;
+}
+
+.drop-zone__replace-hint strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.preview-section--in-drop {
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+}
+
+.preview-section {
   margin-bottom: 0.5rem;
 }
 
@@ -765,6 +893,271 @@
   gap: 1.15rem;
   align-items: start;
   padding: 0.15rem 0 0.5rem;
+}
+
+/* Previews: left-aligned; each item is [thumb | side panel], multiple → to the right with gap. */
+.preview-row--upload-slot {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 1.15rem;
+  padding: 0.08rem 0.1rem 0.15rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  min-height: var(--drop-thumb-h, var(--drop-preview-cap, min(26vh, 220px)));
+  max-height: var(--drop-thumb-h, var(--drop-preview-cap, min(26vh, 220px)));
+}
+
+.preview-row--upload-slot .preview-card--drop-pair {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  width: auto;
+  max-width: none;
+}
+
+/* 1–3 images: equal-width columns, no horizontal scrollbar. 4+ uses default scroll (see .preview-row--upload-slot). */
+.preview-row--upload-slot--fit-three {
+  overflow-x: hidden;
+  gap: 0.7rem;
+}
+
+.preview-row--upload-slot--fit-three .preview-card--drop-pair {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.preview-row--upload-slot--fit-three .preview-drop-pair {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.preview-row--upload-slot--fit-three .preview-thumb-wrap {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.preview-row--upload-slot--fit-three .preview-side-panel {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+}
+
+/* Inside a shared third of the row, cap thumb so panel keeps room; aspect ratio unchanged. */
+.upload-slot--filled .preview-row--upload-slot--fit-three .preview-thumb-wrap {
+  max-width: min(11rem, 40%);
+}
+
+.preview-card--drop-pair {
+  margin: 0;
+}
+
+.preview-drop-pair {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.65rem;
+  /* Lock row to preview height so the side panel matches the image strip exactly. */
+  height: var(--drop-thumb-h, var(--drop-preview-cap, min(26vh, 220px)));
+}
+
+.preview-thumb-wrap {
+  flex: 0 0 auto;
+  height: 100%;
+  width: calc(var(--drop-thumb-h, var(--drop-preview-cap, min(26vh, 220px))) * 9 / 16);
+  flex-shrink: 0;
+}
+
+.preview-thumb--drop-pair {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  max-width: none;
+  aspect-ratio: auto;
+  margin: 0;
+}
+
+.preview-side-panel {
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-width: 10.5rem;
+  min-height: 0;
+  max-width: min(20rem, 50vw);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.32rem 0.45rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 94%, rgba(255, 255, 255, 0.5));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.preview-side-panel__top {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.06rem;
+  padding-bottom: 0.12rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  margin-bottom: 0.12rem;
+}
+
+/* Label above the number field; both stay compact so the drop zone layout stays stable. */
+.preview-side-panel__count-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.32rem;
+  min-height: 0;
+}
+
+.preview-side-panel__count-heading {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.preview-side-panel__count-heading .preview-hint-label--compact {
+  margin: 0;
+  padding: 0;
+  font-size: clamp(0.68rem, 1.45vw, 0.78rem);
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: color-mix(in srgb, var(--muted) 12%, var(--text));
+  white-space: nowrap;
+}
+
+/* Minimal field: compact width/height so the panel layout stays stable. */
+.preview-bubble-count-input {
+  box-sizing: border-box;
+  width: 3.15rem;
+  min-width: 3.15rem;
+  max-width: 3.6rem;
+  height: 2rem;
+  margin: 0;
+  padding: 0.2rem 0.28rem;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface-2) 88%, #fff);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.preview-bubble-count-input::placeholder {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.preview-bubble-count-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent),
+    inset 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.preview-bubble-count-input::-webkit-outer-spin-button,
+.preview-bubble-count-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.preview-bubble-count-input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+@media (prefers-color-scheme: dark) {
+  .preview-bubble-count-input {
+    background: color-mix(in srgb, var(--surface-2) 92%, transparent);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Default when not inside count-row (count-row sets size for the upload panel). */
+.preview-hint-label--compact {
+  font-size: clamp(0.68rem, 1.45vw, 0.78rem);
+  font-weight: 600;
+  line-height: 1.45;
+  margin: 0;
+  color: color-mix(in srgb, var(--muted) 12%, var(--text));
+}
+
+@media (prefers-color-scheme: dark) {
+  .preview-side-panel {
+    background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+}
+
+.preview-side-panel__filename {
+  margin: 0;
+  font-size: 0.58rem;
+  line-height: 1.2;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.preview-side-panel__sequence {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 1px 2px 0;
+  scrollbar-gutter: auto;
+}
+
+.preview-side-panel__sequence::-webkit-scrollbar {
+  width: 5px;
+}
+
+.preview-side-panel__sequence::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+}
+
+.preview-side-panel__sequence .bubble-seq {
+  margin-top: 0;
+}
+
+.preview-side-panel__sequence .bubble-seq__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  grid-template-columns: unset;
+}
+
+.preview-side-panel__sequence .bubble-seq__row {
+  padding: 0.2rem 0.3rem;
+}
+
+.preview-side-panel__sequence .bubble-seq__slot {
+  font-size: 0.58rem;
+  min-height: 1.45rem;
+  padding: 0.18rem 0.15rem;
 }
 
 .preview-card {
@@ -787,6 +1180,30 @@
   border: 1px solid var(--border);
   aspect-ratio: 9 / 16;
   max-height: min(220px, 42vh);
+  margin-inline: auto;
+}
+
+.upload-slot .preview-thumb {
+  aspect-ratio: 9 / 16;
+  max-height: var(--upload-slot-cap, min(26vh, 220px));
+  max-width: min(
+    100%,
+    calc(var(--upload-slot-cap, min(26vh, 220px)) * 9 / 16)
+  );
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.upload-slot .preview-thumb--drop-pair {
+  aspect-ratio: auto;
+  max-height: none;
+  max-width: none;
+  width: 100%;
+  height: 100%;
+}
+
+.drop-zone--has-files .preview-thumb--drop-pair {
+  box-sizing: border-box;
 }
 
 .preview-thumb__zoom {
@@ -837,16 +1254,63 @@
   pointer-events: none;
 }
 
+.preview-thumb__remove {
+  grid-area: 1 / 1;
+  place-self: start end;
+  z-index: 3;
+  margin: 5px;
+  width: 1.55rem;
+  height: 1.55rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.78);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.12s;
+}
+
+.preview-thumb__remove:hover {
+  background: rgba(185, 28, 28, 0.92);
+}
+
+.preview-thumb__remove:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.preview-thumb__remove:active {
+  transform: scale(0.94);
+}
+
 @media (prefers-color-scheme: dark) {
   .preview-thumb__order {
     background: rgba(0, 0, 0, 0.65);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
   }
+
+  .preview-thumb__remove {
+    background: rgba(0, 0, 0, 0.72);
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
+  }
+
+  .preview-thumb__remove:hover {
+    background: rgba(220, 38, 38, 0.9);
+  }
 }
 
 @media (min-width: 720px) {
-  .preview-thumb {
-    max-height: min(260px, 38vh);
+  .upload-slot {
+    --upload-slot-cap: min(26vh, 240px);
   }
 }
 
@@ -1895,6 +2359,54 @@
   font-size: 0.72rem;
 }
 
+@keyframes billing-explainer-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  12% {
+    transform: translateX(-7px);
+  }
+  24% {
+    transform: translateX(7px);
+  }
+  36% {
+    transform: translateX(-5px);
+  }
+  48% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  72% {
+    transform: translateX(3px);
+  }
+  84% {
+    transform: translateX(-1px);
+  }
+}
+
+@keyframes billing-explainer-attn {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+.billing-explainer.billing-explainer--hero.billing-explainer--shake {
+  animation: billing-explainer-shake 0.52s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .billing-explainer.billing-explainer--hero.billing-explainer--shake {
+    animation: billing-explainer-attn 0.45s ease-in-out 2;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .billing-explainer {
     background: color-mix(in srgb, var(--surface-2) 82%, transparent);
@@ -2226,34 +2738,6 @@
 
 .info-popover__list--tight li {
   margin-bottom: 0.28rem;
-}
-
-.billing-upload-notice {
-  margin: 0 0 0.65rem;
-  padding: 0.65rem 0.85rem;
-  border-radius: 12px;
-  font-size: 0.82rem;
-  line-height: 1.45;
-  color: var(--text);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
-}
-
-.billing-upload-notice__link {
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  font-weight: 700;
-  color: var(--accent);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.billing-upload-notice__link:hover {
-  filter: brightness(1.08);
 }
 
 .billing-nudge {

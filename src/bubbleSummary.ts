@@ -6,14 +6,12 @@ export type BubbleRole = 'sender' | 'receiver'
 export type ImageBubbleHint = {
   /** Total text bubbles the user counts in the screenshot; null = not provided. */
   messageCount: number | null
-  /** If true, show sequence UI; user can turn off to skip order hints. */
-  sequenceEnabled: boolean
-  /** Length matches messageCount when sequenceEnabled; each slot is sender vs receiver (left/right in typical chats). */
+  /** Length matches messageCount when set; each slot is sender vs receiver (left/right in typical chats). */
   sequence: BubbleRole[]
 }
 
 export function defaultImageBubbleHint(): ImageBubbleHint {
-  return { messageCount: null, sequenceEnabled: true, sequence: [] }
+  return { messageCount: null, sequence: [] }
 }
 
 /**
@@ -43,9 +41,7 @@ export function buildPass1BubbleSummaryText(
     lines.push(String(n))
 
     const roles: BubbleRole[] =
-      h.sequenceEnabled && h.sequence.length === n
-        ? h.sequence
-        : Array.from({ length: n }, () => 'receiver' as BubbleRole)
+      h.sequence.length === n ? h.sequence : Array.from({ length: n }, () => 'receiver' as BubbleRole)
 
     lines.push(roles.join(','))
   }

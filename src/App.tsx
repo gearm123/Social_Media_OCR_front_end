@@ -201,7 +201,7 @@ function App() {
   const [paywallReason, setPaywallReason] = useState<
     'free_exhausted' | 'multi_on_free' | 'quota_exhausted'
   >('free_exhausted')
-  const [uploadBillingNotice, setUploadBillingNotice] = useState<string | null>(null)
+  const billingExplainerHeroRef = useRef<HTMLElement | null>(null)
 
   const billing = useMemo(() => readBillingSnapshot(), [billingTick])
 
@@ -236,6 +236,21 @@ function App() {
     refreshAuth()
   }, [refreshAuth])
 
+  const shakeBillingExplainerHero = useCallback(() => {
+    const el = billingExplainerHeroRef.current
+    if (!el) return
+    el.classList.remove('billing-explainer--shake')
+    void el.offsetWidth
+    el.classList.add('billing-explainer--shake')
+    el.addEventListener(
+      'animationend',
+      () => {
+        el.classList.remove('billing-explainer--shake')
+      },
+      { once: true },
+    )
+  }, [])
+
   const replaceFilesFromList = useCallback(
     (list: FileList | File[] | null) => {
       if (!list || (list instanceof FileList && !list.length)) return
@@ -245,11 +260,7 @@ function App() {
       const signedIn = Boolean(getAccessToken())
       if (!canMultiImageUploadForSession(snap, signedIn) && deduped.length > 1) {
         deduped = [deduped[0]]
-        setUploadBillingNotice(
-          'Free plan allows one image per run. The first image was kept — choose a plan for multi-image jobs.',
-        )
-      } else {
-        setUploadBillingNotice(null)
+        shakeBillingExplainerHero()
       }
       setResultImageUrl((prev) => {
         if (prev) URL.revokeObjectURL(prev)
@@ -259,8 +270,12 @@ function App() {
       preProcessSnapshotRef.current = null
       setFiles(sortImageFilesByNameSequence(deduped))
     },
-    [],
+    [shakeBillingExplainerHero],
   )
+
+  const removeFileAt = useCallback((index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index))
+  }, [])
 
   /** Drop / drag anywhere on the page (capture on document so it works over any element). */
   useEffect(() => {
@@ -342,7 +357,6 @@ function App() {
     preProcessSnapshotRef.current = null
     setFiles([])
     setHints({})
-    setUploadBillingNotice(null)
     setLoadingPrimary(null)
     setJobError(null)
     setResultExpanded(false)
@@ -651,13 +665,13 @@ function App() {
       {dragActive && !resultImageUrl ? (
         <div className="drag-page-hint" aria-hidden>
           <p className="drag-page-hint__text">
-            {files.length > 0 ? 'Drop to replace with new images' : 'Drop anywhere to add images'}
+            Drop anywhere on the page to add or replace images
           </p>
         </div>
       ) : null}
       <div className={resultImageUrl ? 'app-shell app-shell--result-solo' : 'app-shell'}>
         <div
-          className={`app${resultImageUrl ? ' app--result-solo' : ''}${!resultImageUrl && files.length > 0 ? ' app--has-files' : ''}`}
+          className={`app${resultImageUrl ? ' app--result-solo' : ''}`}
         >
           {resultImageUrl ? (
             <div className="result-solo" aria-label="Translated chat result">
@@ -741,6 +755,7 @@ function App() {
                 </div>
 
                 <section
+                  ref={billingExplainerHeroRef}
                   className={`billing-explainer billing-explainer--hero${hasPaidAccess ? ' billing-explainer--unlocked' : ''}${freeExhausted ? ' billing-explainer--exhausted' : ''}`}
                   aria-label="Usage and plans"
                 >
@@ -778,64 +793,55 @@ function App() {
                   </div>
                 </section>
 
-                {files.length === 0 ? (
-                  <div className="lede-with-info lede-with-info--instructions">
-                    <div className="hero-instructions">
-                      <p className="hero-platform-lede">
-                        we translate your social media conversations for you
-                      </p>
-                      <div className="hero-instructions__platform-row">
-                        <HeroPlatformBanner />
-                        <InfoPopover label="What Translate Chat does">
-                          <ProductInfoContent />
-                        </InfoPopover>
-                      </div>
-                      <div className="hero-instructions__stack">
-                        <section className="hero-instruction-card" aria-label="Upload your screenshots">
-                          <h3 className="hero-instruction-card__name">
-                            <span className="hero-instruction-card__step" aria-hidden>
-                              1
-                            </span>
-                            Upload your screenshots
-                          </h3>
-                          <div className="hero-instruction-card__body">
-                            <p className="hero-instruction-card__line">
-                              Add images in conversation order — the first image should match the earliest part of the
-                              chat.
-                            </p>
-                            <p className="hero-instruction-card__line">We support PNG, JPEG, WebP, or BMP.</p>
-                          </div>
-                        </section>
-                        <section className="hero-instruction-card" aria-label="Improve translation quality">
-                          <h3 className="hero-instruction-card__name">
-                            <span className="hero-instruction-card__step" aria-hidden>
-                              2
-                            </span>
-                            Add details for higher quality translation
-                          </h3>
-                          <div className="hero-instruction-card__body">
-                            <p className="hero-instruction-card__line">
-                              For each image, enter the total number of messages (bubbles) that you see.
-                            </p>
-                            <p className="hero-instruction-card__line">
-                              Set the message sequence (who sent each bubble — sender vs receiver).
-                            </p>
-                            <p className="hero-instruction-card__line hero-instruction-card__line--emphasis">
-                              This added guidance helps produce the best results.
-                            </p>
-                          </div>
-                        </section>
-                      </div>
+                <div className="lede-with-info lede-with-info--instructions">
+                  <div className="hero-instructions">
+                    <p className="hero-platform-lede">
+                      we translate your social media conversations for you
+                    </p>
+                    <div className="hero-instructions__platform-row">
+                      <HeroPlatformBanner />
+                      <InfoPopover label="What Translate Chat does">
+                        <ProductInfoContent />
+                      </InfoPopover>
+                    </div>
+                    <div className="hero-instructions__stack">
+                      <section className="hero-instruction-card" aria-label="Upload your screenshots">
+                        <h3 className="hero-instruction-card__name">
+                          <span className="hero-instruction-card__step" aria-hidden>
+                            1
+                          </span>
+                          Upload your screenshots
+                        </h3>
+                        <div className="hero-instruction-card__body">
+                          <p className="hero-instruction-card__line">
+                            Add images in conversation order — the first image should match the earliest part of the
+                            chat.
+                          </p>
+                          <p className="hero-instruction-card__line">We support PNG, JPEG, WebP, or BMP.</p>
+                        </div>
+                      </section>
+                      <section className="hero-instruction-card" aria-label="Improve translation quality">
+                        <h3 className="hero-instruction-card__name">
+                          <span className="hero-instruction-card__step" aria-hidden>
+                            2
+                          </span>
+                          Add details for higher quality translation
+                        </h3>
+                        <div className="hero-instruction-card__body">
+                          <p className="hero-instruction-card__line">
+                            For each image, enter the total number of messages (bubbles) that you see.
+                          </p>
+                          <p className="hero-instruction-card__line">
+                            Set the message sequence (who sent each bubble — sender vs receiver).
+                          </p>
+                          <p className="hero-instruction-card__line hero-instruction-card__line--emphasis">
+                            This added guidance helps produce the best results.
+                          </p>
+                        </div>
+                      </section>
                     </div>
                   </div>
-                ) : (
-                  <p className="lede lede--when-files">
-                    <span className="lede--when-files__muted">
-                      Choose images again or drop files to <strong>replace</strong> this set · PNG, JPEG, WebP,
-                      BMP
-                    </span>
-                  </p>
-                )}
+                </div>
 
                 <div className="hero-actions">
                   <button
@@ -876,18 +882,6 @@ function App() {
               </header>
 
               <div ref={jobIssuesRef} className="job-issues">
-            {uploadBillingNotice ? (
-              <div className="billing-upload-notice" role="status">
-                {uploadBillingNotice}{' '}
-                <button
-                  type="button"
-                  className="billing-upload-notice__link"
-                  onClick={() => setPricingOpen(true)}
-                >
-                  View plans
-                </button>
-              </div>
-            ) : null}
             {jobError ? (
               <p className="job-status job-status--error" role="alert">
                 {jobError}
@@ -895,138 +889,142 @@ function App() {
             ) : null}
           </div>
 
-          {files.length === 0 ? (
-            <div className={`drop-zone ${dragActive ? 'drop-zone--active' : ''}`}>
-              <div className="drop-zone__inner">
-                <p className="drop-zone__title">Drag &amp; drop zone</p>
-                <p className="drop-zone__hint">
-                  Drop <strong>anywhere on this page</strong> (including the background) or use{' '}
-                  <strong>Choose images</strong>. PNG, JPEG, WebP, or BMP.
-                </p>
-              </div>
-            </div>
-          ) : null}
-
-          {previews.length > 0 ? (
-            <section className="preview-section" aria-label="Uploaded images">
-              <div className="preview-row" role="list">
+          <div className={`upload-slot${files.length > 0 ? ' upload-slot--filled' : ''}`}>
+            <div
+              className={`drop-zone${dragActive ? ' drop-zone--active' : ''}${
+                files.length > 0 ? ' drop-zone--has-files' : ''
+              }`}
+            >
+              {files.length === 0 ? (
+                <div className="drop-zone__inner">
+                  <p className="drop-zone__title">Drag &amp; drop zone</p>
+                  <p className="drop-zone__hint">
+                    Drop <strong>anywhere on this page</strong> (including the background) or use{' '}
+                    <strong>Choose images</strong>. PNG, JPEG, WebP, or BMP.
+                  </p>
+                </div>
+              ) : previews.length > 0 ? (
+                <div className="drop-zone__previews">
+                  <p className="drop-zone__replace-hint">
+                    Drop anywhere or use <strong>Choose images</strong> to replace · Reset clears the slot.
+                  </p>
+                  <section className="preview-section preview-section--in-drop" aria-label="Uploaded images">
+                    <div
+                      className={`preview-row preview-row--upload-slot${
+                        previews.length <= 3 ? ' preview-row--upload-slot--fit-three' : ''
+                      }`}
+                      role="list"
+                    >
                 {previews.map((p, i) => {
                   const k = fileKey(p.file)
                   const hint = hints[k] ?? defaultImageBubbleHint()
                   const count = hint.messageCount
-                  const showSequence = count != null && count >= 1 && hint.sequenceEnabled
+                  const showSequence = count != null && count >= 1
 
                   return (
                     <figure
-                      key={`${k}-${i}`}
-                      className="preview-card preview-card--with-hints"
+                      key={k}
+                      className="preview-card preview-card--with-hints preview-card--drop-pair"
                       role="listitem"
                     >
-                      <div className="preview-thumb">
-                        <button
-                          type="button"
-                          className="preview-thumb__zoom"
-                          aria-label={`Enlarge preview ${i + 1}: ${p.file.name}`}
-                          onClick={() =>
-                            setPreviewLightbox({ url: p.url, name: p.file.name })
-                          }
-                        >
-                          <img src={p.url} alt="" />
-                        </button>
-                        <span className="preview-thumb__order" aria-hidden>
-                          {i + 1}
-                        </span>
-                      </div>
-                      <figcaption>
-                        <span className="preview-name" title={p.file.name}>
-                          {p.file.name}
-                        </span>
-                      </figcaption>
-                      <div className="preview-hint-fields">
-                        <label className="preview-hint-label" htmlFor={`bubble-count-${k}`}>
-                          Bubbles <span className="preview-hint-optional">opt.</span>
-                        </label>
-                        <div className="preview-count-shell">
-                          <span className="preview-count-glyph" aria-hidden>
-                            <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
-                              <path
-                                d="M8 6.5h12a3.5 3.5 0 013.5 3.5v5a3.5 3.5 0 01-3.5 3.5h-1.2l-2.8 2.1V18.5H8A3.5 3.5 0 014.5 15V10A3.5 3.5 0 018 6.5z"
-                                stroke="currentColor"
-                                strokeWidth="1.35"
-                                strokeLinejoin="round"
-                              />
-                              <path
-                                d="M11 11.5h10M11 14.5h7"
-                                stroke="currentColor"
-                                strokeWidth="1.2"
-                                strokeLinecap="round"
-                                opacity="0.55"
-                              />
-                            </svg>
-                          </span>
-                          <input
-                            id={`bubble-count-${k}`}
-                            className="preview-count-input"
-                            type="number"
-                            inputMode="numeric"
-                            min={1}
-                            max={MAX_MESSAGE_BUBBLES}
-                            placeholder="—"
-                            title="Message bubbles visible in this screenshot (1–30)"
-                            value={count == null ? '' : String(count)}
-                            onChange={(e) => {
-                              const raw = e.target.value.trim()
-                              if (raw === '') {
-                                updateHint(k, {
-                                  messageCount: null,
-                                  sequence: [],
-                                })
-                                return
+                      <div className="preview-drop-pair">
+                        <div className="preview-thumb-wrap">
+                          <div className="preview-thumb preview-thumb--drop-pair">
+                            <button
+                              type="button"
+                              className="preview-thumb__zoom"
+                              aria-label={`Enlarge preview ${i + 1}: ${p.file.name}`}
+                              onClick={() =>
+                                setPreviewLightbox({ url: p.url, name: p.file.name })
                               }
-                              let n = parseInt(raw, 10)
-                              if (Number.isNaN(n)) return
-                              n = Math.min(MAX_MESSAGE_BUBBLES, Math.max(1, n))
-                              updateHint(k, {
-                                messageCount: n,
-                                sequence: hint.sequenceEnabled
-                                  ? resizeSequence(hint.sequence, n)
-                                  : [],
-                              })
-                            }}
-                          />
-                        </div>
-                        {count != null && count >= 1 ? (
-                          <label className="preview-hint-check">
-                            <input
-                              type="checkbox"
-                              checked={hint.sequenceEnabled}
-                              onChange={(e) => {
-                                const on = e.target.checked
-                                updateHint(k, {
-                                  sequenceEnabled: on,
-                                  sequence: on ? resizeSequence(hint.sequence, count) : hint.sequence,
-                                })
+                            >
+                              <img src={p.url} alt="" />
+                            </button>
+                            <span className="preview-thumb__order" aria-hidden>
+                              {i + 1}
+                            </span>
+                            <button
+                              type="button"
+                              className="preview-thumb__remove"
+                              aria-label={`Remove ${p.file.name} from upload`}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                removeFileAt(i)
                               }}
-                            />
-                            <span>R/S order</span>
-                          </label>
-                        ) : null}
-                        {showSequence ? (
-                          <IphoneBubbleSequence
-                            count={count}
-                            value={hint.sequence}
-                            onChange={(seq) => updateHint(k, { sequence: seq })}
-                          />
-                        ) : null}
+                            >
+                              <span aria-hidden>×</span>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="preview-side-panel">
+                          <div className="preview-side-panel__top">
+                            <p className="preview-side-panel__filename" title={p.file.name}>
+                              {p.file.name}
+                            </p>
+                            <div className="preview-side-panel__count-row">
+                              <div className="preview-side-panel__count-heading">
+                                <label
+                                  className="preview-hint-label preview-hint-label--compact"
+                                  htmlFor={`bubble-count-${k}`}
+                                >
+                                  total messages
+                                </label>
+                                <InfoPopover label="Help: total messages" align="start">
+                                  <p className="info-popover__lead">
+                                    enter the total amount of text bubbles in the image
+                                  </p>
+                                </InfoPopover>
+                              </div>
+                              <input
+                                id={`bubble-count-${k}`}
+                                className="preview-bubble-count-input"
+                                type="number"
+                                inputMode="numeric"
+                                min={1}
+                                max={MAX_MESSAGE_BUBBLES}
+                                placeholder="—"
+                                title="Optional: how many text bubbles appear in this screenshot (1–30)"
+                                value={count == null ? '' : String(count)}
+                                onChange={(e) => {
+                                  const raw = e.target.value.trim()
+                                  if (raw === '') {
+                                    updateHint(k, {
+                                      messageCount: null,
+                                      sequence: [],
+                                    })
+                                    return
+                                  }
+                                  let n = parseInt(raw, 10)
+                                  if (Number.isNaN(n)) return
+                                  n = Math.min(MAX_MESSAGE_BUBBLES, Math.max(1, n))
+                                  updateHint(k, {
+                                    messageCount: n,
+                                    sequence: resizeSequence(hint.sequence, n),
+                                  })
+                                }}
+                              />
+                            </div>
+                          </div>
+                          {showSequence ? (
+                            <div className="preview-side-panel__sequence">
+                              <IphoneBubbleSequence
+                                count={count}
+                                value={hint.sequence}
+                                onChange={(seq) => updateHint(k, { sequence: seq })}
+                              />
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
                     </figure>
                   )
                 })}
               </div>
-            </section>
-          ) : null}
-            </>
-          )}
+                  </section>
+                </div>
+              ) : null}
+            </div>
+          </div>
 
           <input
             ref={fileInputRef}
@@ -1037,6 +1035,8 @@ function App() {
             multiple={multiUploadAllowed}
             onChange={(e) => onPickFiles(e.target.files)}
           />
+            </>
+          )}
         </div>
       </div>
 
