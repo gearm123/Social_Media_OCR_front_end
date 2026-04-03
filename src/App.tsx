@@ -809,7 +809,7 @@ function App() {
           <header className="app-top-bar">
             <nav className="app-top-bar__nav" aria-label="Help and feedback">
               <a className="app-top-bar__link" href="/contact">
-                Contact
+                Contact us
               </a>
               <a className="app-top-bar__link" href="/feedback">
                 Feedback
