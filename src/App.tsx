@@ -50,6 +50,14 @@ function isImageFile(file: File): boolean {
 
 const MAX_MESSAGE_BUBBLES = 30
 
+const PATIENCE_LINES = [
+  "We're on it.",
+  'It will be worth the wait.',
+  'You can switch tabs while we work.',
+  'Adding a message sequence helps us understand your chat.',
+  'The more images, the more time.',
+]
+
 /** Live overlay timer: m:ss from Process click until loading ends. */
 function formatProcessElapsed(ms: number): string {
   const t = Math.max(0, ms)
@@ -227,6 +235,7 @@ function App() {
   const [processElapsedMs, setProcessElapsedMs] = useState(0)
   const [loadingPrimary, setLoadingPrimary] = useState<string | null>(null)
   const [pipelineProgress, setPipelineProgress] = useState(0)
+  const [patienceIdx, setPatienceIdx] = useState(0)
   const [jobError, setJobError] = useState<string | null>(null)
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
   const [resultExpanded, setResultExpanded] = useState(false)
@@ -496,6 +505,19 @@ function App() {
       jobIssuesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     })
   }, [jobError])
+
+  useEffect(() => {
+    if (!processing) return
+    setPatienceIdx(0)
+  }, [processing])
+
+  useEffect(() => {
+    if (!processing) return
+    const t = window.setInterval(() => {
+      setPatienceIdx((i) => (i + 1) % PATIENCE_LINES.length)
+    }, 4500)
+    return () => clearInterval(t)
+  }, [processing])
 
   useEffect(() => {
     if (!processing) {
@@ -1233,6 +1255,13 @@ function App() {
                   {formatEstimatedTotalTime(processingImageCount)}
                 </span>
               </span>
+            </p>
+            <p
+              key={patienceIdx}
+              className="process-loading__patience"
+              aria-live="polite"
+            >
+              {PATIENCE_LINES[patienceIdx]}
             </p>
             <button
               type="button"
