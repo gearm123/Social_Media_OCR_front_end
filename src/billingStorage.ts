@@ -59,10 +59,11 @@ export const PRICING_PLANS: PricingPlan[] = [
   {
     id: 'debug',
     name: 'Debug (test)',
-    priceUsd: 0.1,
-    priceLabel: '$0.10',
+    priceUsd: 0.7,
+    priceLabel: '$0.70',
     periodHint: 'one-time',
-    blurb: 'Cheap live checkout test — grants one full-run credit like Single. Use before wider launch.',
+    blurb:
+      'Minimum-priced live checkout test (Paddle requires ≥ $0.70 USD per charge). Grants one full-run credit like Single.',
   },
   {
     id: 'month',
