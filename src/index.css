@@ -192,3 +192,74 @@ a {
   line-height: 1.45;
   color: var(--muted);
 }
+
+/* Intent landing pages + /uses hub */
+.intent-landing__more {
+  margin-top: -0.35rem;
+}
+
+.intent-landing__h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 1.35rem 0 0.6rem;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.intent-landing__tips {
+  margin: 0 0 1.35rem;
+  padding-left: 1.25rem;
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.intent-landing__tips li {
+  margin-bottom: 0.45rem;
+}
+
+.intent-landing__cta-wrap {
+  margin: 0 0 1.5rem;
+}
+
+.intent-landing__cta {
+  text-align: center;
+}
+
+.intent-landing__related {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.intent-landing__related-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.intent-landing__related-list li {
+  margin-bottom: 0.4rem;
+}
+
+.intent-landing__related-list a {
+  font-weight: 600;
+}
+
+.intent-landing__hub-list {
+  margin: 0 0 1.5rem;
+  padding-left: 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+.intent-landing__hub-list li {
+  margin-bottom: 0.55rem;
+}
+
+.intent-landing__hub-list a {
+  font-weight: 650;
+}
