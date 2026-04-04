@@ -6,6 +6,17 @@ import react from '@vitejs/plugin-react'
 const HOME_TITLE = 'Translate Chat'
 const HOME_DESC = 'Turn your chat screenshots into a translated conversation'
 
+/** GA4 — injected here so `npm run build` / Netlify always emit these tags (not dropped vs source-only edits). */
+const GA_MEASUREMENT_ID = 'G-T2H2EC3FHG'
+const GA_GTAG_SNIPPET = `
+    <script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '${GA_MEASUREMENT_ID}');
+    </script>`
+
 function escAttr(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -67,7 +78,7 @@ function seoBuildPlugin(siteUrl: string): Plugin {
   return {
     name: 'seo-build',
     transformIndexHtml(html) {
-      return html.replace('</title>', `</title>${seoInjectHtml(siteUrl)}`)
+      return html.replace('</title>', `</title>${GA_GTAG_SNIPPET}${seoInjectHtml(siteUrl)}`)
     },
     closeBundle() {
       const base = siteUrl.replace(/\/$/, '')
