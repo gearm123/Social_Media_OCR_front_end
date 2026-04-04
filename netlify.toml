@@ -5,12 +5,16 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # Canonical origin for OG URL, Twitter image, and <link rel="canonical"> (seo.ts). Match Netlify primary domain.
+  VITE_SITE_URL = "https://chatreconstruct.com"
   # Required for Vite: baked in at `npm run build`. Change this if your API host differs.
   # You can override with Netlify → Site configuration → Environment variables (same name), then redeploy.
   VITE_API_BASE_URL = "https://translate-chat-backend.onrender.com"
 
 # Paddle overlay checkout on /pay requires VITE_PADDLE_CLIENT_TOKEN (set in Netlify env + redeploy).
-# FRONTEND_URL on the API must match this site origin (Paddle default payment link / domain approval).
+# On Render, set API CORS_ORIGINS (or FRONTEND_URL) to this site’s exact origin(s), e.g.
+# https://chatreconstruct.com and https://www.chatreconstruct.com — or the browser shows “Failed to fetch”.
+# FRONTEND_URL on the API should match your primary checkout return URL / Paddle-approved domain.
 
 # SPA: send all routes to index.html (safe for client-side routing later)
 [[redirects]]
