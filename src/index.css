@@ -50,6 +50,44 @@ body {
   overflow: hidden;
 }
 
+/*
+ * Compact layout: narrow viewports, or touch devices up to tablet width.
+ * The (pointer: coarse) branch covers iPhone/Android “Desktop site” / wide layout where width > 768px
+ * but the device is still a phone — without it, body stays overflow:hidden and the page won’t scroll.
+ */
+@media (max-width: 768px), (max-width: 1024px) and (pointer: coarse) {
+  html {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    height: auto;
+    min-height: 100dvh;
+    min-height: 100svh;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #root {
+    height: auto;
+    min-height: 100dvh;
+    min-height: 100svh;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .support-page,
+  .pay-checkout-page {
+    flex: 0 0 auto;
+    overflow: visible;
+    min-height: 0;
+  }
+}
+
 a {
   color: var(--accent);
 }

@@ -6,6 +6,12 @@
   overflow: hidden;
 }
 
+@media (max-width: 768px), (max-width: 1024px) and (pointer: coarse) {
+  .messenger-backdrop {
+    display: none;
+  }
+}
+
 .messenger-backdrop__wash {
   position: absolute;
   inset: 0;
