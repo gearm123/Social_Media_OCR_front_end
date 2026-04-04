@@ -307,9 +307,14 @@ function App() {
     })
   }, [])
 
+  /** FAQ block + schema only when the upload slot is empty — keeps flex layout space for previews/results. */
   useEffect(() => {
-    if (!getSeoSiteOrigin()) return
     const id = 'jsonld-home-faq'
+    if (files.length > 0 || resultImageUrl) {
+      unmountJsonLd(id)
+      return
+    }
+    if (!getSeoSiteOrigin()) return
     mountJsonLd(id, {
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
@@ -323,7 +328,7 @@ function App() {
       })),
     })
     return () => unmountJsonLd(id)
-  }, [])
+  }, [files.length, resultImageUrl])
 
   /** After guest Paddle checkout, webhooks can lag; re-fetch guest entitlements a few times and on focus. */
   useEffect(() => {
@@ -1331,22 +1336,24 @@ function App() {
             onChange={(e) => onPickFiles(e.target.files)}
           />
 
-          <section className="seo-home-faq" aria-labelledby="seo-home-faq-heading">
-            <h2 id="seo-home-faq-heading" className="seo-home-faq__title">
-              Common questions
-            </h2>
-            <dl className="seo-home-faq__list">
-              {SEO_HOME_FAQ_ITEMS.map((item) => (
-                <div className="seo-home-faq__item" key={item.question}>
-                  <dt className="seo-home-faq__q">{item.question}</dt>
-                  <dd className="seo-home-faq__a">{item.answer}</dd>
-                </div>
-              ))}
-            </dl>
-            <p className="seo-home-faq__more">
-              <a href="/uses">More guides by app and language →</a>
-            </p>
-          </section>
+          {files.length === 0 && !resultImageUrl ? (
+            <section className="seo-home-faq" aria-labelledby="seo-home-faq-heading">
+              <h2 id="seo-home-faq-heading" className="seo-home-faq__title">
+                Common questions
+              </h2>
+              <dl className="seo-home-faq__list">
+                {SEO_HOME_FAQ_ITEMS.map((item) => (
+                  <div className="seo-home-faq__item" key={item.question}>
+                    <dt className="seo-home-faq__q">{item.question}</dt>
+                    <dd className="seo-home-faq__a">{item.answer}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="seo-home-faq__more">
+                <a href="/uses">More guides by app and language →</a>
+              </p>
+            </section>
+          ) : null}
 
           <footer className="app-legal-footer">
             <a className="app-legal-footer__link" href="/uses">
