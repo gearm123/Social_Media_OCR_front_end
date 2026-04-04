@@ -7,7 +7,7 @@ const HOME_TITLE = 'Translate Chat'
 const HOME_DESC = 'Turn your chat screenshots into a translated conversation'
 
 /** GA4 — injected here so `npm run build` / Netlify always emit these tags (not dropped vs source-only edits). */
-const GA_MEASUREMENT_ID = 'G-T2H2EC3FHG'
+const GA_MEASUREMENT_ID = 'G-Y5NEYR5MJZ'
 const GA_GTAG_SNIPPET = `
     <script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>
     <script>
