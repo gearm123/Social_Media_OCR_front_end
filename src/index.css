@@ -301,3 +301,51 @@ a {
 .intent-landing__hub-list a {
   font-weight: 650;
 }
+
+/* Visible breadcrumbs — pairs with BreadcrumbList JSON-LD on guide routes. */
+.seo-breadcrumbs {
+  margin: 0 0 0.85rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.seo-breadcrumbs__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seo-breadcrumbs__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.seo-breadcrumbs__item:not(:last-child)::after {
+  content: '/';
+  opacity: 0.45;
+  font-weight: 500;
+  margin-left: 0.1rem;
+}
+
+.seo-breadcrumbs__item a {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--accent) 45%, var(--text));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.seo-breadcrumbs__item--current {
+  font-weight: 600;
+  color: var(--text);
+  max-width: 100%;
+}
+
+.seo-breadcrumbs__item--current[aria-current='page'] {
+  text-decoration: none;
+}

@@ -64,6 +64,51 @@ export type DocumentSeo = {
 /**
  * Updates document title, description, Open Graph, Twitter, and canonical (when `VITE_SITE_URL` is set).
  */
+/** Public site origin from `VITE_SITE_URL` (no trailing slash). Used for JSON-LD URLs. */
+export function getSeoSiteOrigin(): string {
+  return siteOrigin()
+}
+
+/** Mount `<script type="application/ld+json">` in `document.head`; replaces prior script with same `id`. */
+export function mountJsonLd(id: string, data: Record<string, unknown>): void {
+  unmountJsonLd(id)
+  const script = document.createElement('script')
+  script.type = 'application/ld+json'
+  script.id = id
+  script.textContent = JSON.stringify(data).replace(/</g, '\\u003c')
+  document.head.appendChild(script)
+}
+
+export function unmountJsonLd(id: string): void {
+  document.getElementById(id)?.remove()
+}
+
+/**
+ * Home-page FAQ — keep visible FAQ copy on the home page aligned with these entries for FAQPage schema.
+ */
+export const SEO_HOME_FAQ_ITEMS = [
+  {
+    question: 'What does Translate Chat do?',
+    answer:
+      'You upload chat screenshots (Messenger, WhatsApp, LINE, and similar apps). We read the conversation layout with AI vision and OCR hints, then produce a clean English chat-style image you can save or share.',
+  },
+  {
+    question: 'Which chat apps work best?',
+    answer:
+      'The pipeline is tuned for common layouts: Facebook Messenger, WhatsApp, LINE, Instagram-style threads, Telegram, and iMessage-style bubbles. See the translation guides for app-specific tips.',
+  },
+  {
+    question: 'Do I need an account to try it?',
+    answer:
+      'You can start with a limited free run without signing in. Create an account when you want more usage, subscriptions, or one-time paid runs.',
+  },
+  {
+    question: 'Where can I read about privacy and data handling?',
+    answer:
+      'Use the Privacy link in the footer when the app is connected to our API — it opens our hosted privacy page. We do not use your screenshots to train public models.',
+  },
+] as const
+
 export function applyDocumentSeo({ title, description, path }: DocumentSeo): void {
   document.title = title
   upsertMetaName('description', description)

@@ -41,7 +41,16 @@ import {
 import { InfoPopover } from './InfoPopover'
 import { PaywallModal } from './PaywallModal'
 import { PricingModal } from './PricingModal'
-import { applyDocumentSeo, SEO_HOME_DESCRIPTION, SEO_SITE_NAME } from './seo'
+import { INTENT_LANDINGS } from './intentLandings'
+import {
+  applyDocumentSeo,
+  getSeoSiteOrigin,
+  mountJsonLd,
+  SEO_HOME_DESCRIPTION,
+  SEO_HOME_FAQ_ITEMS,
+  SEO_SITE_NAME,
+  unmountJsonLd,
+} from './seo'
 
 /** Formats the pipeline is built around (OpenCV-friendly screenshots). */
 const ACCEPT_IMAGES =
@@ -296,6 +305,24 @@ function App() {
       description: SEO_HOME_DESCRIPTION,
       path: '/',
     })
+  }, [])
+
+  useEffect(() => {
+    if (!getSeoSiteOrigin()) return
+    const id = 'jsonld-home-faq'
+    mountJsonLd(id, {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: SEO_HOME_FAQ_ITEMS.map((item) => ({
+        '@type': 'Question',
+        name: item.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: item.answer,
+        },
+      })),
+    })
+    return () => unmountJsonLd(id)
   }, [])
 
   /** After guest Paddle checkout, webhooks can lag; re-fetch guest entitlements a few times and on focus. */
@@ -955,6 +982,17 @@ function App() {
                   <p className="hero-tagline">
                     Turn your chat screenshots into a translated conversation
                   </p>
+                  <nav className="seo-topic-nav" aria-label="Translation guides by app or topic">
+                    <span className="seo-topic-nav__label">Guides</span>
+                    <span className="seo-topic-nav__links">
+                      <a href="/uses">All guides</a>
+                      {INTENT_LANDINGS.slice(0, 4).map((x) => (
+                        <a key={x.path} href={x.path}>
+                          {x.h1}
+                        </a>
+                      ))}
+                    </span>
+                  </nav>
                 </div>
 
                 <section
@@ -1292,6 +1330,23 @@ function App() {
             multiple={multiUploadAllowed}
             onChange={(e) => onPickFiles(e.target.files)}
           />
+
+          <section className="seo-home-faq" aria-labelledby="seo-home-faq-heading">
+            <h2 id="seo-home-faq-heading" className="seo-home-faq__title">
+              Common questions
+            </h2>
+            <dl className="seo-home-faq__list">
+              {SEO_HOME_FAQ_ITEMS.map((item) => (
+                <div className="seo-home-faq__item" key={item.question}>
+                  <dt className="seo-home-faq__q">{item.question}</dt>
+                  <dd className="seo-home-faq__a">{item.answer}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="seo-home-faq__more">
+              <a href="/uses">More guides by app and language →</a>
+            </p>
+          </section>
 
           <footer className="app-legal-footer">
             <a className="app-legal-footer__link" href="/uses">

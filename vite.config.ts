@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { INTENT_LANDINGS, USES_HUB_PATH } from './src/intentLandings'
 
 const HOME_TITLE = 'Translate Chat'
 const HOME_DESC = 'Turn your chat screenshots into a translated conversation'
@@ -49,27 +50,56 @@ function seoInjectHtml(siteUrl: string): string {
     lines.push(`<meta property="og:image:alt" content="${escAttr(HOME_TITLE)}" />`)
     lines.push(`<meta name="twitter:image" content="${escAttr(`${base}/translate-chat-mark.svg`)}" />`)
   }
-  const graph: Record<string, unknown>[] = [
-    {
+  const graph: Record<string, unknown>[] = []
+  if (siteHome) {
+    const orgId = `${base}/#organization`
+    graph.push(
+      {
+        '@type': 'Organization',
+        '@id': orgId,
+        name: HOME_TITLE,
+        url: siteHome,
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${base}/#website`,
+        name: HOME_TITLE,
+        description: HOME_DESC,
+        url: siteHome,
+        publisher: { '@id': orgId },
+        inLanguage: 'en',
+      },
+      {
+        '@type': 'WebApplication',
+        '@id': `${base}/#webapp`,
+        name: HOME_TITLE,
+        description: HOME_DESC,
+        url: siteHome,
+        applicationCategory: 'UtilitiesApplication',
+        operatingSystem: 'Web',
+        browserRequirements: 'Requires JavaScript',
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'USD',
+          description: 'Free tier available; paid plans for more usage',
+        },
+        publisher: { '@id': orgId },
+      },
+    )
+  } else {
+    graph.push({
       '@type': 'WebApplication',
       name: HOME_TITLE,
       description: HOME_DESC,
       applicationCategory: 'UtilitiesApplication',
       operatingSystem: 'Web',
-    },
-  ]
-  if (siteHome) {
-    graph.unshift({
-      '@type': 'WebSite',
-      name: HOME_TITLE,
-      description: HOME_DESC,
-      url: siteHome,
     })
   }
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
     '@graph': graph,
-  })
+  }).replace(/</g, '\\u003c')
   lines.push(`<script type="application/ld+json">${jsonLd}</script>`)
   return `\n    ${lines.join('\n    ')}\n  `
 }
@@ -85,13 +115,24 @@ function seoBuildPlugin(siteUrl: string): Plugin {
       if (!base) return
       const distDir = path.join(process.cwd(), 'dist')
       if (!fs.existsSync(distDir)) return
-      const paths = ['/', '/contact', '/feedback', '/pay']
-      const urls = paths.map((p) => {
-        const loc = p === '/' ? `${base}/` : `${base}${p}`
-        const priority = p === '/' ? '1.0' : '0.7'
-        return `  <url>\n    <loc>${loc}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>${priority}</priority>\n  </url>`
-      })
-      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`
+
+      type Row = { loc: string; changefreq: string; priority: string }
+      const rows: Row[] = [
+        { loc: `${base}/`, changefreq: 'weekly', priority: '1.0' },
+        { loc: `${base}${USES_HUB_PATH}`, changefreq: 'weekly', priority: '0.9' },
+        ...INTENT_LANDINGS.map((x) => ({
+          loc: `${base}${x.path}`,
+          changefreq: 'monthly',
+          priority: '0.85',
+        })),
+        { loc: `${base}/contact`, changefreq: 'yearly', priority: '0.4' },
+        { loc: `${base}/feedback`, changefreq: 'yearly', priority: '0.4' },
+      ]
+      const urlBlocks = rows.map(
+        (r) =>
+          `  <url>\n    <loc>${r.loc}</loc>\n    <changefreq>${r.changefreq}</changefreq>\n    <priority>${r.priority}</priority>\n  </url>`,
+      )
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlBlocks.join('\n')}\n</urlset>\n`
       fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemap, 'utf8')
       fs.writeFileSync(
         path.join(distDir, 'robots.txt'),
