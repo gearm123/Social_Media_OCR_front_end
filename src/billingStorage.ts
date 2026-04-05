@@ -92,19 +92,9 @@ export const PRICING_PLANS: PricingPlan[] = [
   },
 ]
 
-/**
- * Plans shown in the pricing UI. Debug is listed first while visible so checkout is easy to test.
- * Set `VITE_SHOW_DEBUG_PRICE=false` before production builds to hide the debug tier.
- */
+/** Plans shown in the pricing UI (debug tier is backend-only for Paddle tests, not listed here). */
 export function getVisiblePricingPlans(): PricingPlan[] {
-  const hideDebug = import.meta.env.VITE_SHOW_DEBUG_PRICE === 'false'
-  const list = hideDebug ? PRICING_PLANS.filter((p) => p.id !== 'debug') : [...PRICING_PLANS]
-  if (!hideDebug) {
-    const debug = list.find((p) => p.id === 'debug')
-    const rest = list.filter((p) => p.id !== 'debug')
-    if (debug) return [debug, ...rest]
-  }
-  return list
+  return PRICING_PLANS.filter((p) => p.id !== 'debug')
 }
 
 export type BillingMeResponse = {

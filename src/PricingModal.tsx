@@ -246,15 +246,9 @@ export function PricingModal({ open, onClose, onApplied, isGuest, onOpenAuth }: 
             return (
               <article
                 key={plan.id}
-                className={`pricing-card${plan.featured ? ' pricing-card--featured' : ''}${
-                  plan.id === 'debug' ? ' pricing-card--debug' : ''
-                }`}
+                className={`pricing-card${plan.featured ? ' pricing-card--featured' : ''}`}
               >
-                {plan.id === 'debug' ? (
-                  <span className="pricing-card__ribbon pricing-card__ribbon--test">Test</span>
-                ) : plan.featured ? (
-                  <span className="pricing-card__ribbon">Popular</span>
-                ) : null}
+                {plan.featured ? <span className="pricing-card__ribbon">Popular</span> : null}
                 <h3 className="pricing-card__name">{plan.name}</h3>
                 <p className="pricing-card__price">
                   <span className="pricing-card__amount">{plan.priceLabel}</span>
