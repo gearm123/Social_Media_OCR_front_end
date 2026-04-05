@@ -127,6 +127,28 @@ function processingOverlayHeadline(stage: string | undefined, status: string): s
   }
 }
 
+/**
+ * Some browsers leave `dataTransfer.files` empty on drop (single file from certain sources);
+ * `items` + `getAsFile()` is the reliable fallback.
+ */
+function filesFromDataTransfer(dt: DataTransfer | null): File[] {
+  if (!dt) return []
+  if (dt.files?.length) {
+    return Array.from(dt.files)
+  }
+  const out: File[] = []
+  if (dt.items?.length) {
+    for (let i = 0; i < dt.items.length; i++) {
+      const item = dt.items[i]
+      if (item.kind === 'file') {
+        const f = item.getAsFile()
+        if (f) out.push(f)
+      }
+    }
+  }
+  return out
+}
+
 /** Dedupe within one pick/drop; each new selection replaces the previous list entirely. */
 function dedupeImageFiles(incoming: File[]): File[] {
   const seen = new Set<string>()
@@ -231,7 +253,6 @@ function App() {
   const preProcessSnapshotRef = useRef<Record<string, ImageBubbleHint> | null>(null)
 
   const [files, setFiles] = useState<File[]>([])
-  const [previews, setPreviews] = useState<PreviewItem[]>([])
   const [hints, setHints] = useState<Record<string, ImageBubbleHint>>({})
   const [dragActive, setDragActive] = useState(false)
   const [processing, setProcessing] = useState(false)
@@ -259,6 +280,18 @@ function App() {
   const billingExplainerHeroRef = useRef<HTMLElement | null>(null)
 
   const billing = useMemo(() => readBillingSnapshot(), [billingTick])
+
+  /** Sync with `files` on the same render — avoids a blank frame where `files` is set but preview state lags (useEffect). */
+  const previews = useMemo<PreviewItem[]>(
+    () => files.map((file) => ({ file, url: URL.createObjectURL(file) })),
+    [files],
+  )
+
+  useEffect(() => {
+    return () => {
+      previews.forEach((p) => URL.revokeObjectURL(p.url))
+    }
+  }, [previews])
 
   const refreshAuth = useCallback(() => {
     const t = getAccessToken()
@@ -391,8 +424,9 @@ function App() {
 
   const replaceFilesFromList = useCallback(
     (list: FileList | File[] | null) => {
-      if (!list || (list instanceof FileList && !list.length)) return
-      const arr = Array.from(list as FileList | File[])
+      if (list == null) return
+      const arr = Array.isArray(list) ? list : Array.from(list)
+      if (arr.length === 0) return
       let deduped = dedupeImageFiles(arr)
       const snap = readBillingSnapshot()
       const signedIn = Boolean(getAccessToken())
@@ -444,9 +478,8 @@ function App() {
       e.preventDefault()
       e.stopPropagation()
       setDragActive(false)
-      if (e.dataTransfer?.files?.length) {
-        replaceFilesFromList(e.dataTransfer.files)
-      }
+      const dropped = filesFromDataTransfer(e.dataTransfer)
+      if (dropped.length) replaceFilesFromList(dropped)
     }
 
     const onWindowBlur = () => setDragActive(false)
@@ -476,14 +509,6 @@ function App() {
       }
       return next
     })
-  }, [files])
-
-  useEffect(() => {
-    const next = files.map((file) => ({ file, url: URL.createObjectURL(file) }))
-    setPreviews(next)
-    return () => {
-      next.forEach((p) => URL.revokeObjectURL(p.url))
-    }
   }, [files])
 
   const onPickFiles = (list: FileList | null) => {
@@ -1198,7 +1223,7 @@ function App() {
                     <strong>Choose images</strong>. PNG, JPEG, WebP, or BMP.
                   </p>
                 </div>
-              ) : previews.length > 0 ? (
+              ) : files.length > 0 ? (
                 <div className="drop-zone__previews">
                   <p className="drop-zone__replace-hint">
                     Drop anywhere or use <strong>Choose images</strong> to replace · Reset clears the slot.
@@ -1206,7 +1231,7 @@ function App() {
                   <section className="preview-section preview-section--in-drop" aria-label="Uploaded images">
                     <div
                       className={`preview-row preview-row--upload-slot${
-                        previews.length <= 3 ? ' preview-row--upload-slot--fit-three' : ''
+                        files.length <= 3 ? ' preview-row--upload-slot--fit-three' : ''
                       }`}
                       role="list"
                     >
