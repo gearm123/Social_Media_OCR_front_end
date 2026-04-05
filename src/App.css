@@ -490,6 +490,118 @@
   margin-top: clamp(0.6rem, 2.2vh, 1.35rem);
 }
 
+.hero-actions__process-cluster {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Label + bar stacked; total height kept within one control row (see max-height + compact bar) */
+.hero-actions__difficulty-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.06rem;
+  max-height: 2.5rem;
+  flex-shrink: 0;
+}
+
+.hero-actions__difficulty-label {
+  margin: 0;
+  padding: 0;
+  max-width: 11.5rem;
+  font-size: 0.58rem;
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  text-align: center;
+  color: color-mix(in srgb, var(--muted) 92%, var(--text));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Segmented difficulty control — same row as Process */
+.difficulty-bar {
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.1rem;
+  border: 1px solid color-mix(in srgb, var(--muted) 28%, var(--border));
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-2) 88%, transparent) 0%,
+    color-mix(in srgb, var(--surface-2) 100%, transparent) 100%
+  );
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent);
+  gap: 0.08rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .difficulty-bar {
+    box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent);
+  }
+}
+
+.difficulty-bar__seg {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.05rem;
+  margin: 0;
+  padding: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--muted);
+  transition: color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.difficulty-bar__seg:hover {
+  color: var(--text);
+}
+
+.difficulty-bar__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.difficulty-bar__face {
+  pointer-events: none;
+  padding: 0.26rem 0.48rem;
+  border-radius: inherit;
+}
+
+.difficulty-bar__seg--active {
+  color: #fff;
+  background: linear-gradient(180deg, #059669 0%, #047857 100%);
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.28);
+}
+
+.difficulty-bar__seg--active:hover {
+  color: #fff;
+}
+
+.difficulty-bar__seg:has(.difficulty-bar__input:focus-visible) .difficulty-bar__face {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.difficulty-bar__seg--active:has(.difficulty-bar__input:focus-visible) .difficulty-bar__face {
+  outline-color: color-mix(in srgb, #fff 55%, var(--accent));
+}
+
 .job-issues {
   flex-shrink: 0;
   margin-bottom: 0.3rem;
@@ -2890,7 +3002,9 @@
 .info-popover__panel {
   width: min(26rem, calc(100vw - 2rem));
   max-height: none;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0.85rem 1rem;
   border-radius: 14px;
   font-size: 0.78rem;
@@ -2902,6 +3016,33 @@
   border: 1px solid var(--border);
   box-shadow: 0 16px 48px rgba(15, 23, 42, 0.2);
   animation: info-popover-in 0.14s ease-out;
+}
+
+.info-popover__panel-inner {
+  min-height: 0;
+}
+
+/* Difficulty tooltip: tighter rhythm between lead, level titles, and lists */
+.info-popover--difficulty-copy .info-popover__lead {
+  margin: 0 0 0.18rem;
+}
+
+.info-popover--difficulty-copy .info-popover__lead + .info-popover__subhead {
+  margin-top: 0;
+}
+
+.info-popover--difficulty-copy .info-popover__subhead {
+  margin: 0.22rem 0 0.05rem;
+  line-height: 1.32;
+}
+
+.info-popover--difficulty-copy .info-popover__para {
+  margin: 0 0 0.06rem;
+  line-height: 1.38;
+}
+
+.info-popover--difficulty-copy .info-popover__para:last-child {
+  margin-bottom: 0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -3509,6 +3650,33 @@
   .hero-actions:not(.hero-actions--result) .btn,
   .hero-actions--result .btn {
     min-height: 44px;
+    box-sizing: border-box;
+  }
+
+  .hero-actions__process-cluster .btn.process {
+    min-height: 44px;
+  }
+
+  .hero-actions__difficulty-stack {
+    max-height: 2.75rem;
+  }
+
+  .hero-actions__difficulty-label {
+    font-size: 0.46rem;
+    letter-spacing: 0.03em;
+  }
+
+  .difficulty-bar__seg {
+    min-width: 2.35rem;
+  }
+
+  .difficulty-bar__face {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding-left: 0.55rem;
+    padding-right: 0.55rem;
     box-sizing: border-box;
   }
 

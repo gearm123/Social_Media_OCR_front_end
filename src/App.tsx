@@ -167,6 +167,9 @@ type PreviewItem = { file: File; url: string }
 
 type PreviewLightbox = { url: string; name: string }
 
+/** UI-only until the API accepts `difficulty` on jobs. */
+type TranslationDifficulty = 1 | 2 | 3
+
 function ProductInfoContent() {
   return (
     <>
@@ -242,6 +245,25 @@ function PlansUsageInfoContent() {
   )
 }
 
+function DifficultyInfoContent() {
+  return (
+    <div className="info-popover--difficulty-copy">
+      <p className="info-popover__lead">Our recommendation for your requested language:</p>
+      <p className="info-popover__subhead">Level 1 — Straightforward OCR</p>
+      <p className="info-popover__para">Spanish, French, German, Italian, Portuguese.</p>
+      <p className="info-popover__subhead">Level 2 — Moderate complexity</p>
+      <p className="info-popover__para">
+        Dutch, Polish, Swedish, Norwegian, Danish, Finnish, Czech, Romanian.
+      </p>
+      <p className="info-popover__subhead">Level 3 — Complex</p>
+      <p className="info-popover__para">
+        Thai, Vietnamese, Hindi, Bengali, Tamil, Telugu, Urdu, Chinese, Japanese, Korean, Arabic, Indonesian,
+        Filipino/Tagalog, Russian, Ukrainian, Greek, Turkish, Hebrew, Persian.
+      </p>
+    </div>
+  )
+}
+
 function App() {
   const inputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -277,6 +299,7 @@ function App() {
   >('free_exhausted')
   /** Which image (file key) has the guidance modal open */
   const [guidanceModalKey, setGuidanceModalKey] = useState<string | null>(null)
+  const [translationDifficulty, setTranslationDifficulty] = useState<TranslationDifficulty>(3)
   const billingExplainerHeroRef = useRef<HTMLElement | null>(null)
 
   const billing = useMemo(() => readBillingSnapshot(), [billingTick])
@@ -1154,32 +1177,69 @@ function App() {
                       >
                         Reset
                       </button>
-                      <button
-                        type="button"
-                        className="btn process"
-                        disabled={
-                          files.length === 0 ||
-                          processing ||
-                          !apiUrlConfigured ||
-                          blockReason !== 'none'
-                        }
-                        title={
-                          files.length === 0
-                            ? 'Upload at least one image to process'
-                            : !apiUrlConfigured
-                              ? 'Set VITE_API_BASE_URL at build time (see notice on the right)'
-                              : blockReason === 'quota_exhausted'
-                                ? 'Monthly run quota used — open Plans or wait for renewal'
-                                : blockReason === 'free_exhausted'
-                                  ? 'Free try used — open Plans to purchase or subscribe'
-                                  : blockReason === 'multi_on_free'
-                                    ? 'Multiple images require a plan'
-                                    : 'Run translation job on the API'
-                        }
-                        onClick={() => void runProcess()}
-                      >
-                        {processing ? 'Working…' : 'Process'}
-                      </button>
+                      <div className="hero-actions__process-cluster">
+                        <button
+                          type="button"
+                          className="btn process"
+                          disabled={
+                            files.length === 0 ||
+                            processing ||
+                            !apiUrlConfigured ||
+                            blockReason !== 'none'
+                          }
+                          title={
+                            files.length === 0
+                              ? 'Upload at least one image to process'
+                              : !apiUrlConfigured
+                                ? 'Set VITE_API_BASE_URL at build time (see notice on the right)'
+                                : blockReason === 'quota_exhausted'
+                                  ? 'Monthly run quota used — open Plans or wait for renewal'
+                                  : blockReason === 'free_exhausted'
+                                    ? 'Free try used — open Plans to purchase or subscribe'
+                                    : blockReason === 'multi_on_free'
+                                      ? 'Multiple images require a plan'
+                                      : 'Run translation job on the API'
+                          }
+                          onClick={() => void runProcess()}
+                        >
+                          {processing ? 'Working…' : 'Process'}
+                        </button>
+                        <div className="hero-actions__difficulty-stack">
+                          <span
+                            className="hero-actions__difficulty-label"
+                            title="Choose language difficulty"
+                          >
+                            Choose language difficulty
+                          </span>
+                          <fieldset className="difficulty-bar">
+                            <legend className="sr-only">Translation difficulty</legend>
+                            {([1, 2, 3] as const).map((level) => (
+                              <label
+                                key={level}
+                                className={`difficulty-bar__seg${
+                                  translationDifficulty === level ? ' difficulty-bar__seg--active' : ''
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  className="difficulty-bar__input"
+                                  name="translation-difficulty"
+                                  value={level}
+                                  checked={translationDifficulty === level}
+                                  onChange={() => setTranslationDifficulty(level)}
+                                  aria-label={`Difficulty level ${level}`}
+                                />
+                                <span className="difficulty-bar__face" aria-hidden>
+                                  {level}
+                                </span>
+                              </label>
+                            ))}
+                          </fieldset>
+                        </div>
+                        <InfoPopover label="Recommended languages by difficulty level" align="end">
+                          <DifficultyInfoContent />
+                        </InfoPopover>
+                      </div>
                     </>
                   )}
                 </div>
