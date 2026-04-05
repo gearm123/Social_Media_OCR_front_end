@@ -3022,21 +3022,31 @@
   min-height: 0;
 }
 
-/* Difficulty tooltip: intro emphasis; tighter rhythm below for level lists */
+/* Difficulty tooltip: title band at top, then tighter rhythm for level lists */
 .info-popover--difficulty-copy .info-popover__difficulty-intro-block {
-  margin: 0 0 0.42rem;
+  margin: 0 0 0.55rem;
+  padding: 0 0 0.58rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 88%, var(--accent) 8%);
 }
 
-.info-popover--difficulty-copy .info-popover__difficulty-intro {
+.info-popover--difficulty-copy .info-popover__difficulty-title {
   margin: 0;
-  font-size: 0.86rem;
-  font-weight: 750;
-  line-height: 1.38;
+  font-size: 0.94rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
   color: var(--text);
+  padding-left: 0.55rem;
+  border-left: 3px solid var(--accent);
 }
 
-.info-popover--difficulty-copy .info-popover__difficulty-intro + .info-popover__difficulty-intro {
-  margin-top: 0.2rem;
+.info-popover--difficulty-copy .info-popover__difficulty-deck {
+  margin: 0.4rem 0 0;
+  padding-left: calc(0.55rem + 3px);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--muted) 35%, var(--text));
 }
 
 .info-popover--difficulty-copy .info-popover__lead {

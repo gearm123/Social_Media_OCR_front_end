@@ -248,12 +248,12 @@ function PlansUsageInfoContent() {
 function DifficultyInfoContent() {
   return (
     <div className="info-popover--difficulty-copy">
-      <div className="info-popover__difficulty-intro-block">
-        <p className="info-popover__difficulty-intro">Difficulty affects speed and quality of the result.</p>
-        <p className="info-popover__difficulty-intro">
+      <header className="info-popover__difficulty-intro-block">
+        <p className="info-popover__difficulty-title">Difficulty affects speed and quality of the result.</p>
+        <p className="info-popover__difficulty-deck">
           Choosing high difficulty will take more time to process, but the results will be the highest quality.
         </p>
-      </div>
+      </header>
       <p className="info-popover__lead">Our recommendation for your requested language:</p>
       <p className="info-popover__subhead">Level 1 — Straightforward OCR</p>
       <p className="info-popover__para">Spanish, French, German, Italian, Portuguese</p>
