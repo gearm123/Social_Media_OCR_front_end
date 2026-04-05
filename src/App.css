@@ -217,44 +217,6 @@
   }
 }
 
-/* Crawlable internal links + long-tail context (home). */
-.seo-topic-nav {
-  margin: 0.65rem 0 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem 0.65rem;
-  font-size: clamp(0.72rem, 1.65vw, 0.82rem);
-  line-height: 1.35;
-  color: color-mix(in srgb, var(--muted) 25%, var(--text));
-}
-
-.seo-topic-nav__label {
-  font-weight: 650;
-  color: var(--muted);
-  margin-right: 0.15rem;
-}
-
-.seo-topic-nav__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.55rem;
-  justify-content: center;
-}
-
-.seo-topic-nav__links a {
-  color: color-mix(in srgb, var(--accent) 55%, var(--text));
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
-}
-
-.seo-topic-nav__links a:hover {
-  color: var(--accent);
-}
-
 .seo-home-faq {
   margin-top: 1.15rem;
   padding: 1rem 0.85rem 0.15rem;
@@ -335,7 +297,7 @@
   z-index: 1;
   max-width: 48rem;
   width: 100%;
-  margin-bottom: clamp(0.6rem, 2vh, 1.25rem);
+  margin-bottom: clamp(0.45rem, 1.2vh, 0.9rem);
 }
 
 .hero-instructions {
@@ -344,17 +306,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-}
-
-.hero-platform-lede {
-  margin: 0 0 0.08rem;
-  font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
-  font-size: clamp(0.88rem, 1.95vw, 0.95rem);
-  font-weight: 500;
-  line-height: 1.32;
-  letter-spacing: -0.015em;
-  text-align: center;
-  color: color-mix(in srgb, var(--muted) 18%, var(--text));
 }
 
 .hero-instructions__platform-row {
@@ -671,7 +622,7 @@
 
 /* Single flex slot: empty = dashed drop zone grows to fill; with files = hug content (no extra scroll). */
 .upload-slot {
-  --upload-slot-cap: min(34vh, 288px);
+  --upload-slot-cap: min(26vh, 220px);
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
@@ -708,13 +659,13 @@
 /* Inner swap only: slightly shorter strip than empty state keeps full page on-screen. */
 .drop-zone--has-files {
   --drop-preview-cap: var(--upload-slot-cap);
-  /* Taller preview strip when images are loaded (guidance opens in a modal). */
-  --drop-thumb-h: min(24vh, 198px);
+  /* Shorter than empty drop target so hero + slot fit in the viewport (guidance is in a modal). */
+  --drop-thumb-h: min(18.5vh, 150px);
 }
 
 @media (min-width: 720px) {
   .drop-zone--has-files {
-    --drop-thumb-h: min(26vh, 218px);
+    --drop-thumb-h: min(19vh, 162px);
   }
 }
 
@@ -1437,7 +1388,7 @@
 
 @media (min-width: 720px) {
   .upload-slot {
-    --upload-slot-cap: min(34vh, 300px);
+    --upload-slot-cap: min(26vh, 240px);
   }
 }
 

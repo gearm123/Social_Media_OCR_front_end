@@ -41,7 +41,6 @@ import { GuidanceInputModal } from './GuidanceInputModal'
 import { InfoPopover } from './InfoPopover'
 import { PaywallModal } from './PaywallModal'
 import { PricingModal } from './PricingModal'
-import { INTENT_LANDINGS } from './intentLandings'
 import {
   applyDocumentSeo,
   getSeoSiteOrigin,
@@ -997,17 +996,6 @@ function App() {
                   <p className="hero-tagline">
                     Turn your chat screenshots into a translated conversation
                   </p>
-                  <nav className="seo-topic-nav" aria-label="Translation guides by app or topic">
-                    <span className="seo-topic-nav__label">Guides</span>
-                    <span className="seo-topic-nav__links">
-                      <a href="/uses">All guides</a>
-                      {INTENT_LANDINGS.slice(0, 4).map((x) => (
-                        <a key={x.path} href={x.path}>
-                          {x.h1}
-                        </a>
-                      ))}
-                    </span>
-                  </nav>
                 </div>
 
                 <section
@@ -1051,9 +1039,6 @@ function App() {
 
                 <div className="lede-with-info lede-with-info--instructions">
                   <div className="hero-instructions">
-                    <p className="hero-platform-lede">
-                      we translate your social media conversations for you
-                    </p>
                     <div className="hero-instructions__platform-row">
                       <HeroPlatformBanner />
                       <InfoPopover label="What Translate Chat does">
