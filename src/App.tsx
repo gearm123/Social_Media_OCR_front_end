@@ -248,17 +248,23 @@ function PlansUsageInfoContent() {
 function DifficultyInfoContent() {
   return (
     <div className="info-popover--difficulty-copy">
+      <div className="info-popover__difficulty-intro-block">
+        <p className="info-popover__difficulty-intro">Difficulty affects speed and quality of the result.</p>
+        <p className="info-popover__difficulty-intro">
+          Choosing high difficulty will take more time to process, but the results will be the highest quality.
+        </p>
+      </div>
       <p className="info-popover__lead">Our recommendation for your requested language:</p>
       <p className="info-popover__subhead">Level 1 — Straightforward OCR</p>
-      <p className="info-popover__para">Spanish, French, German, Italian, Portuguese.</p>
+      <p className="info-popover__para">Spanish, French, German, Italian, Portuguese</p>
       <p className="info-popover__subhead">Level 2 — Moderate complexity</p>
       <p className="info-popover__para">
-        Dutch, Polish, Swedish, Norwegian, Danish, Finnish, Czech, Romanian.
+        Dutch, Polish, Swedish, Norwegian, Danish, Finnish, Czech, Romanian
       </p>
       <p className="info-popover__subhead">Level 3 — Complex</p>
       <p className="info-popover__para">
-        Thai, Vietnamese, Hindi, Bengali, Tamil, Telugu, Urdu, Chinese, Japanese, Korean, Arabic, Indonesian,
-        Filipino/Tagalog, Russian, Ukrainian, Greek, Turkish, Hebrew, Persian.
+        Thai, Vietnamese, Hindi, Bengali, Tamil, Telugu, Urdu. Also Chinese (Simplified or Traditional), Japanese,
+        Korean, Arabic, Indonesian, Filipino/Tagalog, Russian, Ukrainian, Greek, Turkish, Hebrew, Persian (Farsi)
       </p>
     </div>
   )
