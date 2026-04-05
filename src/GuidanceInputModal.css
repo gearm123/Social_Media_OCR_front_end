@@ -1,0 +1,258 @@
+.guidance-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 4150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(0.75rem, env(safe-area-inset-top, 0px)) max(0.75rem, env(safe-area-inset-right, 0px))
+    max(0.75rem, env(safe-area-inset-bottom, 0px)) max(0.75rem, env(safe-area-inset-left, 0px));
+  box-sizing: border-box;
+}
+
+.guidance-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+
+.guidance-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(26rem, calc(100vw - 1.5rem));
+  max-height: min(92dvh, 40rem);
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow:
+    0 24px 64px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+@media (prefers-color-scheme: dark) {
+  .guidance-modal__panel {
+    background: color-mix(in srgb, var(--surface-2) 92%, #0f172a);
+    box-shadow:
+      0 24px 64px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  }
+}
+
+.guidance-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.35rem;
+  flex-shrink: 0;
+}
+
+.guidance-modal__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--text);
+}
+
+.guidance-modal__close {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -0.2rem -0.15rem 0 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.45rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guidance-modal__close:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+}
+
+.guidance-modal__filename {
+  margin: 0 1rem 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  word-break: break-word;
+  flex-shrink: 0;
+}
+
+.guidance-modal__body {
+  padding: 0 1rem 0.75rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Count &lt; 11: no inner scroll — whole dialog fits without vertical scrolling in this section */
+.guidance-modal__body--fit {
+  overflow: visible;
+  flex: 0 1 auto;
+}
+
+/* 11+ bubbles: scroll only the guidance body */
+.guidance-modal__body--scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  max-height: min(58dvh, 24rem);
+}
+
+.guidance-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.guidance-modal__field--sequence {
+  gap: 0.55rem;
+}
+
+.guidance-modal__label-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.guidance-modal__label {
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: var(--text);
+  margin: 0;
+}
+
+.guidance-modal__count-input {
+  box-sizing: border-box;
+  width: 5.5rem;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+  font-size: 1.65rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  text-align: center;
+  color: var(--text);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-2) 90%, #fff);
+  box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.06);
+}
+
+.guidance-modal__count-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent),
+    inset 0 2px 4px rgba(15, 23, 42, 0.06);
+}
+
+.guidance-modal__count-input::placeholder {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.guidance-modal__count-input::-webkit-outer-spin-button,
+.guidance-modal__count-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.guidance-modal__count-input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.guidance-modal__sequence-intro {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.guidance-modal__hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.guidance-modal__sequence {
+  width: 100%;
+}
+
+/* Fit 5–10 bubbles in two columns so the modal stays within viewport without scrolling */
+.guidance-modal__sequence--two-col .bubble-seq__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  align-items: start;
+}
+
+.guidance-modal__sequence .bubble-seq__row {
+  padding: 0.38rem 0.45rem;
+}
+
+.guidance-modal__sequence .bubble-seq__index {
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 0.72rem;
+}
+
+.guidance-modal__sequence .bubble-seq__slot {
+  font-size: 0.8rem;
+  min-height: 2.35rem;
+  padding: 0.35rem 0.4rem;
+}
+
+.guidance-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--surface) 88%, var(--surface-2));
+}
+
+@media (prefers-color-scheme: dark) {
+  .guidance-modal__actions {
+    background: color-mix(in srgb, var(--surface-2) 94%, #0f172a);
+  }
+
+  .guidance-modal__count-input {
+    background: color-mix(in srgb, var(--surface-2) 95%, transparent);
+  }
+}

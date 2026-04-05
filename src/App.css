@@ -671,7 +671,7 @@
 
 /* Single flex slot: empty = dashed drop zone grows to fill; with files = hug content (no extra scroll). */
 .upload-slot {
-  --upload-slot-cap: min(26vh, 220px);
+  --upload-slot-cap: min(34vh, 288px);
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
@@ -708,13 +708,13 @@
 /* Inner swap only: slightly shorter strip than empty state keeps full page on-screen. */
 .drop-zone--has-files {
   --drop-preview-cap: var(--upload-slot-cap);
-  /* Shorter than empty drop target so hero + slot fit without scrolling. */
-  --drop-thumb-h: min(18.5vh, 150px);
+  /* Taller preview strip when images are loaded (guidance opens in a modal). */
+  --drop-thumb-h: min(24vh, 198px);
 }
 
 @media (min-width: 720px) {
   .drop-zone--has-files {
-    --drop-thumb-h: min(19vh, 162px);
+    --drop-thumb-h: min(26vh, 218px);
   }
 }
 
@@ -1009,10 +1009,10 @@
   min-width: 0;
 }
 
-.preview-row--upload-slot--fit-three .preview-side-panel {
+.preview-row--upload-slot--fit-three .preview-guidance-strip {
   flex: 1 1 0;
   min-width: 0;
-  max-width: none;
+  max-width: min(12rem, 38vw);
 }
 
 /* Inside a shared third of the row, cap thumb so panel keeps room; aspect ratio unchanged. */
@@ -1047,6 +1047,64 @@
   max-width: none;
   aspect-ratio: auto;
   margin: 0;
+}
+
+.preview-guidance-strip {
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-width: 9.25rem;
+  max-width: min(13rem, 44vw);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 94%, rgba(255, 255, 255, 0.5));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  box-sizing: border-box;
+}
+
+.preview-guidance-strip__name {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.25;
+  color: var(--muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  word-break: break-word;
+}
+
+.preview-guidance-strip__btn {
+  width: 100%;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+  min-height: 2.55rem;
+  font-weight: 650;
+  font-size: 0.78rem;
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
+}
+
+.preview-guidance-strip__status {
+  margin: 0;
+  font-size: 0.6rem;
+  line-height: 1.35;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .preview-guidance-strip {
+    background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
 }
 
 .preview-side-panel {
@@ -1379,7 +1437,7 @@
 
 @media (min-width: 720px) {
   .upload-slot {
-    --upload-slot-cap: min(26vh, 240px);
+    --upload-slot-cap: min(34vh, 300px);
   }
 }
 
@@ -3594,7 +3652,7 @@
     aspect-ratio: 9 / 16;
   }
 
-  .upload-slot--filled .preview-side-panel {
+  .upload-slot--filled .preview-guidance-strip {
     max-width: none;
     min-width: 0;
     width: 100%;

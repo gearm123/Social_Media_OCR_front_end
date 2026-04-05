@@ -24,7 +24,6 @@ import { fetchMe, type UserMe } from './authApi'
 import { clearSession, getAccessToken } from './authStorage'
 import { fileKey } from './fileUtils'
 import { sortImageFilesByNameSequence } from './sortUploadedImages'
-import { IphoneBubbleSequence } from './IphoneBubbleSequence'
 import { MessengerBackdrop } from './MessengerBackdrop'
 import {
   canMultiImageUploadForSession,
@@ -38,6 +37,7 @@ import {
   subscriptionQuotaStuckForSession,
   subscriptionRunsRemaining,
 } from './billingStorage'
+import { GuidanceInputModal } from './GuidanceInputModal'
 import { InfoPopover } from './InfoPopover'
 import { PaywallModal } from './PaywallModal'
 import { PricingModal } from './PricingModal'
@@ -126,15 +126,6 @@ function processingOverlayHeadline(stage: string | undefined, status: string): s
       if (status === 'completed') return 'Final image ready'
       return 'Processing…'
   }
-}
-
-function resizeSequence(
-  prev: ImageBubbleHint['sequence'],
-  n: number,
-): ImageBubbleHint['sequence'] {
-  const out = prev.slice(0, n)
-  while (out.length < n) out.push('receiver')
-  return out
 }
 
 /** Dedupe within one pick/drop; each new selection replaces the previous list entirely. */
@@ -264,6 +255,8 @@ function App() {
   const [paywallReason, setPaywallReason] = useState<
     'free_exhausted' | 'multi_on_free' | 'quota_exhausted'
   >('free_exhausted')
+  /** Which image (file key) has the guidance modal open */
+  const [guidanceModalKey, setGuidanceModalKey] = useState<string | null>(null)
   const billingExplainerHeroRef = useRef<HTMLElement | null>(null)
 
   const billing = useMemo(() => readBillingSnapshot(), [billingTick])
@@ -896,6 +889,23 @@ function App() {
         onViewPlans={() => setPricingOpen(true)}
       />
 
+      {guidanceModalKey ? (
+        <GuidanceInputModal
+          open
+          fileName={
+            previews.find((pv) => fileKey(pv.file) === guidanceModalKey)?.file.name ?? ''
+          }
+          messageCount={(hints[guidanceModalKey] ?? defaultImageBubbleHint()).messageCount}
+          sequence={(hints[guidanceModalKey] ?? defaultImageBubbleHint()).sequence}
+          maxBubbles={MAX_MESSAGE_BUBBLES}
+          onDismiss={() => setGuidanceModalKey(null)}
+          onSave={(next) => {
+            updateHint(guidanceModalKey, next)
+            setGuidanceModalKey(null)
+          }}
+        />
+      ) : null}
+
       {resultImageUrl ? null : <MessengerBackdrop />}
       {dragActive && !resultImageUrl ? (
         <div className="drag-page-hint" aria-hidden>
@@ -1219,7 +1229,6 @@ function App() {
                   const k = fileKey(p.file)
                   const hint = hints[k] ?? defaultImageBubbleHint()
                   const count = hint.messageCount
-                  const showSequence = count != null && count >= 1
 
                   return (
                     <figure
@@ -1256,64 +1265,22 @@ function App() {
                             </button>
                           </div>
                         </div>
-                        <div className="preview-side-panel">
-                          <div className="preview-side-panel__top">
-                            <p className="preview-side-panel__filename" title={p.file.name}>
-                              {p.file.name}
-                            </p>
-                            <div className="preview-side-panel__count-row">
-                              <div className="preview-side-panel__count-heading">
-                                <label
-                                  className="preview-hint-label preview-hint-label--compact"
-                                  htmlFor={`bubble-count-${k}`}
-                                >
-                                  total messages
-                                </label>
-                                <InfoPopover label="Help: total messages" align="start">
-                                  <p className="info-popover__lead">
-                                    enter the total amount of text bubbles in the image
-                                  </p>
-                                </InfoPopover>
-                              </div>
-                              <input
-                                id={`bubble-count-${k}`}
-                                className="preview-bubble-count-input"
-                                type="number"
-                                inputMode="numeric"
-                                min={1}
-                                max={MAX_MESSAGE_BUBBLES}
-                                placeholder="—"
-                                title="Optional: how many text bubbles appear in this screenshot (1–30)"
-                                value={count == null ? '' : String(count)}
-                                onChange={(e) => {
-                                  const raw = e.target.value.trim()
-                                  if (raw === '') {
-                                    updateHint(k, {
-                                      messageCount: null,
-                                      sequence: [],
-                                    })
-                                    return
-                                  }
-                                  let n = parseInt(raw, 10)
-                                  if (Number.isNaN(n)) return
-                                  n = Math.min(MAX_MESSAGE_BUBBLES, Math.max(1, n))
-                                  updateHint(k, {
-                                    messageCount: n,
-                                    sequence: resizeSequence(hint.sequence, n),
-                                  })
-                                }}
-                              />
-                            </div>
-                          </div>
-                          {showSequence ? (
-                            <div className="preview-side-panel__sequence">
-                              <IphoneBubbleSequence
-                                count={count}
-                                value={hint.sequence}
-                                onChange={(seq) => updateHint(k, { sequence: seq })}
-                              />
-                            </div>
-                          ) : null}
+                        <div className="preview-guidance-strip">
+                          <p className="preview-guidance-strip__name" title={p.file.name}>
+                            {p.file.name}
+                          </p>
+                          <button
+                            type="button"
+                            className="btn primary btn--compact preview-guidance-strip__btn"
+                            onClick={() => setGuidanceModalKey(k)}
+                          >
+                            Add guidance input
+                          </button>
+                          <p className="preview-guidance-strip__status">
+                            {count != null && count >= 1
+                              ? `${count} bubble${count === 1 ? '' : 's'} · sequence set`
+                              : 'Optional — improves accuracy'}
+                          </p>
                         </div>
                       </div>
                     </figure>
