@@ -2,6 +2,8 @@
  * SEO helpers — meta descriptions match visible copy on each route (no new marketing text).
  */
 
+import { CANONICAL_SITE_ORIGIN } from './canonicalSite'
+
 /** Hero tagline (App.tsx `.hero-tagline`). */
 export const SEO_HOME_DESCRIPTION = 'Turn your chat screenshots into a translated conversation'
 
@@ -51,7 +53,9 @@ function upsertCanonical(href: string): void {
 
 function siteOrigin(): string {
   const raw = import.meta.env.VITE_SITE_URL?.trim() || ''
-  return raw.replace(/\/+$/, '')
+  if (raw) return raw.replace(/\/+$/, '')
+  if (import.meta.env.PROD) return CANONICAL_SITE_ORIGIN.replace(/\/+$/, '')
+  return ''
 }
 
 export type DocumentSeo = {

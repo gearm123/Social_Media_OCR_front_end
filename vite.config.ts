@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { CANONICAL_SITE_ORIGIN } from './src/canonicalSite'
 import { INTENT_LANDINGS, USES_HUB_PATH } from './src/intentLandings'
 
 const HOME_TITLE = 'Translate Chat'
@@ -104,7 +105,7 @@ function seoInjectHtml(siteUrl: string): string {
   return `\n    ${lines.join('\n    ')}\n  `
 }
 
-function seoBuildPlugin(siteUrl: string): Plugin {
+function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
   return {
     name: 'seo-build',
     transformIndexHtml(html) {
@@ -112,7 +113,16 @@ function seoBuildPlugin(siteUrl: string): Plugin {
     },
     closeBundle() {
       const base = siteUrl.replace(/\/$/, '')
-      if (!base) return
+      if (!base) {
+        const onCi = Boolean(process.env.CI || process.env.NETLIFY || process.env.CONTINUOUS_INTEGRATION)
+        if (onCi || mode === 'production') {
+          console.warn(
+            '[seo-build] VITE_SITE_URL is empty — sitemap.xml and robots.txt were not written. ' +
+              'Production builds use CANONICAL_SITE_ORIGIN from src/canonicalSite.ts when env is unset.',
+          )
+        }
+        return
+      }
       const distDir = path.join(process.cwd(), 'dist')
       if (!fs.existsSync(distDir)) return
 
@@ -139,6 +149,15 @@ function seoBuildPlugin(siteUrl: string): Plugin {
         `User-agent: *\nAllow: /\n\nSitemap: ${base}/sitemap.xml\n`,
         'utf8',
       )
+      console.log(`[seo-build] sitemap.xml + robots.txt written with base: ${base}`)
+      if (base.includes('netlify.app')) {
+        console.warn(
+          '[seo-build] VITE_SITE_URL uses a *.netlify.app host. If Google Search Console is set up for a ' +
+            'custom domain (e.g. chatreconstruct.com), every <loc> must use that origin or GSC reports ' +
+            '"URL not allowed". Set VITE_SITE_URL in Netlify → Site configuration → Environment variables ' +
+            'to your **primary** domain (UI vars override netlify.toml), then redeploy.',
+        )
+      }
     },
   }
 }
@@ -146,9 +165,16 @@ function seoBuildPlugin(siteUrl: string): Plugin {
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const siteUrl = (env.VITE_SITE_URL || '').trim()
+  const fromEnv = String(env.VITE_SITE_URL || process.env.VITE_SITE_URL || '').trim()
+  const useCanonicalFallback =
+    !fromEnv &&
+    (mode === 'production' ||
+      Boolean(process.env.NETLIFY || process.env.CI || process.env.CONTINUOUS_INTEGRATION))
+  // Explicit VITE_SITE_URL (e.g. Netlify UI) always wins. If unset on Netlify/production, use repo default
+  // so sitemap <loc> URLs match the custom domain and Google Search Console accepts the sitemap.
+  const siteUrl = fromEnv || (useCanonicalFallback ? CANONICAL_SITE_ORIGIN : '')
 
   return {
-    plugins: [react(), seoBuildPlugin(siteUrl)],
+    plugins: [react(), seoBuildPlugin(siteUrl, mode)],
   }
 })

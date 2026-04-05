@@ -5,7 +5,9 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  # Canonical origin for OG URL, Twitter image, and <link rel="canonical"> (seo.ts). Match Netlify primary domain.
+  # Canonical origin: sitemap.xml <loc>, robots.txt Sitemap line, OG URL, canonical (seo.ts).
+  # Must match the domain you use in Google Search Console, or GSC shows "URL not allowed" on <loc> entries.
+  # Netlify UI env vars override this file — remove or update VITE_SITE_URL there if it still points at *.netlify.app.
   VITE_SITE_URL = "https://chatreconstruct.com"
   # Required for Vite: baked in at `npm run build`. Change this if your API host differs.
   # You can override with Netlify → Site configuration → Environment variables (same name), then redeploy.
