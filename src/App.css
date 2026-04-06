@@ -101,7 +101,8 @@
 }
 
 .hero-title-block {
-  margin: 0 auto clamp(0.75rem, 3.2vh, 2rem);
+  /* Tight vs Plans & usage — was clamp(0.75rem, 3.2vh, 2rem); halved for desktop headroom */
+  margin: 0 auto clamp(0.375rem, 1.6vh, 1rem);
   max-width: 38rem;
 }
 
@@ -265,6 +266,105 @@
 .seo-home-faq__more a {
   font-weight: 650;
   color: color-mix(in srgb, var(--accent) 50%, var(--text));
+}
+
+/* FAQ route: same Q&A styles without the home-page top border (support-page already has title). */
+.seo-home-faq--page {
+  margin-top: 0.5rem;
+  padding: 0;
+  border-top: none;
+  max-width: 42rem;
+}
+
+.site-explore-bar {
+  width: 100%;
+  max-width: 40rem;
+  margin: 0.375rem auto 0;
+  padding: 0 0.5rem;
+  flex-shrink: 0;
+}
+
+.site-explore-bar__track {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.75rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--surface-2) 88%, var(--accent)),
+    var(--surface-2)
+  );
+  border: 1px solid color-mix(in srgb, var(--border) 70%, var(--accent));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 12%, transparent),
+    0 8px 28px rgba(15, 23, 42, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  .site-explore-bar__track {
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--surface-2) 92%, var(--accent)),
+      var(--surface-2)
+    );
+    box-shadow:
+      0 1px 0 color-mix(in srgb, #fff 6%, transparent),
+      0 8px 28px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.site-explore-bar__eyebrow {
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--muted) 55%, var(--text));
+  flex-shrink: 0;
+}
+
+.site-explore-bar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+.site-explore-bar__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.38rem 0.72rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-decoration: none;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.site-explore-bar__chip:hover {
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  transform: translateY(-1px);
+}
+
+.site-explore-bar__chip--accent {
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  color: color-mix(in srgb, var(--accent) 12%, var(--text));
+}
+
+.site-explore-bar__chip--accent:hover {
+  background: color-mix(in srgb, var(--accent) 26%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
 }
 
 .lede {
@@ -2665,8 +2765,9 @@
 .billing-explainer.billing-explainer--hero {
   position: relative;
   z-index: 80;
-  margin-top: clamp(0.4rem, 2.2vh, 1.35rem);
-  margin-bottom: clamp(0.65rem, 2.8vh, 1.65rem);
+  /* Halved vs tagline / content below for more vertical room on fixed-height desktop layout */
+  margin-top: clamp(0.2rem, 1.1vh, 0.675rem);
+  margin-bottom: clamp(0.325rem, 1.4vh, 0.825rem);
   max-width: 36rem;
   padding: 0.55rem 0.9rem 0.55rem 0.95rem;
   border-radius: 16px;
@@ -3801,3 +3902,5 @@
     min-height: min(36vw, 200px);
   }
 }
+
+

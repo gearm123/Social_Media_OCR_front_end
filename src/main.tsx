@@ -6,10 +6,12 @@ import FeedbackPage from './FeedbackPage.tsx'
 import IntentLandingPage from './IntentLandingPage.tsx'
 import PayCheckoutPage from './PayCheckoutPage.tsx'
 import UsesHubPage, { USES_HUB_SEO_DESCRIPTION } from './UsesHubPage.tsx'
+import FaqPage from './FaqPage.tsx'
 import { INTENT_BY_PATH, USES_HUB_PATH } from './intentLandings'
 import {
   applyDocumentSeo,
   SEO_CONTACT_DESCRIPTION,
+  SEO_FAQ_DESCRIPTION,
   SEO_FEEDBACK_DESCRIPTION,
   SEO_HOME_DESCRIPTION,
   SEO_SITE_NAME,
@@ -22,6 +24,7 @@ const pathNorm = rawPath.toLowerCase()
 const isPayRoute = pathNorm === '/pay'
 const isContactRoute = pathNorm === '/contact'
 const isFeedbackRoute = pathNorm === '/feedback'
+const isFaqRoute = pathNorm === '/faq'
 const isUsesHub = pathNorm === USES_HUB_PATH
 const intent = INTENT_BY_PATH[pathNorm]
 
@@ -55,6 +58,12 @@ if (isContactRoute) {
     description: USES_HUB_SEO_DESCRIPTION,
     path: USES_HUB_PATH,
   })
+} else if (isFaqRoute) {
+  applyDocumentSeo({
+    title: `FAQ · ${SEO_SITE_NAME}`,
+    description: SEO_FAQ_DESCRIPTION,
+    path: '/faq',
+  })
 }
 
 const root = document.getElementById('root')!
@@ -71,6 +80,8 @@ createRoot(root).render(
     <IntentLandingPage intent={intent} />
   ) : isUsesHub ? (
     <UsesHubPage />
+  ) : isFaqRoute ? (
+    <FaqPage />
   ) : (
     <StrictMode>
       <App />

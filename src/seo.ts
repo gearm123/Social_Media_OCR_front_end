@@ -15,6 +15,10 @@ export const SEO_CONTACT_DESCRIPTION =
 export const SEO_FEEDBACK_DESCRIPTION =
   'Your experience matters. Share bugs, ideas, or anything that would make Translate Chat more useful for you.'
 
+/** FAQ page lead / meta description (visible under the H1 on `/faq`). */
+export const SEO_FAQ_DESCRIPTION =
+  'Quick answers about what Translate Chat does, which chat apps work best, whether you need an account, and how privacy is handled.'
+
 export const SEO_SITE_NAME = 'Translate Chat'
 
 function upsertMetaName(name: string, content: string): void {
@@ -88,9 +92,9 @@ export function unmountJsonLd(id: string): void {
 }
 
 /**
- * Home-page FAQ — keep visible FAQ copy on the home page aligned with these entries for FAQPage schema.
+ * FAQ page content and FAQPage JSON-LD (`/faq`). Wording matches visible Q&amp;A on the FAQ route.
  */
-export const SEO_HOME_FAQ_ITEMS = [
+export const SEO_FAQ_ITEMS = [
   {
     question: 'What does Translate Chat do?',
     answer:

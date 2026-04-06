@@ -41,15 +41,8 @@ import { GuidanceInputModal } from './GuidanceInputModal'
 import { InfoPopover } from './InfoPopover'
 import { PaywallModal } from './PaywallModal'
 import { PricingModal } from './PricingModal'
-import {
-  applyDocumentSeo,
-  getSeoSiteOrigin,
-  mountJsonLd,
-  SEO_HOME_DESCRIPTION,
-  SEO_HOME_FAQ_ITEMS,
-  SEO_SITE_NAME,
-  unmountJsonLd,
-} from './seo'
+import SiteExploreBar from './SiteExploreBar'
+import { applyDocumentSeo, SEO_HOME_DESCRIPTION, SEO_SITE_NAME } from './seo'
 
 /** Formats the pipeline is built around (OpenCV-friendly screenshots). */
 const ACCEPT_IMAGES =
@@ -383,29 +376,6 @@ function App() {
       path: '/',
     })
   }, [])
-
-  /** FAQ block + schema only when the upload slot is empty — keeps flex layout space for previews/results. */
-  useEffect(() => {
-    const id = 'jsonld-home-faq'
-    if (files.length > 0 || resultImageUrl) {
-      unmountJsonLd(id)
-      return
-    }
-    if (!getSeoSiteOrigin()) return
-    mountJsonLd(id, {
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: SEO_HOME_FAQ_ITEMS.map((item) => ({
-        '@type': 'Question',
-        name: item.question,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: item.answer,
-        },
-      })),
-    })
-    return () => unmountJsonLd(id)
-  }, [files.length, resultImageUrl])
 
   /** After guest Paddle checkout, webhooks can lag; re-fetch guest entitlements a few times and on focus. */
   useEffect(() => {
@@ -1394,6 +1364,8 @@ function App() {
             </div>
           </div>
 
+          <SiteExploreBar />
+
           <input
             ref={fileInputRef}
             id={inputId}
@@ -1404,26 +1376,13 @@ function App() {
             onChange={(e) => onPickFiles(e.target.files)}
           />
 
-          {files.length === 0 && !resultImageUrl ? (
-            <section className="seo-home-faq" aria-labelledby="seo-home-faq-heading">
-              <h2 id="seo-home-faq-heading" className="seo-home-faq__title">
-                Common questions
-              </h2>
-              <dl className="seo-home-faq__list">
-                {SEO_HOME_FAQ_ITEMS.map((item) => (
-                  <div className="seo-home-faq__item" key={item.question}>
-                    <dt className="seo-home-faq__q">{item.question}</dt>
-                    <dd className="seo-home-faq__a">{item.answer}</dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="seo-home-faq__more">
-                <a href="/uses">More guides by app and language →</a>
-              </p>
-            </section>
-          ) : null}
-
           <footer className="app-legal-footer">
+            <a className="app-legal-footer__link" href="/faq">
+              FAQ
+            </a>
+            <span className="app-legal-footer__sep" aria-hidden>
+              ·
+            </span>
             <a className="app-legal-footer__link" href="/uses">
               Guides
             </a>

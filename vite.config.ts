@@ -130,6 +130,7 @@ function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
       const rows: Row[] = [
         { loc: `${base}/`, changefreq: 'weekly', priority: '1.0' },
         { loc: `${base}${USES_HUB_PATH}`, changefreq: 'weekly', priority: '0.9' },
+        { loc: `${base}/faq`, changefreq: 'monthly', priority: '0.75' },
         ...INTENT_LANDINGS.map((x) => ({
           loc: `${base}${x.path}`,
           changefreq: 'monthly',
