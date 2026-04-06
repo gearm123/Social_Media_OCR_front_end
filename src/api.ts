@@ -64,6 +64,8 @@ export async function fetchHealth(): Promise<{ ok: boolean }> {
 export type CreateJobOptions = {
   bubbleSummaryText?: string | null
   language?: string | null
+  /** Pipeline depth 1–3 (matches backend `Form` field `difficulty`). */
+  difficulty?: 1 | 2 | 3
   /** Abort upload/create request (e.g. user clicked Cancel before job_id exists). */
   signal?: AbortSignal
 }
@@ -86,6 +88,10 @@ export async function createJob(
   const lang = options?.language?.trim()
   if (lang) {
     fd.append('language', lang)
+  }
+  const difficulty = options?.difficulty
+  if (difficulty != null) {
+    fd.append('difficulty', String(difficulty))
   }
 
   const controller = new AbortController()

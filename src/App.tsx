@@ -72,6 +72,9 @@ const PATIENCE_LINES = [
   'The more images, the more time.',
 ]
 
+/** Matches backend `POST /jobs` form field `difficulty` (pipeline depth). */
+type TranslationDifficulty = 1 | 2 | 3
+
 /** Live overlay timer: m:ss from Process click until loading ends. */
 function formatProcessElapsed(ms: number): string {
   const t = Math.max(0, ms)
@@ -81,20 +84,38 @@ function formatProcessElapsed(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-/** Wall-clock estimate in seconds (~2 min single image; multi-image scales with page count). */
-function pipelineEtaSecondsRange(imageCount: number): [number, number] {
+/**
+ * Wall-clock estimate in seconds for a full 3-pass run (~2 min single image; multi-image scales with page count).
+ * Scaled by `difficulty / 3` so level 1 ≈ one pass, 2 ≈ two passes, 3 unchanged.
+ */
+function pipelineEtaSecondsRange(
+  imageCount: number,
+  difficulty: TranslationDifficulty,
+): [number, number] {
   const n = Math.max(1, imageCount)
+  let lo: number
+  let hi: number
   if (n === 1) {
     const s = 2 * 60
-    return [s, s]
+    lo = hi = s
+  } else {
+    const lowMin = 2 + Math.floor((n - 1) * 0.9)
+    const highMin = 3 + Math.ceil((n - 1) * 1.2)
+    lo = lowMin * 60
+    hi = highMin * 60
   }
-  const lowMin = 2 + Math.floor((n - 1) * 0.9)
-  const highMin = 3 + Math.ceil((n - 1) * 1.2)
-  return [lowMin * 60, highMin * 60]
+  const scale = difficulty / 3
+  let loS = Math.round(lo * scale)
+  let hiS = Math.round(hi * scale)
+  if (loS > hiS) hiS = loS
+  return [loS, hiS]
 }
 
-function formatEstimatedTotalTime(imageCount: number): string {
-  const [lo, hi] = pipelineEtaSecondsRange(imageCount)
+function formatEstimatedTotalTime(
+  imageCount: number,
+  difficulty: TranslationDifficulty,
+): string {
+  const [lo, hi] = pipelineEtaSecondsRange(imageCount, difficulty)
   if (lo === hi) {
     return `Est. total ~${formatProcessElapsed(lo * 1000)}`
   }
@@ -166,9 +187,6 @@ function dedupeImageFiles(incoming: File[]): File[] {
 type PreviewItem = { file: File; url: string }
 
 type PreviewLightbox = { url: string; name: string }
-
-/** UI-only until the API accepts `difficulty` on jobs. */
-type TranslationDifficulty = 1 | 2 | 3
 
 function ProductInfoContent() {
   return (
@@ -286,6 +304,8 @@ function App() {
   const [processing, setProcessing] = useState(false)
   /** Snapshot at Process click — used for ETA copy while the overlay is open. */
   const [processingImageCount, setProcessingImageCount] = useState(1)
+  /** Snapshot at Process click — ETA scales by pass count (1–3). */
+  const [processingDifficulty, setProcessingDifficulty] = useState<TranslationDifficulty>(3)
   const [processElapsedMs, setProcessElapsedMs] = useState(0)
   const [loadingPrimary, setLoadingPrimary] = useState<string | null>(null)
   const [pipelineProgress, setPipelineProgress] = useState(0)
@@ -778,6 +798,7 @@ function App() {
     activeJobIdRef.current = null
     uploadAbortRef.current = new AbortController()
     setProcessingImageCount(files.length)
+    setProcessingDifficulty(translationDifficulty)
     setProcessing(true)
     setResultExpanded(false)
     setPreviewLightbox(null)
@@ -792,6 +813,7 @@ function App() {
       const bubbleSummaryText = buildPass1BubbleSummaryText(files, hints)
       const created = await createJob(files, {
         bubbleSummaryText,
+        difficulty: translationDifficulty,
         signal: uploadAbortRef.current.signal,
       })
       const jobId = created.job_id
@@ -1469,7 +1491,7 @@ function App() {
               </span>
               <span className="process-loading__timer-row">
                 <span className="process-loading__timer-value">
-                  {formatEstimatedTotalTime(processingImageCount)}
+                  {formatEstimatedTotalTime(processingImageCount, processingDifficulty)}
                 </span>
               </span>
             </p>
