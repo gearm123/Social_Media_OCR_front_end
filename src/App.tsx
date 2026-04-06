@@ -263,8 +263,8 @@ function DifficultyInfoContent() {
       </p>
       <p className="info-popover__subhead">Level 3 — Complex</p>
       <p className="info-popover__para">
-        Thai, Vietnamese, Hindi, Bengali, Tamil, Telugu, Urdu. Also Chinese (Simplified or Traditional), Japanese,
-        Korean, Arabic, Indonesian, Filipino/Tagalog, Russian, Ukrainian, Greek, Turkish, Hebrew, Persian (Farsi)
+        Thai, Vietnamese, Hindi, Bengali, Tamil, Telugu, Urdu, Chinese, Japanese, Korean, Arabic, Indonesian,
+        Filipino/Tagalog, Russian, Ukrainian, Greek, Turkish, Hebrew, Persian (Farsi)
       </p>
     </div>
   )
