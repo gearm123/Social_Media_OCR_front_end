@@ -105,7 +105,7 @@ function pipelineEtaSecondsRange(
     hi = highMin * 60
   }
   const scale = difficulty / 3
-  let loS = Math.round(lo * scale)
+  const loS = Math.round(lo * scale)
   let hiS = Math.round(hi * scale)
   if (loS > hiS) hiS = loS
   return [loS, hiS]
@@ -328,7 +328,10 @@ function App() {
   const [translationDifficulty, setTranslationDifficulty] = useState<TranslationDifficulty>(3)
   const billingExplainerHeroRef = useRef<HTMLElement | null>(null)
 
-  const billing = useMemo(() => readBillingSnapshot(), [billingTick])
+  const billing = useMemo(() => {
+    void billingTick
+    return readBillingSnapshot()
+  }, [billingTick])
 
   /** Sync with `files` on the same render — avoids a blank frame where `files` is set but preview state lags (useEffect). */
   const previews = useMemo<PreviewItem[]>(
