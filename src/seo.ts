@@ -19,6 +19,34 @@ export const SEO_FEEDBACK_DESCRIPTION =
 export const SEO_FAQ_DESCRIPTION =
   'Quick answers about what Translate Chat does, which chat apps work best, whether you need an account, and how privacy is handled.'
 
+/** How-to page meta + lead (visible under the H1 on `/how-to`). */
+export const SEO_HOWTO_DESCRIPTION =
+  'Step-by-step: upload chat screenshots in order, add bubble counts and sender/receiver guidance, choose difficulty, run Process, then download your translated conversation image.'
+
+/** Steps for `/how-to` body copy and HowTo JSON-LD (keep wording in sync). */
+export const SEO_HOWTO_STEPS: readonly { title: string; body: string }[] = [
+  {
+    title: 'Upload screenshots in chat order',
+    body: 'Use Choose images or drag and drop anywhere on the page. Add files in conversation order — the first image should show the earliest part of the chat. Supported formats: PNG, JPEG, WebP, and BMP.',
+  },
+  {
+    title: 'Add guidance for each image',
+    body: 'For every screenshot, open Add guidance input and enter the total number of message bubbles you see. Set the sequence (sender vs receiver) for each bubble. This optional step significantly improves layout and translation quality.',
+  },
+  {
+    title: 'Pick language difficulty',
+    body: 'Choose a difficulty level (1–3) before Process. Higher levels take longer but help for complex scripts and languages; use the in-app hint to see recommended levels for your language.',
+  },
+  {
+    title: 'Run Process',
+    body: 'Click Process when your API is configured and you have usage available. Wait for the pipeline to finish — you can switch tabs while it runs. You can cancel from the progress screen if needed.',
+  },
+  {
+    title: 'Download or share the result',
+    body: 'When processing completes, open the result to view full size, download the PNG, or use Share if your device supports it. Use Back to adjust guidance and run again, or Start over to clear uploads.',
+  },
+]
+
 export const SEO_SITE_NAME = 'Translate Chat'
 
 function upsertMetaName(name: string, content: string): void {

@@ -1,32 +1,6 @@
-import { useEffect } from 'react'
-import {
-  getSeoSiteOrigin,
-  mountJsonLd,
-  SEO_FAQ_DESCRIPTION,
-  SEO_FAQ_ITEMS,
-  unmountJsonLd,
-} from './seo'
-
-const JSONLD_ID = 'jsonld-faq-page'
+import { SEO_FAQ_DESCRIPTION, SEO_FAQ_ITEMS } from './seo'
 
 export default function FaqPage() {
-  useEffect(() => {
-    if (!getSeoSiteOrigin()) return
-    mountJsonLd(JSONLD_ID, {
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: SEO_FAQ_ITEMS.map((item) => ({
-        '@type': 'Question',
-        name: item.question,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: item.answer,
-        },
-      })),
-    })
-    return () => unmountJsonLd(JSONLD_ID)
-  }, [])
-
   return (
     <div className="support-page">
       <header className="support-page__header">

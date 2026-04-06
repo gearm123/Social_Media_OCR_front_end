@@ -1,7 +1,5 @@
-import { useEffect } from 'react'
 import type { IntentLanding } from './intentLandings'
 import { INTENT_LANDINGS, USES_HUB_PATH } from './intentLandings'
-import { getSeoSiteOrigin, mountJsonLd, unmountJsonLd } from './seo'
 
 type Props = {
   intent: IntentLanding
@@ -9,28 +7,6 @@ type Props = {
 
 export default function IntentLandingPage({ intent }: Props) {
   const others = INTENT_LANDINGS.filter((x) => x.path !== intent.path)
-
-  useEffect(() => {
-    const origin = getSeoSiteOrigin()
-    if (!origin) return
-    const id = 'jsonld-breadcrumb-intent'
-    const pageUrl = `${origin}${intent.path}`
-    mountJsonLd(id, {
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: `${origin}/` },
-        {
-          '@type': 'ListItem',
-          position: 2,
-          name: 'Translation guides',
-          item: `${origin}${USES_HUB_PATH}`,
-        },
-        { '@type': 'ListItem', position: 3, name: intent.h1, item: pageUrl },
-      ],
-    })
-    return () => unmountJsonLd(id)
-  }, [intent.h1, intent.path])
 
   return (
     <div className="support-page intent-landing">

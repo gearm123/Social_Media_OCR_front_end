@@ -1,6 +1,4 @@
-import { useEffect } from 'react'
-import { INTENT_LANDINGS, USES_HUB_PATH } from './intentLandings'
-import { getSeoSiteOrigin, mountJsonLd, unmountJsonLd } from './seo'
+import { INTENT_LANDINGS } from './intentLandings'
 
 const HUB_LEAD =
   'Short guides for common search intents — same tool on the home page, with tips tailored to each chat app or language.'
@@ -8,22 +6,6 @@ const HUB_LEAD =
 export const USES_HUB_SEO_DESCRIPTION = HUB_LEAD
 
 export default function UsesHubPage() {
-  useEffect(() => {
-    const origin = getSeoSiteOrigin()
-    if (!origin) return
-    const id = 'jsonld-breadcrumb-uses'
-    const hubUrl = `${origin}${USES_HUB_PATH}`
-    mountJsonLd(id, {
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: `${origin}/` },
-        { '@type': 'ListItem', position: 2, name: 'Translation guides', item: hubUrl },
-      ],
-    })
-    return () => unmountJsonLd(id)
-  }, [])
-
   return (
     <div className="support-page intent-landing">
       <header className="support-page__header">

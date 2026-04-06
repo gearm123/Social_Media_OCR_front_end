@@ -1,5 +1,5 @@
 /**
- * Compact navigation below the home drop zone — Guides + FAQ (Contact / Feedback stay in the top bar).
+ * Compact navigation below the home drop zone — How to, Guides, FAQ (Contact / Feedback in the top bar).
  */
 export default function SiteExploreBar() {
   return (
@@ -7,10 +7,13 @@ export default function SiteExploreBar() {
       <div className="site-explore-bar__track">
         <span className="site-explore-bar__eyebrow">Explore</span>
         <div className="site-explore-bar__chips">
+          <a className="site-explore-bar__chip site-explore-bar__chip--accent" href="/how-to">
+            How to
+          </a>
           <a className="site-explore-bar__chip" href="/uses">
             Guides
           </a>
-          <a className="site-explore-bar__chip site-explore-bar__chip--accent" href="/faq">
+          <a className="site-explore-bar__chip" href="/faq">
             FAQ
           </a>
         </div>
