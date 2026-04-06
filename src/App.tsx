@@ -77,38 +77,43 @@ function formatProcessElapsed(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+/** Expected wall time per pipeline pass (single-image baseline), seconds. */
+const PIPELINE_PASS_EXPECTED_SEC: readonly [number, number, number] = [80, 40, 30]
+
+function expectedSecondsForPassCount(passCount: number): number {
+  const n = Math.max(0, Math.min(3, Math.floor(passCount)))
+  let sum = 0
+  for (let i = 0; i < n; i++) sum += PIPELINE_PASS_EXPECTED_SEC[i]!
+  return sum
+}
+
+/** Multi-image stretch factors vs single-image (same curve as the old 2–3 minute 3-pass model). */
+function pipelineImageCountFactors(imageCount: number): { lo: number; hi: number } {
+  const n = Math.max(1, imageCount)
+  if (n === 1) return { lo: 1, hi: 1 }
+  const lowMin = 2 + Math.floor((n - 1) * 0.9)
+  const highMin = 3 + Math.ceil((n - 1) * 1.2)
+  const refSingleSec = 2 * 60
+  return { lo: (lowMin * 60) / refSingleSec, hi: (highMin * 60) / refSingleSec }
+}
+
 /**
- * Wall-clock estimate in seconds for a full 3-pass run (~2 min single image; multi-image scales with page count).
- * Scaled by `difficulty / 3` so level 1 ≈ one pass, 2 ≈ two passes, 3 unchanged.
+ * Wall-clock estimate in seconds: sum of expected time per pass (80 + 40 + 30 for 3 passes) for the
+ * `difficulty` depth, scaled for multi-image using the previous minute-based spread.
  */
 function pipelineEtaSecondsRange(
   imageCount: number,
   difficulty: TranslationDifficulty,
 ): [number, number] {
-  const n = Math.max(1, imageCount)
-  let lo: number
-  let hi: number
-  if (n === 1) {
-    const s = 2 * 60
-    lo = hi = s
-  } else {
-    const lowMin = 2 + Math.floor((n - 1) * 0.9)
-    const highMin = 3 + Math.ceil((n - 1) * 1.2)
-    lo = lowMin * 60
-    hi = highMin * 60
-  }
-  const scale = difficulty / 3
-  const loS = Math.round(lo * scale)
-  let hiS = Math.round(hi * scale)
+  const core = expectedSecondsForPassCount(difficulty)
+  const { lo: loM, hi: hiM } = pipelineImageCountFactors(imageCount)
+  const loS = Math.max(1, Math.round(core * loM))
+  let hiS = Math.max(1, Math.round(core * hiM))
   if (loS > hiS) hiS = loS
   return [loS, hiS]
 }
 
-function formatEstimatedTotalTime(
-  imageCount: number,
-  difficulty: TranslationDifficulty,
-): string {
-  const [lo, hi] = pipelineEtaSecondsRange(imageCount, difficulty)
+function formatEstimatedTotalTimeFromRange([lo, hi]: [number, number]): string {
   if (lo === hi) {
     return `Est. total ~${formatProcessElapsed(lo * 1000)}`
   }
@@ -669,6 +674,19 @@ function App() {
     }, 250)
     return () => clearInterval(id)
   }, [processing])
+
+  const pipelineEtaSec = useMemo(
+    () => pipelineEtaSecondsRange(processingImageCount, processingDifficulty),
+    [processingImageCount, processingDifficulty],
+  )
+
+  /** At least as full as elapsed/upper ETA (capped before done); server `progress` can move it faster. */
+  const loadingBarProgress = useMemo(() => {
+    if (!processing) return 0
+    const hi = pipelineEtaSec[1]
+    const timeBased = Math.min(0.92, processElapsedMs / (Math.max(1, hi) * 1000))
+    return Math.min(1, Math.max(pipelineProgress, timeBased))
+  }, [processing, pipelineEtaSec, processElapsedMs, pipelineProgress])
 
   const apiUrlConfigured = Boolean(apiBase())
 
@@ -1375,44 +1393,6 @@ function App() {
             multiple={multiUploadAllowed}
             onChange={(e) => onPickFiles(e.target.files)}
           />
-
-          <footer className="app-legal-footer">
-            <a className="app-legal-footer__link" href="/faq">
-              FAQ
-            </a>
-            <span className="app-legal-footer__sep" aria-hidden>
-              ·
-            </span>
-            <a className="app-legal-footer__link" href="/uses">
-              Guides
-            </a>
-            {apiUrlConfigured ? (
-              <>
-                <span className="app-legal-footer__sep" aria-hidden>
-                  ·
-                </span>
-                <a
-                  className="app-legal-footer__link"
-                  href={`${apiBase()}/legal/terms`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Terms
-                </a>
-                <span className="app-legal-footer__sep" aria-hidden>
-                  ·
-                </span>
-                <a
-                  className="app-legal-footer__link"
-                  href={`${apiBase()}/legal/privacy`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Privacy
-                </a>
-              </>
-            ) : null}
-          </footer>
         </div>
       </main>
 
@@ -1435,12 +1415,12 @@ function App() {
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-valuenow={Math.round(pipelineProgress * 100)}
+              aria-valuenow={Math.round(loadingBarProgress * 100)}
               aria-label="Pipeline progress"
             >
               <div
                 className="process-loading__bar-fill"
-                style={{ width: `${Math.round(pipelineProgress * 100)}%` }}
+                style={{ width: `${Math.round(loadingBarProgress * 100)}%` }}
               />
             </div>
             <p id="process-loading-progress-desc" className="process-loading__timers" aria-live="polite">
@@ -1453,7 +1433,7 @@ function App() {
               </span>
               <span className="process-loading__timer-row">
                 <span className="process-loading__timer-value">
-                  {formatEstimatedTotalTime(processingImageCount, processingDifficulty)}
+                  {formatEstimatedTotalTimeFromRange(pipelineEtaSec)}
                 </span>
               </span>
             </p>
