@@ -4188,6 +4188,123 @@
     flex: 0 1 auto;
     min-height: min(36vw, 200px);
   }
+
+  /* Keep text and modals within the viewport (no horizontal scroll / clipped copy). */
+  .app-shell {
+    max-width: 100%;
+  }
+
+  .app {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .hero,
+  .hero-title-block,
+  .hero-instructions {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .hero-tagline,
+  .hero-brand,
+  .hero-instruction-card__name,
+  .hero-instruction-card__line,
+  .hero-instruction-card__line--emphasis {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  .billing-explainer,
+  .billing-explainer__line,
+  .billing-explainer__split-row {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  .billing-explainer__value {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-wrap: break-word;
+  }
+
+  .billing-explainer__split-row {
+    width: 100%;
+  }
+
+  .seo-home-faq,
+  .seo-home-faq__q,
+  .seo-home-faq__a,
+  .seo-home-faq__more {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  .site-explore-bar,
+  .site-explore-bar__track {
+    max-width: 100%;
+  }
+
+  .site-explore-bar__chip {
+    max-width: 100%;
+    overflow-wrap: break-word;
+  }
+
+  .billing-nudge span {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-wrap: break-word;
+  }
+
+  .pricing-modal,
+  .paywall-modal,
+  .auth-modal {
+    padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+    box-sizing: border-box;
+  }
+
+  .pricing-modal__panel,
+  .paywall-modal__panel {
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  .pricing-modal__subtitle,
+  .pricing-modal__legal,
+  .pricing-card__blurb,
+  .pricing-card__name,
+  .paywall-modal__body {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  .auth-modal__panel {
+    overflow-x: hidden;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .auth-modal__subtitle {
+    max-width: 100%;
+  }
+
+  .auth-modal__tab-label {
+    overflow-wrap: break-word;
+    text-align: center;
+  }
+
+  .info-popover__panel {
+    width: min(26rem, calc(100vw - 1.25rem));
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
 }
 
 

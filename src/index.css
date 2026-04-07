@@ -77,7 +77,9 @@ body {
     min-height: 100dvh;
     min-height: 100svh;
     max-height: none;
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: visible;
+    max-width: 100%;
   }
 
   .support-page,
@@ -85,6 +87,34 @@ body {
     flex: 0 0 auto;
     overflow: visible;
     min-height: 0;
+  }
+
+  .support-page {
+    max-width: 100%;
+    padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+    box-sizing: border-box;
+  }
+
+  .support-page__lead,
+  .support-page__muted,
+  .support-page__note,
+  .support-page__title,
+  .howto-page__step-title,
+  .howto-page__step-body,
+  .intent-landing__tips,
+  .intent-landing__related-list,
+  .intent-landing__hub-list,
+  .seo-breadcrumbs__list {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  .pay-checkout-page__title,
+  .pay-checkout-page__error {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
   }
 }
 
