@@ -2,6 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Backup if an HTTP or www request still receives HTML (Enforce HTTPS + _redirects should handle most). -->
+    <script>
+      (function () {
+        var host = location.hostname
+        var tail = location.pathname + location.search + location.hash
+        if (host === 'www.chatreconstruct.com') {
+          location.replace('https://chatreconstruct.com' + tail)
+          return
+        }
+        if (location.protocol === 'http:' && host === 'chatreconstruct.com') {
+          location.replace('https://chatreconstruct.com' + tail)
+        }
+      })()
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

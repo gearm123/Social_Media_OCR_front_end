@@ -18,4 +18,30 @@
 # https://chatreconstruct.com and https://www.chatreconstruct.com — or the browser shows “Failed to fetch”.
 # FRONTEND_URL on the API should match your primary checkout return URL / Paddle-approved domain.
 
-# Canonical HTTP → HTTPS / www → apex: see public/_redirects (copied to dist). SPA fallback is there too.
+# ---------------------------------------------------------------------------
+# Redirects (order matters). public/_redirects is processed first (host rules only);
+# these rules run next — repeat HTTP/www→apex so they still apply if _redirects is skipped.
+# Netlify UI: Domains → HTTPS → Enforce HTTPS (recommended). index.html has a small JS backup.
+# ---------------------------------------------------------------------------
+[[redirects]]
+  from = "http://chatreconstruct.com/*"
+  to = "https://chatreconstruct.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://www.chatreconstruct.com/*"
+  to = "https://chatreconstruct.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.chatreconstruct.com/*"
+  to = "https://chatreconstruct.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
