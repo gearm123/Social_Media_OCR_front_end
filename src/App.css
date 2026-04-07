@@ -3760,6 +3760,7 @@
     padding: 0.26rem 0.42rem;
     border-radius: 12px;
     box-sizing: border-box;
+    margin: 0 0 0.55rem;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
