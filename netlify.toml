@@ -18,8 +18,4 @@
 # https://chatreconstruct.com and https://www.chatreconstruct.com — or the browser shows “Failed to fetch”.
 # FRONTEND_URL on the API should match your primary checkout return URL / Paddle-approved domain.
 
-# SPA: send all routes to index.html (safe for client-side routing later)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Canonical HTTP → HTTPS / www → apex: see public/_redirects (copied to dist). SPA fallback is there too.
