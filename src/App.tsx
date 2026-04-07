@@ -1231,22 +1231,22 @@ function App() {
                     </>
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        className="btn primary"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        Choose images
-                      </button>
-                      <button
-                        type="button"
-                        className="btn danger-outline"
-                        onClick={clearAll}
-                        title="Remove all images and start over"
-                      >
-                        Reset
-                      </button>
-                      <div className="hero-actions__process-cluster">
+                      <div className="hero-actions__row hero-actions__row--primary">
+                        <button
+                          type="button"
+                          className="btn primary"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          Choose images
+                        </button>
+                        <button
+                          type="button"
+                          className="btn danger-outline"
+                          onClick={clearAll}
+                          title="Remove all images and start over"
+                        >
+                          Reset
+                        </button>
                         <button
                           type="button"
                           className="btn process"
@@ -1273,6 +1273,8 @@ function App() {
                         >
                           {processing ? 'Working…' : 'Process'}
                         </button>
+                      </div>
+                      <div className="hero-actions__row hero-actions__row--secondary">
                         <div className="hero-actions__difficulty-stack">
                           <span
                             className="hero-actions__difficulty-label"

@@ -726,11 +726,19 @@
   margin-top: clamp(0.6rem, 2.2vh, 1.35rem);
 }
 
-.hero-actions__process-cluster {
+/* Primary: Choose images + Reset + Process. Secondary: difficulty + info + mood.
+   Desktop: both rows flow inline (often one line); mobile: stacked (see compact media query). */
+.hero-actions__row--primary,
+.hero-actions__row--secondary {
   display: inline-flex;
   flex-wrap: nowrap;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
+}
+
+.hero-actions__row--primary {
+  gap: 0.55rem;
 }
 
 /* Label + bar stacked; total height kept within one control row (see max-height + compact bar) */
@@ -4048,8 +4056,45 @@
     box-sizing: border-box;
   }
 
-  .hero-actions__process-cluster .btn.process {
+  .hero-actions:not(.hero-actions--result) {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .hero-actions__row--primary {
+    display: flex;
+    width: 100%;
+    box-sizing: border-box;
+    gap: 0.35rem;
+  }
+
+  .hero-actions__row--primary .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-left: 0.45rem;
+    padding-right: 0.45rem;
+    font-size: 0.78rem;
+  }
+
+  .hero-actions__row--primary .btn.process {
     min-height: 44px;
+  }
+
+  .hero-actions__row--secondary {
+    display: flex;
+    width: 100%;
+    box-sizing: border-box;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  .hero-actions__row--secondary .info-popover {
+    flex-shrink: 0;
   }
 
   .hero-actions__difficulty-stack {
