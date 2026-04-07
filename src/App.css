@@ -3753,30 +3753,78 @@
     width: 100%;
     max-width: none;
     align-self: stretch;
+    flex-wrap: nowrap;
+    align-items: center;
     justify-content: space-between;
-    gap: 0.35rem 0.5rem;
-    padding: 0.35rem 0.45rem;
-    border-radius: 14px;
+    gap: 0.2rem 0.35rem;
+    padding: 0.26rem 0.42rem;
+    border-radius: 12px;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .app-top-bar::-webkit-scrollbar {
+    display: none;
   }
 
   .app-top-bar__nav {
-    gap: 0.1rem;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.06rem;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .app-top-bar__auth {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 0.18rem;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .app-top-bar__divider {
+    flex-shrink: 0;
+    height: 1.05rem;
+    margin: 0 0.04rem;
+    align-self: center;
   }
 
   .app-top-bar__link {
-    font-size: 0.8rem;
-    padding: 0.5rem 0.55rem;
-    min-height: 44px;
+    font-size: 0.72rem;
+    padding: 0.32rem 0.42rem;
+    min-height: 38px;
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
+    flex-shrink: 0;
   }
 
   .app-top-bar .btn--compact {
-    font-size: 0.82rem;
-    padding: 0.5rem 0.8rem;
-    min-height: 44px;
+    font-size: 0.74rem;
+    padding: 0.32rem 0.52rem;
+    min-height: 38px;
     box-sizing: border-box;
+    flex-shrink: 0;
+  }
+
+  .app-top-bar .app-auth-bar__name {
+    max-width: min(5.5rem, 28vw);
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .app-top-bar .app-auth-bar__muted {
+    font-size: 0.62rem;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 42vw;
   }
 
   .billing-explainer.billing-explainer--hero {
