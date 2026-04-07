@@ -759,6 +759,113 @@
   text-overflow: ellipsis;
 }
 
+/* Mood toggle — same row as Process + difficulty; height aligned with .hero-actions__difficulty-stack */
+.hero-actions__mood-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.06rem;
+  max-height: 2.5rem;
+  flex-shrink: 0;
+}
+
+.hero-actions__mood-label {
+  margin: 0;
+  padding: 0;
+  max-width: 12.5rem;
+  font-size: 0.58rem;
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  text-align: center;
+  color: color-mix(in srgb, var(--muted) 92%, var(--text));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mood-bar {
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.1rem;
+  border: 1px solid color-mix(in srgb, var(--muted) 28%, var(--border));
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-2) 88%, transparent) 0%,
+    color-mix(in srgb, var(--surface-2) 100%, transparent) 100%
+  );
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent);
+  gap: 0.08rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mood-bar {
+    box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent);
+  }
+}
+
+.mood-bar__seg {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--muted);
+  transition: color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.mood-bar__seg:hover {
+  color: var(--text);
+}
+
+.mood-bar__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.mood-bar__face {
+  pointer-events: none;
+  padding: 0.24rem 0.42rem;
+  border-radius: inherit;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Indigo active pill — distinct from green difficulty bar */
+.mood-bar__seg--active {
+  color: #fff;
+  background: linear-gradient(180deg, #4f46e5 0%, #4338ca 100%);
+  box-shadow: 0 1px 2px rgba(79, 70, 229, 0.28);
+}
+
+.mood-bar__seg--active:hover {
+  color: #fff;
+}
+
+.mood-bar__seg:has(.mood-bar__input:focus-visible) .mood-bar__face {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.mood-bar__seg--active:has(.mood-bar__input:focus-visible) .mood-bar__face {
+  outline-color: color-mix(in srgb, #fff 55%, var(--accent));
+}
+
 /* Segmented difficulty control — same row as Process */
 .difficulty-bar {
   display: inline-flex;
@@ -3949,7 +4056,16 @@
     max-height: 2.75rem;
   }
 
+  .hero-actions__mood-stack {
+    max-height: 2.75rem;
+  }
+
   .hero-actions__difficulty-label {
+    font-size: 0.46rem;
+    letter-spacing: 0.03em;
+  }
+
+  .hero-actions__mood-label {
     font-size: 0.46rem;
     letter-spacing: 0.03em;
   }
@@ -3965,6 +4081,16 @@
     min-height: 30px;
     padding-left: 0.55rem;
     padding-right: 0.55rem;
+    box-sizing: border-box;
+  }
+
+  .mood-bar__face {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding-left: 0.38rem;
+    padding-right: 0.38rem;
     box-sizing: border-box;
   }
 

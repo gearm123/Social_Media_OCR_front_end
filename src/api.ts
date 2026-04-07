@@ -66,6 +66,10 @@ export type CreateJobOptions = {
   language?: string | null
   /** Pipeline depth 1–3 (matches backend `Form` field `difficulty`). */
   difficulty?: 1 | 2 | 3
+  /**
+   * When true, sends `hurry_up=1` (same as CLI `--hurry-up`). Omitted when false — backend defaults to hurry_up off.
+   */
+  hurryUp?: boolean
   /** Abort upload/create request (e.g. user clicked Cancel before job_id exists). */
   signal?: AbortSignal
 }
@@ -92,6 +96,9 @@ export async function createJob(
   const difficulty = options?.difficulty
   if (difficulty != null) {
     fd.append('difficulty', String(difficulty))
+  }
+  if (options?.hurryUp === true) {
+    fd.append('hurry_up', '1')
   }
 
   const controller = new AbortController()

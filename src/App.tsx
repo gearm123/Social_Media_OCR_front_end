@@ -262,6 +262,52 @@ function PlansUsageInfoContent() {
   )
 }
 
+type TranslationMood = 'hurry' | 'patient'
+
+function MoodBar({
+  mode,
+  onMode,
+}: {
+  mode: TranslationMood
+  onMode: (m: TranslationMood) => void
+}) {
+  const labelId = useId()
+  return (
+    <div className="hero-actions__mood-stack">
+      <span className="hero-actions__mood-label" id={labelId}>
+        Choose your mood
+      </span>
+      <fieldset className="mood-bar" aria-labelledby={labelId}>
+        <legend className="sr-only">Processing mood</legend>
+        <label
+          className={`mood-bar__seg${mode === 'hurry' ? ' mood-bar__seg--active' : ''}`}
+        >
+          <input
+            type="radio"
+            className="mood-bar__input"
+            name="translation-mood"
+            checked={mode === 'hurry'}
+            onChange={() => onMode('hurry')}
+            aria-label="Hurry up"
+          />
+          <span className="mood-bar__face">Hurry up</span>
+        </label>
+        <label className={`mood-bar__seg${mode === 'patient' ? ' mood-bar__seg--active' : ''}`}>
+          <input
+            type="radio"
+            className="mood-bar__input"
+            name="translation-mood"
+            checked={mode === 'patient'}
+            onChange={() => onMode('patient')}
+            aria-label="Take your time"
+          />
+          <span className="mood-bar__face">Take your time</span>
+        </label>
+      </fieldset>
+    </div>
+  )
+}
+
 function DifficultyInfoContent() {
   return (
     <div className="info-popover--difficulty-copy">
@@ -325,6 +371,7 @@ function App() {
   /** Which image (file key) has the guidance modal open */
   const [guidanceModalKey, setGuidanceModalKey] = useState<string | null>(null)
   const [translationDifficulty, setTranslationDifficulty] = useState<TranslationDifficulty>(3)
+  const [translationMood, setTranslationMood] = useState<TranslationMood>('patient')
   const billingExplainerHeroRef = useRef<HTMLElement | null>(null)
 
   const billing = useMemo(() => {
@@ -806,6 +853,7 @@ function App() {
       const created = await createJob(files, {
         bubbleSummaryText,
         difficulty: translationDifficulty,
+        hurryUp: translationMood === 'hurry',
         signal: uploadAbortRef.current.signal,
       })
       const jobId = created.job_id
@@ -1260,6 +1308,7 @@ function App() {
                         <InfoPopover label="Recommended languages by difficulty level" align="end">
                           <DifficultyInfoContent />
                         </InfoPopover>
+                        <MoodBar mode={translationMood} onMode={setTranslationMood} />
                       </div>
                     </>
                   )}
