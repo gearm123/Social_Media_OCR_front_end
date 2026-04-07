@@ -23,6 +23,10 @@ export const SEO_FAQ_DESCRIPTION =
 export const SEO_HOWTO_DESCRIPTION =
   'Step-by-step: upload chat screenshots in order, add bubble counts and sender/receiver guidance, choose difficulty, run Process, then download your translated conversation image.'
 
+/** `/demonstration` page — meta matches visible lead under the H1. */
+export const SEO_DEMONSTRATION_DESCRIPTION =
+  "See how readable chat bubbles can be reconstructed even when the phone screen is badly cracked — the same idea behind Translate Chat's output on tough screenshots."
+
 /** Steps for `/how-to` body copy and HowTo JSON-LD (keep wording in sync). */
 export const SEO_HOWTO_STEPS: readonly { title: string; body: string }[] = [
   {

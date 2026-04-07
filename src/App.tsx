@@ -38,6 +38,7 @@ import {
   subscriptionRunsRemaining,
 } from './billingStorage'
 import { GuidanceInputModal } from './GuidanceInputModal'
+import { ChatReconstructHoverPreview } from './ChatReconstructHoverPreview'
 import { InfoPopover } from './InfoPopover'
 import { PaywallModal } from './PaywallModal'
 import { PricingModal } from './PricingModal'
@@ -1107,6 +1108,7 @@ function App() {
                 <div className="lede-with-info lede-with-info--instructions">
                   <div className="hero-instructions">
                     <div className="hero-instructions__platform-row">
+                      <ChatReconstructHoverPreview />
                       <HeroPlatformBanner />
                       <InfoPopover label="What Translate Chat does">
                         <ProductInfoContent />

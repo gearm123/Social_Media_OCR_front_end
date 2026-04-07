@@ -74,6 +74,7 @@ function breadcrumbsForRoute(pathNorm: string, intent: IntentLanding | null): Cr
     '/feedback': { name: 'Feedback', path: '/feedback' },
     '/faq': { name: 'FAQ', path: '/faq' },
     '/how-to': { name: 'How to', path: '/how-to' },
+    '/demonstration': { name: 'Demonstration', path: '/demonstration' },
     '/pay': { name: 'Checkout', path: '/pay' },
     [USES_HUB_PATH]: { name: 'Translation guides', path: USES_HUB_PATH },
   }

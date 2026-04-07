@@ -236,6 +236,79 @@ a {
   color: var(--accent);
 }
 
+/* /demonstration — wide centered media (default .support-page max-width is too narrow) */
+.support-page.demonstration-page {
+  max-width: min(52rem, 100%);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.demonstration-page__main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1 1 auto;
+  justify-content: center;
+  min-height: 0;
+}
+
+.demonstration-page__lead {
+  max-width: 34rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.demonstration-page__visual {
+  width: 100%;
+  max-width: min(960px, 100%);
+  margin-top: 0.35rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  box-shadow:
+    0 4px 28px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  box-sizing: border-box;
+  /* No opacity/filter animation on this wrapper — can interfere with GIF playback in some engines. */
+}
+
+@media (prefers-color-scheme: dark) {
+  .demonstration-page__visual {
+    background: color-mix(in srgb, var(--surface-2) 92%, #0f172a);
+    box-shadow:
+      0 10px 36px rgba(0, 0, 0, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+}
+
+.demonstration-page__media {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 12px;
+  vertical-align: middle;
+  object-fit: contain;
+  /* Native GIF: intrinsic dimensions + max-width only — no max-height cap so wide frames aren’t cropped oddly. */
+}
+
+.demonstration-page__cta {
+  margin: 1.35rem 0 0;
+}
+
+.demonstration-page .seo-breadcrumbs {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.demonstration-page .seo-breadcrumbs__list {
+  justify-content: center;
+}
+
 /* /how-to — numbered steps */
 .howto-page__steps {
   list-style: none;

@@ -463,6 +463,8 @@
   justify-content: center;
   gap: 0.55rem 1rem;
   margin-bottom: 0.2rem;
+  /* Match `.hero-platform-banner` outer height: border + vertical padding + 28px logos / min-height. */
+  --hero-movie-btn-size: calc(2px + 0.56rem + max(2.05rem, 28px));
 }
 
 .hero-platform-banner {
@@ -501,6 +503,94 @@
 
 .hero-platform-banner__logo:hover {
   opacity: 1;
+}
+
+/* Hero: movie preview — circle left of platform pill; hover shows demo GIF (portaled, native decode) */
+.chat-reconstruct-hover {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.chat-reconstruct-hover--hero-row {
+  align-self: center;
+}
+
+.chat-reconstruct-hover__trigger--hero {
+  box-sizing: border-box;
+  width: var(--hero-movie-btn-size);
+  height: var(--hero-movie-btn-size);
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--muted) 35%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+  color: var(--muted);
+  line-height: 1;
+  cursor: help;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-reconstruct-hover__trigger--hero:hover,
+.chat-reconstruct-hover__trigger--hero:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--accent);
+}
+
+.chat-reconstruct-hover--hero-row .chat-reconstruct-hover__icon {
+  width: min(1.62rem, 62%);
+  height: min(1.62rem, 62%);
+  display: block;
+  shape-rendering: geometricPrecision;
+  filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.14));
+}
+
+@media (prefers-color-scheme: dark) {
+  .chat-reconstruct-hover--hero-row .chat-reconstruct-hover__icon {
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+  }
+}
+
+.chat-reconstruct-hover__panel {
+  width: min(520px, calc(100vw - 2rem));
+  max-height: none;
+  overflow: visible;
+  overscroll-behavior: contain;
+  padding: 0.55rem 0.6rem 0.65rem;
+  border-radius: 14px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  font-weight: 500;
+  color: var(--text);
+  text-align: left;
+  background: var(--surface-1, #fff);
+  border: 1px solid var(--border);
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.2);
+  /* No opacity/transform entrance — can interfere with animated GIF compositing in Chromium. */
+}
+
+.chat-reconstruct-hover__panel-inner {
+  min-height: 0;
+}
+
+.chat-reconstruct-hover__media {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  vertical-align: middle;
+  object-fit: contain;
+}
+
+@media (prefers-color-scheme: dark) {
+  .chat-reconstruct-hover__panel {
+    background: color-mix(in srgb, var(--surface-2) 95%, #0f172a);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  }
 }
 
 /* Two instruction cards side by side; single column only on narrow viewports */

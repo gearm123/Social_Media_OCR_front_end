@@ -8,6 +8,7 @@ import PayCheckoutPage from './PayCheckoutPage.tsx'
 import UsesHubPage, { USES_HUB_SEO_DESCRIPTION } from './UsesHubPage.tsx'
 import FaqPage from './FaqPage.tsx'
 import HowToPage from './HowToPage.tsx'
+import DemonstrationPage from './DemonstrationPage.tsx'
 import { mountLandingStructuredData } from './landingStructuredData'
 import { INTENT_BY_PATH, USES_HUB_PATH } from './intentLandings'
 import {
@@ -17,6 +18,7 @@ import {
   SEO_FEEDBACK_DESCRIPTION,
   SEO_HOME_DESCRIPTION,
   SEO_HOWTO_DESCRIPTION,
+  SEO_DEMONSTRATION_DESCRIPTION,
   SEO_SITE_NAME,
 } from './seo'
 import './index.css'
@@ -29,6 +31,7 @@ const isContactRoute = pathNorm === '/contact'
 const isFeedbackRoute = pathNorm === '/feedback'
 const isFaqRoute = pathNorm === '/faq'
 const isHowToRoute = pathNorm === '/how-to'
+const isDemonstrationRoute = pathNorm === '/demonstration'
 const isUsesHub = pathNorm === USES_HUB_PATH
 const intent = INTENT_BY_PATH[pathNorm]
 
@@ -74,6 +77,12 @@ if (isContactRoute) {
     description: SEO_HOWTO_DESCRIPTION,
     path: '/how-to',
   })
+} else if (isDemonstrationRoute) {
+  applyDocumentSeo({
+    title: `Demonstration · ${SEO_SITE_NAME}`,
+    description: SEO_DEMONSTRATION_DESCRIPTION,
+    path: '/demonstration',
+  })
 }
 
 mountLandingStructuredData(pathNorm, intent ?? null)
@@ -96,6 +105,8 @@ createRoot(root).render(
     <FaqPage />
   ) : isHowToRoute ? (
     <HowToPage />
+  ) : isDemonstrationRoute ? (
+    <DemonstrationPage />
   ) : (
     <StrictMode>
       <App />
