@@ -62,13 +62,16 @@ export async function authLogin(email: string, password: string): Promise<string
   return j.access_token
 }
 
-export async function authOAuthGoogle(idToken: string): Promise<string> {
+export async function authOAuthGoogle(creds: { id_token?: string; access_token?: string }): Promise<string> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
+  const id = creds.id_token?.trim()
+  const at = creds.access_token?.trim()
+  const body = id ? { id_token: id } : { access_token: at ?? '' }
   const r = await fetch(`${base}/auth/oauth/google`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id_token: idToken }),
+    body: JSON.stringify(body),
   })
   if (!r.ok) throw new Error(await readErrorDetail(r))
   const j = (await r.json()) as { access_token: string }

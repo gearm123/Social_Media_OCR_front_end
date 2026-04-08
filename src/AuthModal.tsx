@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   authLogin,
   authOAuthFacebook,
@@ -85,9 +85,6 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
   const [formErr, setFormErr] = useState<string | null>(null)
   const [oauthErr, setOauthErr] = useState<string | null>(null)
 
-  const googleBtnRef = useRef<HTMLDivElement>(null)
-  const googleGsiInitialized = useRef(false)
-
   useEffect(() => {
     if (open) {
       setTab(initialTab)
@@ -136,80 +133,6 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
   )
 
   useEffect(() => {
-    if (!open || !providers?.google_client_id || !googleBtnRef.current) return
-    const el = googleBtnRef.current
-    const clientId = providers.google_client_id
-    let cancelled = false
-    let resizeObserver: ResizeObserver | null = null
-    let resizeTimer: ReturnType<typeof setTimeout> | null = null
-
-    const renderGoogleButton = () => {
-      if (cancelled || !el.isConnected) return
-      const g = window.google
-      if (!g?.accounts?.id) return
-      el.innerHTML = ''
-      const raw = el.getBoundingClientRect().width
-      const widthPx = Math.max(240, Math.min(400, Math.floor(raw) || 320))
-      // Official branded button: blue “Sign in with Google” (matches google.com marketing).
-      g.accounts.id.renderButton(el, {
-        type: 'standard',
-        theme: 'filled_blue',
-        size: 'large',
-        text: tab === 'signup' ? 'signup_with' : 'signin_with',
-        shape: 'rectangular',
-        logo_alignment: 'left',
-        width: widthPx,
-        locale: typeof navigator !== 'undefined' ? navigator.language : 'en',
-      })
-    }
-
-    ;(async () => {
-      try {
-        await loadScript('https://accounts.google.com/gsi/client')
-        if (cancelled || !el.isConnected) return
-        const g = window.google
-        if (!g?.accounts?.id) return
-        if (!googleGsiInitialized.current) {
-          g.accounts.id.initialize({
-            client_id: clientId,
-            callback: (resp: { credential?: string }) => {
-              if (!resp.credential) return
-              void finishWithToken(() => authOAuthGoogle(resp.credential!))
-            },
-            // Slightly tighter UX inside a modal
-            auto_select: false,
-            cancel_on_tap_outside: true,
-          })
-          googleGsiInitialized.current = true
-        }
-        await new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-        if (cancelled || !el.isConnected) return
-        renderGoogleButton()
-        resizeObserver = new ResizeObserver(() => {
-          if (resizeTimer) clearTimeout(resizeTimer)
-          resizeTimer = setTimeout(() => {
-            resizeTimer = null
-            renderGoogleButton()
-          }, 120)
-        })
-        resizeObserver.observe(el)
-      } catch {
-        if (!cancelled) setOauthErr('Could not load Google sign-in')
-      }
-    })()
-
-    return () => {
-      cancelled = true
-      if (resizeTimer) clearTimeout(resizeTimer)
-      resizeObserver?.disconnect()
-    }
-  }, [open, providers?.google_client_id, finishWithToken, tab])
-
-  useEffect(() => {
     if (!open || !providers?.facebook_app_id) return
     const appId = providers.facebook_app_id
     window.fbAsyncInit = function () {
@@ -224,6 +147,41 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
     }
     void loadScript('https://connect.facebook.net/en_US/sdk.js').catch(() => {})
   }, [open, providers?.facebook_app_id])
+
+  const onGoogleClick = async () => {
+    if (!providers?.google_client_id) return
+    setOauthErr(null)
+    try {
+      if (!window.google?.accounts?.oauth2) {
+        await loadScript('https://accounts.google.com/gsi/client')
+      }
+      const oauth2 = window.google?.accounts?.oauth2
+      if (!oauth2) {
+        setOauthErr('Could not load Google sign-in')
+        return
+      }
+      const clientId = providers.google_client_id
+      const client = oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'openid email profile',
+        callback: (tokenResponse) => {
+          if (tokenResponse.error) {
+            setOauthErr(tokenResponse.error_description || tokenResponse.error)
+            return
+          }
+          const at = tokenResponse.access_token
+          if (!at) {
+            setOauthErr('Google sign-in did not return a token')
+            return
+          }
+          void finishWithToken(() => authOAuthGoogle({ access_token: at }))
+        },
+      })
+      client.requestAccessToken()
+    } catch {
+      setOauthErr('Could not load Google sign-in')
+    }
+  }
 
   const onFacebookClick = () => {
     if (!providers?.facebook_app_id) return
@@ -486,26 +444,30 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
         <div id="fb-root" />
         <div className="auth-modal__oauth-row">
           <div className="auth-modal__oauth-cell">
-            {hasGoogle ? (
-              <div className="auth-modal__google-frame">
-                <div ref={googleBtnRef} className="auth-modal__google-host" title="Google" />
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="auth-modal__oauth-fallback auth-modal__oauth-fallback--google"
-                disabled
-                title="Set GOOGLE_OAUTH_CLIENT_ID on the API to enable"
-              >
-                <IconGoogle />
-                <span>Google</span>
-              </button>
-            )}
+            <button
+              type="button"
+              className="auth-modal__oauth-btn auth-modal__oauth-btn--social"
+              disabled={busy || !hasGoogle}
+              title={
+                hasGoogle
+                  ? tab === 'signup'
+                    ? 'Sign up with Google'
+                    : 'Sign in with Google'
+                  : 'Set GOOGLE_OAUTH_CLIENT_ID on the API to enable'
+              }
+              onClick={() => {
+                if (!hasGoogle) return
+                void onGoogleClick()
+              }}
+            >
+              <IconGoogle />
+              <span>Continue with Google</span>
+            </button>
           </div>
           <div className="auth-modal__oauth-cell">
             <button
               type="button"
-              className="auth-modal__oauth-fallback auth-modal__oauth-fallback--facebook"
+              className="auth-modal__oauth-btn auth-modal__oauth-btn--social"
               disabled={busy || !hasFacebook}
               title={
                 hasFacebook
@@ -519,7 +481,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
               }}
             >
               <IconFacebook />
-              <span>Facebook</span>
+              <span>Continue with Facebook</span>
             </button>
           </div>
         </div>

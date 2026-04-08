@@ -8,6 +8,19 @@ declare global {
           initialize: (cfg: Record<string, unknown>) => void
           renderButton: (el: HTMLElement, cfg: Record<string, unknown>) => void
         }
+        oauth2: {
+          initTokenClient: (cfg: {
+            client_id: string
+            scope: string
+            callback: (resp: {
+              access_token?: string
+              error?: string
+              error_description?: string
+            }) => void
+          }) => {
+            requestAccessToken: (opts?: { prompt?: string }) => void
+          }
+        }
       }
     }
     FB?: {

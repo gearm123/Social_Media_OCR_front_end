@@ -2877,99 +2877,58 @@
   justify-content: center;
 }
 
-.auth-modal__google-host {
-  min-height: 44px;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Match Google’s default button rounding; avoid oversized radius on their iframe */
-.auth-modal__google-host iframe {
-  border-radius: 4px !important;
-}
-
-.auth-modal__hint--fix {
-  margin: 0.5rem 0 0;
-  font-size: 0.68rem;
-  line-height: 1.5;
-  text-align: left;
-  opacity: 1;
-}
-
-.auth-modal__hint--fix a {
-  color: var(--accent, #2563eb);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 .auth-modal__oauth-icon {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
-.auth-modal__oauth-fallback {
+/* Google + Facebook: same compact row layout (icon + label) */
+.auth-modal__oauth-btn {
   width: 100%;
-  min-height: 52px;
-  padding: 0.4rem 0.35rem 0.45rem;
-  display: flex;
-  flex-direction: column;
+  min-height: 40px;
+  padding: 0.42rem 0.85rem;
+  display: inline-flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 0.28rem;
+  gap: 0.5rem;
   border: none;
-  border-radius: 14px;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
   transition:
     transform 0.12s ease,
     box-shadow 0.15s ease,
     filter 0.15s ease;
 }
 
-.auth-modal__oauth-fallback span {
-  line-height: 1;
+.auth-modal__oauth-btn span {
+  white-space: nowrap;
 }
 
-.auth-modal__oauth-fallback:not(:disabled):hover {
+.auth-modal__oauth-btn--social {
+  background: linear-gradient(180deg, #1a7df5 0%, #1877f2 100%);
+  color: #fff;
+  box-shadow: 0 3px 12px rgba(24, 119, 242, 0.32);
+}
+
+.auth-modal__oauth-btn--social:not(:disabled):hover {
   transform: translateY(-1px);
-  filter: brightness(1.04);
+  filter: brightness(1.05);
 }
 
-.auth-modal__oauth-fallback:not(:disabled):active {
+.auth-modal__oauth-btn--social:not(:disabled):active {
   transform: translateY(0);
 }
 
-.auth-modal__oauth-fallback:disabled {
+.auth-modal__oauth-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.42;
-  filter: grayscale(0.35);
-}
-
-.auth-modal__oauth-fallback--google {
-  background: #fff;
-  color: #1f2937;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-}
-
-.auth-modal__oauth-fallback--facebook {
-  background: linear-gradient(180deg, #1a7df5 0%, #1877f2 100%);
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(24, 119, 242, 0.35);
-}
-
-@media (prefers-color-scheme: dark) {
-  .auth-modal__oauth-fallback--google {
-    background: rgba(30, 41, 59, 0.9);
-    color: #f1f5f9;
-    border-color: rgba(148, 163, 184, 0.25);
-  }
+  opacity: 0.45;
+  filter: grayscale(0.2);
 }
 
 .auth-modal__hint {
