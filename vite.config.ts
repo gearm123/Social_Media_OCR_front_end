@@ -8,17 +8,6 @@ import { INTENT_LANDINGS, USES_HUB_PATH } from './src/intentLandings'
 const HOME_TITLE = 'Translate Chat'
 const HOME_DESC = 'Turn your chat screenshots into a translated conversation'
 
-/** GA4 — injected here so `npm run build` / Netlify always emit these tags (not dropped vs source-only edits). */
-const GA_MEASUREMENT_ID = 'G-Y5NEYR5MJZ'
-const GA_GTAG_SNIPPET = `
-    <script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', '${GA_MEASUREMENT_ID}');
-    </script>`
-
 function escAttr(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -109,7 +98,8 @@ function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
   return {
     name: 'seo-build',
     transformIndexHtml(html) {
-      return html.replace('</title>', `</title>${GA_GTAG_SNIPPET}${seoInjectHtml(siteUrl)}`)
+      // GA4 gtag lives in index.html (official snippet). SEO meta/JSON-LD injected before </head>.
+      return html.replace('</head>', `${seoInjectHtml(siteUrl)}\n  </head>`)
     },
     closeBundle() {
       const base = siteUrl.replace(/\/$/, '')
