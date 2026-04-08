@@ -86,6 +86,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
   const [oauthErr, setOauthErr] = useState<string | null>(null)
 
   const googleBtnRef = useRef<HTMLDivElement>(null)
+  const googleGsiInitialized = useRef(false)
 
   useEffect(() => {
     if (open) {
@@ -139,39 +140,63 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
     const el = googleBtnRef.current
     const clientId = providers.google_client_id
     let cancelled = false
+    let resizeObserver: ResizeObserver | null = null
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null
+
+    const renderGoogleButton = () => {
+      if (cancelled || !el.isConnected) return
+      const g = window.google
+      if (!g?.accounts?.id) return
+      el.innerHTML = ''
+      const raw = el.getBoundingClientRect().width
+      const widthPx = Math.max(240, Math.min(400, Math.floor(raw) || 320))
+      // Official branded button: blue “Sign in with Google” (matches google.com marketing).
+      g.accounts.id.renderButton(el, {
+        type: 'standard',
+        theme: 'filled_blue',
+        size: 'large',
+        text: tab === 'signup' ? 'signup_with' : 'signin_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+        width: widthPx,
+        locale: typeof navigator !== 'undefined' ? navigator.language : 'en',
+      })
+    }
 
     ;(async () => {
       try {
         await loadScript('https://accounts.google.com/gsi/client')
         if (cancelled || !el.isConnected) return
-        el.innerHTML = ''
         const g = window.google
         if (!g?.accounts?.id) return
-        g.accounts.id.initialize({
-          client_id: clientId,
-          callback: (resp: { credential?: string }) => {
-            if (!resp.credential) return
-            void finishWithToken(() => authOAuthGoogle(resp.credential!))
-          },
-        })
-        // Let the modal finish layout so width isn’t 0 when we measure for Google’s iframe.
+        if (!googleGsiInitialized.current) {
+          g.accounts.id.initialize({
+            client_id: clientId,
+            callback: (resp: { credential?: string }) => {
+              if (!resp.credential) return
+              void finishWithToken(() => authOAuthGoogle(resp.credential!))
+            },
+            // Slightly tighter UX inside a modal
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          })
+          googleGsiInitialized.current = true
+        }
         await new Promise<void>((resolve) => {
           requestAnimationFrame(() => {
             requestAnimationFrame(() => resolve())
           })
         })
         if (cancelled || !el.isConnected) return
-        // Classic “Sign in with Google” / “Sign up with Google” (standard rectangular button).
-        const widthPx = Math.max(220, Math.min(400, Math.floor(el.getBoundingClientRect().width) || 320))
-        g.accounts.id.renderButton(el, {
-          type: 'standard',
-          theme: 'outline',
-          size: 'large',
-          text: tab === 'signup' ? 'signup_with' : 'signin_with',
-          shape: 'rectangular',
-          logo_alignment: 'left',
-          width: widthPx,
+        renderGoogleButton()
+        resizeObserver = new ResizeObserver(() => {
+          if (resizeTimer) clearTimeout(resizeTimer)
+          resizeTimer = setTimeout(() => {
+            resizeTimer = null
+            renderGoogleButton()
+          }, 120)
         })
+        resizeObserver.observe(el)
       } catch {
         if (!cancelled) setOauthErr('Could not load Google sign-in')
       }
@@ -179,6 +204,8 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
 
     return () => {
       cancelled = true
+      if (resizeTimer) clearTimeout(resizeTimer)
+      resizeObserver?.disconnect()
     }
   }, [open, providers?.google_client_id, finishWithToken, tab])
 
@@ -222,7 +249,8 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
         }
         void finishWithToken(() => authOAuthFacebook(tok))
       },
-      { scope: 'public_profile,email' },
+      // `email` omitted on purpose: avoids Meta advanced access / login-review prompts; API uses a stable internal address.
+      { scope: 'public_profile' },
     )
   }
 
@@ -459,7 +487,9 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
         <div className="auth-modal__oauth-row">
           <div className="auth-modal__oauth-cell">
             {hasGoogle ? (
-              <div ref={googleBtnRef} className="auth-modal__google-host" title="Google" />
+              <div className="auth-modal__google-frame">
+                <div ref={googleBtnRef} className="auth-modal__google-host" title="Google" />
+              </div>
             ) : (
               <button
                 type="button"
@@ -500,22 +530,6 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
           </p>
         ) : null}
 
-        {oauthErr && /jssdk|javascript sdk/i.test(oauthErr) ? (
-          <p className="auth-modal__hint auth-modal__hint--fix" role="note">
-            In{' '}
-            <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer">
-              Meta for Developers
-            </a>
-            : open your app → <strong>Use cases</strong> → <strong>Facebook Login</strong> → <strong>Settings</strong>{' '}
-            (or <strong>Facebook Login</strong> → <strong>Settings</strong>) and set{' '}
-            <strong>Login with JavaScript SDK</strong> to <strong>Yes</strong>. Save, wait a minute, then try again.
-          </p>
-        ) : null}
-
-        <p className="auth-modal__hint">
-          OAuth buttons need matching client IDs on your API. Disabled options will activate after you configure
-          Google and Facebook in the server environment.
-        </p>
       </div>
     </div>
   )
