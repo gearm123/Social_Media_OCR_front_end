@@ -4,7 +4,6 @@ import { getAccessToken, setAccessToken } from './authStorage'
 export type AuthProviders = {
   google_client_id: string
   facebook_app_id: string
-  apple_client_id: string
 }
 
 export type UserMe = {
@@ -83,19 +82,6 @@ export async function authOAuthFacebook(accessToken: string): Promise<string> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ access_token: accessToken }),
-  })
-  if (!r.ok) throw new Error(await readErrorDetail(r))
-  const j = (await r.json()) as { access_token: string }
-  return j.access_token
-}
-
-export async function authOAuthApple(idToken: string): Promise<string> {
-  const base = apiBase()
-  if (!base) throw new Error('VITE_API_BASE_URL is not set')
-  const r = await fetch(`${base}/auth/oauth/apple`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id_token: idToken }),
   })
   if (!r.ok) throw new Error(await readErrorDetail(r))
   const j = (await r.json()) as { access_token: string }

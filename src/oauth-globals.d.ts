@@ -18,14 +18,5 @@ declare global {
       ) => void
     }
     fbAsyncInit?: () => void
-    AppleID?: {
-      auth: {
-        init: (cfg: Record<string, unknown>) => void
-        signIn: () => Promise<{
-          authorization?: { id_token?: string }
-          error?: string
-        }>
-      }
-    }
   }
 }

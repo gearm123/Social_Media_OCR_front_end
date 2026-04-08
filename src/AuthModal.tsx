@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   authLogin,
-  authOAuthApple,
   authOAuthFacebook,
   authOAuthGoogle,
   authRegister,
@@ -64,17 +63,6 @@ function IconFacebook() {
       <path
         fill="currentColor"
         d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-      />
-    </svg>
-  )
-}
-
-function IconApple() {
-  return (
-    <svg className="auth-modal__oauth-icon" viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="currentColor"
-        d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"
       />
     </svg>
   )
@@ -217,37 +205,6 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
     )
   }
 
-  const onAppleClick = async () => {
-    if (!providers?.apple_client_id) return
-    setOauthErr(null)
-    setBusy(true)
-    try {
-      await loadScript('https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js')
-      const AppleID = window.AppleID
-      if (!AppleID?.auth) {
-        setOauthErr('Apple Sign In script did not load')
-        return
-      }
-      AppleID.auth.init({
-        clientId: providers.apple_client_id,
-        scope: 'name email',
-        redirectURI: window.location.origin,
-        usePopup: true,
-      })
-      const res = await AppleID.auth.signIn()
-      const idToken = res.authorization?.id_token
-      if (!idToken) {
-        setOauthErr(res.error || 'Apple did not return an id_token')
-        return
-      }
-      await finishWithToken(() => authOAuthApple(idToken))
-    } catch (e) {
-      setOauthErr(e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(false)
-    }
-  }
-
   const onSubmitSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormErr(null)
@@ -289,7 +246,6 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
 
   const hasGoogle = Boolean(providers?.google_client_id)
   const hasFacebook = Boolean(providers?.facebook_app_id)
-  const hasApple = Boolean(providers?.apple_client_id)
 
   return (
     <div className="auth-modal" role="dialog" aria-modal="true" aria-label="Sign in">
@@ -515,21 +471,6 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
               <span>Facebook</span>
             </button>
           </div>
-          <div className="auth-modal__oauth-cell">
-            <button
-              type="button"
-              className="auth-modal__oauth-fallback auth-modal__oauth-fallback--apple"
-              disabled={busy || !hasApple}
-              title={hasApple ? 'Continue with Apple' : 'Set APPLE_CLIENT_ID on the API to enable'}
-              onClick={() => {
-                if (!hasApple) return
-                void onAppleClick()
-              }}
-            >
-              <IconApple />
-              <span>Apple</span>
-            </button>
-          </div>
         </div>
 
         {oauthErr ? (
@@ -540,7 +481,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
 
         <p className="auth-modal__hint">
           OAuth buttons need matching client IDs on your API. Disabled options will activate after you configure
-          Google, Facebook, or Apple in the server environment.
+          Google and Facebook in the server environment.
         </p>
       </div>
     </div>
