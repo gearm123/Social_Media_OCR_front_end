@@ -154,11 +154,23 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
             void finishWithToken(() => authOAuthGoogle(resp.credential!))
           },
         })
+        // Let the modal finish layout so width isn’t 0 when we measure for Google’s iframe.
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+        if (cancelled || !el.isConnected) return
+        // Classic “Sign in with Google” / “Sign up with Google” (standard rectangular button).
+        const widthPx = Math.max(220, Math.min(400, Math.floor(el.getBoundingClientRect().width) || 320))
         g.accounts.id.renderButton(el, {
-          type: 'icon',
+          type: 'standard',
           theme: 'outline',
           size: 'large',
-          shape: 'square',
+          text: tab === 'signup' ? 'signup_with' : 'signin_with',
+          shape: 'rectangular',
+          logo_alignment: 'left',
+          width: widthPx,
         })
       } catch {
         if (!cancelled) setOauthErr('Could not load Google sign-in')
@@ -168,7 +180,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
     return () => {
       cancelled = true
     }
-  }, [open, providers?.google_client_id, finishWithToken])
+  }, [open, providers?.google_client_id, finishWithToken, tab])
 
   useEffect(() => {
     if (!open || !providers?.facebook_app_id) return
@@ -193,7 +205,16 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
       return
     }
     window.FB.login(
-      (response: { authResponse?: { accessToken: string } }) => {
+      (response: {
+        authResponse?: { accessToken: string }
+        status?: string
+        errorMessage?: string
+      }) => {
+        const msg = response.errorMessage?.trim()
+        if (msg) {
+          setOauthErr(msg)
+          return
+        }
         const tok = response.authResponse?.accessToken
         if (!tok) {
           setOauthErr('Facebook sign-in was cancelled or did not return a token')
@@ -476,6 +497,18 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
         {oauthErr ? (
           <p className="auth-modal__error auth-modal__error--oauth" role="alert">
             {oauthErr}
+          </p>
+        ) : null}
+
+        {oauthErr && /jssdk|javascript sdk/i.test(oauthErr) ? (
+          <p className="auth-modal__hint auth-modal__hint--fix" role="note">
+            In{' '}
+            <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer">
+              Meta for Developers
+            </a>
+            : open your app → <strong>Use cases</strong> → <strong>Facebook Login</strong> → <strong>Settings</strong>{' '}
+            (or <strong>Facebook Login</strong> → <strong>Settings</strong>) and set{' '}
+            <strong>Login with JavaScript SDK</strong> to <strong>Yes</strong>. Save, wait a minute, then try again.
           </p>
         ) : null}
 

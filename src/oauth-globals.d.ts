@@ -13,7 +13,11 @@ declare global {
     FB?: {
       init: (cfg: Record<string, unknown>) => void
       login: (
-        cb: (r: { authResponse?: { accessToken: string }; status?: string }) => void,
+        cb: (r: {
+          authResponse?: { accessToken: string }
+          status?: string
+          errorMessage?: string
+        }) => void,
         opts?: { scope: string },
       ) => void
     }
