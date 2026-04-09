@@ -6,6 +6,19 @@ export type AuthProviders = {
   facebook_app_id: string
 }
 
+let authProvidersCache: AuthProviders | null = null
+let authProvidersInflight: Promise<AuthProviders> | null = null
+
+/** Synchronously read providers if a prefetch or prior fetch already populated the cache. */
+export function getCachedAuthProviders(): AuthProviders | null {
+  return authProvidersCache
+}
+
+/** Start loading auth providers as early as possible (e.g. on app mount). Errors are ignored. */
+export function prefetchAuthProviders(): void {
+  void fetchAuthProviders().catch(() => {})
+}
+
 export type UserMe = {
   id: string
   email: string
@@ -30,11 +43,22 @@ async function readErrorDetail(r: Response): Promise<string> {
 }
 
 export async function fetchAuthProviders(): Promise<AuthProviders> {
+  if (authProvidersCache) return authProvidersCache
+  if (authProvidersInflight) return authProvidersInflight
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
-  const r = await fetch(`${base}/auth/providers`)
-  if (!r.ok) throw new Error(`Auth providers failed: ${r.status}`)
-  return r.json() as Promise<AuthProviders>
+  authProvidersInflight = (async () => {
+    const r = await fetch(`${base}/auth/providers`)
+    if (!r.ok) throw new Error(`Auth providers failed: ${r.status}`)
+    return (await r.json()) as AuthProviders
+  })()
+  try {
+    const p = await authProvidersInflight
+    authProvidersCache = p
+    return p
+  } finally {
+    authProvidersInflight = null
+  }
 }
 
 export async function authRegister(username: string, email: string, password: string): Promise<UserMe> {

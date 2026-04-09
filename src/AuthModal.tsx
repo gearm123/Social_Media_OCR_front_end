@@ -5,6 +5,7 @@ import {
   authOAuthGoogle,
   authRegister,
   fetchAuthProviders,
+  getCachedAuthProviders,
   persistSession,
   type AuthProviders,
 } from './authApi'
@@ -70,7 +71,7 @@ function IconFacebook() {
 
 export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: Props) {
   const [tab, setTab] = useState<Tab>(initialTab)
-  const [providers, setProviders] = useState<AuthProviders | null>(null)
+  const [providers, setProviders] = useState<AuthProviders | null>(() => getCachedAuthProviders())
   const [providersErr, setProvidersErr] = useState<string | null>(null)
 
   const [username, setUsername] = useState('')
@@ -95,6 +96,11 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
 
   useEffect(() => {
     if (!open) return
+    const hit = getCachedAuthProviders()
+    if (hit) {
+      setProviders(hit)
+      setProvidersErr(null)
+    }
     let cancelled = false
     fetchAuthProviders()
       .then((p) => {
