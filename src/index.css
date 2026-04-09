@@ -183,6 +183,11 @@ a {
   margin: 0 auto;
 }
 
+/* Wider column when guide videos sit beside copy */
+.support-page.guide-page {
+  max-width: min(58rem, 100%);
+}
+
 .support-page__header {
   margin-bottom: 1.25rem;
 }
@@ -273,6 +278,10 @@ a {
   min-height: 100dvh;
 }
 
+.support-page.demonstration-page.guide-page {
+  max-width: min(58rem, 100%);
+}
+
 .demonstration-page__main {
   display: flex;
   flex-direction: column;
@@ -281,6 +290,15 @@ a {
   flex: 1 1 auto;
   justify-content: center;
   min-height: 0;
+}
+
+.demonstration-page.guide-page .demonstration-page__main {
+  justify-content: flex-start;
+  align-items: stretch;
+  width: 100%;
+  max-width: min(58rem, 100%);
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .demonstration-page__lead {
@@ -509,4 +527,279 @@ a {
 
 .seo-breadcrumbs__item--current[aria-current='page'] {
   text-decoration: none;
+}
+
+/* Guide workflow videos — intent landings, /uses, /how-to, /demonstration */
+.guide-workflow {
+  margin: 1.5rem 0 1.85rem;
+  padding: 1.15rem 1rem 1.35rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-2) 85%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  box-shadow: 0 4px 22px rgba(15, 23, 42, 0.06);
+  box-sizing: border-box;
+}
+
+@media (prefers-color-scheme: dark) {
+  .guide-workflow {
+    background: color-mix(in srgb, var(--surface-2) 90%, #0f172a);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+  }
+}
+
+.guide-workflow__heading {
+  font-size: 1.05rem;
+  font-weight: 750;
+  margin: 0 0 0.45rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.guide-workflow__intro {
+  margin: 0 0 1.2rem;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.guide-workflow__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.guide-workflow__step {
+  margin: 0 0 1.65rem;
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.guide-workflow__step:last-child {
+  margin-bottom: 0;
+}
+
+.guide-workflow--revealed .guide-workflow__step:nth-child(1) {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.04s;
+}
+
+.guide-workflow--revealed .guide-workflow__step:nth-child(2) {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.1s;
+}
+
+.guide-workflow--revealed .guide-workflow__step:nth-child(3) {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.16s;
+}
+
+.guide-workflow--revealed .guide-workflow__step:nth-child(4) {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.22s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-workflow__step {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+.guide-workflow__step-head {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.65rem;
+}
+
+.guide-workflow__step-badge {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--accent) 88%, #0f172a),
+    var(--accent)
+  );
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 26%, transparent);
+  margin-top: 0.12rem;
+}
+
+.guide-workflow__step-title {
+  margin: 0 0 0.28rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.guide-workflow__step-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.52;
+  color: var(--muted);
+}
+
+.guide-workflow__media {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+@media (min-width: 640px) {
+  .guide-workflow__media {
+    grid-template-columns: 1fr minmax(140px, 30%);
+    align-items: start;
+    gap: 0.75rem;
+  }
+}
+
+.guide-workflow__primary,
+.guide-workflow__micro-wrap {
+  border-radius: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 94%, #0f172a);
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+}
+
+.guide-workflow__micro-label {
+  margin: 0 0 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.guide-workflow__micro-wrap {
+  padding: 0.45rem 0.45rem 0.5rem;
+}
+
+.guide-workflow__clip {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: middle;
+  background: #0f172a;
+}
+
+.guide-workflow__clip--micro {
+  border-radius: 6px;
+}
+
+/* Left rail next to guide copy — compact stacked main + detail clips */
+.guide-workflow--rail {
+  margin: 0;
+  padding: 0.75rem 0.55rem 0.95rem;
+}
+
+.guide-workflow--rail .guide-workflow__heading {
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+}
+
+.guide-workflow--rail .guide-workflow__intro {
+  font-size: 0.76rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.45;
+}
+
+.guide-workflow--rail .guide-workflow__step {
+  margin-bottom: 1rem;
+}
+
+.guide-workflow--rail .guide-workflow__step-badge {
+  width: 1.45rem;
+  height: 1.45rem;
+  font-size: 0.7rem;
+}
+
+.guide-workflow--rail .guide-workflow__step-title {
+  font-size: 0.8rem;
+}
+
+.guide-workflow--rail .guide-workflow__step-desc {
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.guide-workflow--rail .guide-workflow__media {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+  margin-top: 0.3rem;
+}
+
+.guide-workflow--rail .guide-workflow__micro-wrap {
+  padding: 0.35rem;
+}
+
+.guide-workflow--rail .guide-workflow__micro-label {
+  font-size: 0.6rem;
+}
+
+/* Two-column guide layout: videos left, text right */
+.guide-page__split {
+  display: grid;
+  grid-template-columns: minmax(240px, 38%) 1fr;
+  gap: 1.35rem 1.5rem;
+  align-items: start;
+  margin-top: 0.35rem;
+  width: 100%;
+}
+
+.guide-page__rail {
+  position: sticky;
+  top: 0.75rem;
+  max-height: calc(100dvh - 1.5rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+  padding-bottom: 0.35rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.guide-page__body {
+  min-width: 0;
+}
+
+.guide-page__body--demonstration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.guide-page__split--demonstration .demonstration-page__visual {
+  margin-top: 0;
+  width: 100%;
+  max-width: min(960px, 100%);
+}
+
+@media (max-width: 900px) {
+  .guide-page__split {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-page__rail {
+    position: relative;
+    top: auto;
+    max-height: none;
+    overflow: visible;
+  }
 }

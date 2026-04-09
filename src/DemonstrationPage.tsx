@@ -1,3 +1,4 @@
+import GuideWorkflowSection from './GuideWorkflowSection'
 import {
   DEMO_RECONSTRUCTION_GIF_PATH,
   DEMO_RECONSTRUCTION_HEIGHT,
@@ -12,7 +13,7 @@ const DEMONSTRATION_MEDIA_SRC = DEMO_RECONSTRUCTION_GIF_PATH
 
 export default function DemonstrationPage() {
   return (
-    <div className="support-page demonstration-page">
+    <div className="support-page demonstration-page guide-page">
       <header className="support-page__header">
         <a className="support-page__back" href="/">
           ← Back to Translate Chat
@@ -35,24 +36,34 @@ export default function DemonstrationPage() {
           idea behind Translate Chat&apos;s output on tough screenshots.
         </p>
 
-        <div className="demonstration-page__visual">
-          <img
-            className="demonstration-page__media"
-            src={DEMONSTRATION_MEDIA_SRC}
-            alt="Before and after: cracked phone screens with reconstructed chat bubbles overlaid for legibility"
-            width={DEMO_RECONSTRUCTION_WIDTH}
-            height={DEMO_RECONSTRUCTION_HEIGHT}
-            loading="eager"
-            decoding="async"
-            fetchPriority="high"
-          />
+        <div className="guide-page__split guide-page__split--demonstration">
+          <aside className="guide-page__rail" aria-label="Screen recordings of the translator workflow">
+            <GuideWorkflowSection
+              variant="rail"
+              heading="Using the translator"
+              intro="Workflow on the left; reconstruction example on the right."
+            />
+          </aside>
+          <div className="guide-page__body guide-page__body--demonstration">
+            <div className="demonstration-page__visual">
+              <img
+                className="demonstration-page__media"
+                src={DEMONSTRATION_MEDIA_SRC}
+                alt="Before and after: cracked phone screens with reconstructed chat bubbles overlaid for legibility"
+                width={DEMO_RECONSTRUCTION_WIDTH}
+                height={DEMO_RECONSTRUCTION_HEIGHT}
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+              />
+            </div>
+            <p className="demonstration-page__cta">
+              <a className="support-page__mailto" href="/">
+                Open the translator
+              </a>
+            </p>
+          </div>
         </div>
-
-        <p className="demonstration-page__cta">
-          <a className="support-page__mailto" href="/">
-            Open the translator
-          </a>
-        </p>
       </main>
     </div>
   )

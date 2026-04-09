@@ -1,3 +1,4 @@
+import GuideWorkflowSection from './GuideWorkflowSection'
 import type { IntentLanding } from './intentLandings'
 import { INTENT_LANDINGS, USES_HUB_PATH } from './intentLandings'
 
@@ -9,7 +10,7 @@ export default function IntentLandingPage({ intent }: Props) {
   const others = INTENT_LANDINGS.filter((x) => x.path !== intent.path)
 
   return (
-    <div className="support-page intent-landing">
+    <div className="support-page intent-landing guide-page">
       <header className="support-page__header">
         <a className="support-page__back" href={USES_HUB_PATH}>
           ← All translation guides
@@ -37,32 +38,43 @@ export default function IntentLandingPage({ intent }: Props) {
           </p>
         ))}
 
-        <h2 className="intent-landing__h2">Tips for better results</h2>
-        <ul className="intent-landing__tips">
-          {intent.tips.map((t, i) => (
-            <li key={i}>{t}</li>
-          ))}
-        </ul>
+        <div className="guide-page__split">
+          <aside className="guide-page__rail" aria-label="Screen recordings of the translator workflow">
+            <GuideWorkflowSection
+              variant="rail"
+              heading="How the translator flows"
+              intro="Left: the four steps in order. Right: tips for this guide."
+            />
+          </aside>
+          <div className="guide-page__body">
+            <h2 className="intent-landing__h2">Tips for better results</h2>
+            <ul className="intent-landing__tips">
+              {intent.tips.map((t, i) => (
+                <li key={i}>{t}</li>
+              ))}
+            </ul>
 
-        <p className="intent-landing__cta-wrap">
-          <a className="support-page__mailto intent-landing__cta" href="/">
-            Start translating — upload screenshots
-          </a>
-        </p>
+            <p className="intent-landing__cta-wrap">
+              <a className="support-page__mailto intent-landing__cta" href="/">
+                Start translating — upload screenshots
+              </a>
+            </p>
 
-        <nav className="intent-landing__related" aria-label="Other guides">
-          <h2 className="intent-landing__h2">Other guides</h2>
-          <ul className="intent-landing__related-list">
-            {others.map((x) => (
-              <li key={x.path}>
-                <a href={x.path}>{x.h1}</a>
-              </li>
-            ))}
-            <li>
-              <a href={USES_HUB_PATH}>All guides on one page</a>
-            </li>
-          </ul>
-        </nav>
+            <nav className="intent-landing__related" aria-label="Other guides">
+              <h2 className="intent-landing__h2">Other guides</h2>
+              <ul className="intent-landing__related-list">
+                {others.map((x) => (
+                  <li key={x.path}>
+                    <a href={x.path}>{x.h1}</a>
+                  </li>
+                ))}
+                <li>
+                  <a href={USES_HUB_PATH}>All guides on one page</a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
       </main>
     </div>
   )
