@@ -1485,30 +1485,57 @@ function App() {
                             onRemove={() => removeFileAt(i)}
                           />
                         </div>
-                        <div className="preview-guidance-strip">
+                        <div
+                          className={
+                            guidanceSaved
+                              ? 'preview-guidance-strip preview-guidance-strip--set'
+                              : 'preview-guidance-strip'
+                          }
+                        >
                           <p className="preview-guidance-strip__name" title={p.file.name}>
                             {p.file.name}
                           </p>
                           {guidanceSaved ? (
                             <>
-                              <p className="preview-guidance-strip__done">
-                                Guidance added · {count} message{count === 1 ? '' : 's'} (sender/receiver
-                                sequence set)
-                              </p>
+                              <div
+                                className="preview-guidance-strip__set-indicator"
+                                role="img"
+                                aria-label={`Guidance saved for ${count} message${count === 1 ? '' : 's'}`}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  width={20}
+                                  height={20}
+                                  aria-hidden={true}
+                                >
+                                  <circle cx="12" cy="12" r="11" fill="#16a34a" />
+                                  <path
+                                    d="M7 12.5 L10.5 16 L17 9"
+                                    fill="none"
+                                    stroke="#fff"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              </div>
                               <div className="preview-guidance-strip__actions">
                                 <button
                                   type="button"
                                   className="btn ghost btn--compact preview-guidance-strip__action-btn"
                                   onClick={() => setGuidanceModalKey(k)}
+                                  aria-label={`Edit guidance for ${p.file.name}`}
                                 >
-                                  Edit
+                                  Edit guidance
                                 </button>
                                 <button
                                   type="button"
                                   className="btn ghost btn--compact preview-guidance-strip__action-btn"
                                   onClick={() => updateHint(k, defaultImageBubbleHint())}
+                                  aria-label={`Clear guidance for ${p.file.name}`}
                                 >
-                                  Remove
+                                  Clear guidance
                                 </button>
                               </div>
                             </>
