@@ -44,6 +44,8 @@ import { PaywallModal } from './PaywallModal'
 import { PricingModal } from './PricingModal'
 import SiteExploreBar from './SiteExploreBar'
 import { applyDocumentSeo, SEO_HOME_DESCRIPTION, SEO_SITE_NAME } from './seo'
+import { DEFAULT_TARGET_LANGUAGE_CODE } from './supportedTargetLanguages'
+import { TargetLanguagePicker } from './TargetLanguagePicker'
 
 /** Formats the pipeline is built around (OpenCV-friendly screenshots). */
 const ACCEPT_IMAGES =
@@ -372,6 +374,10 @@ function App() {
   const [guidanceModalKey, setGuidanceModalKey] = useState<string | null>(null)
   const [translationDifficulty, setTranslationDifficulty] = useState<TranslationDifficulty>(3)
   const [translationMood, setTranslationMood] = useState<TranslationMood>('patient')
+  /** Empty string = English (default); POST /jobs omits `language` in that case (same as no `--language`). */
+  const [targetLanguageCliCode, setTargetLanguageCliCode] = useState(
+    DEFAULT_TARGET_LANGUAGE_CODE,
+  )
   const billingExplainerHeroRef = useRef<HTMLElement | null>(null)
 
   const billing = useMemo(() => {
@@ -854,6 +860,10 @@ function App() {
         bubbleSummaryText,
         difficulty: translationDifficulty,
         hurryUp: translationMood === 'hurry',
+        language:
+          targetLanguageCliCode.trim() === DEFAULT_TARGET_LANGUAGE_CODE
+            ? undefined
+            : targetLanguageCliCode.trim(),
         signal: uploadAbortRef.current.signal,
       })
       const jobId = created.job_id
@@ -1274,43 +1284,57 @@ function App() {
                           {processing ? 'Working…' : 'Process'}
                         </button>
                       </div>
-                      <div className="hero-actions__row hero-actions__row--secondary">
-                        <div className="hero-actions__difficulty-stack">
-                          <span
-                            className="hero-actions__difficulty-label"
-                            title="Choose language difficulty"
-                          >
-                            Choose language difficulty
+                      <div className="hero-actions__post-primary">
+                        <div className="hero-actions__language-stack">
+                          <span className="hero-actions__language-label" title="Target translation language">
+                            Target language
                           </span>
-                          <fieldset className="difficulty-bar">
-                            <legend className="sr-only">Translation difficulty</legend>
-                            {([1, 2, 3] as const).map((level) => (
-                              <label
-                                key={level}
-                                className={`difficulty-bar__seg${
-                                  translationDifficulty === level ? ' difficulty-bar__seg--active' : ''
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  className="difficulty-bar__input"
-                                  name="translation-difficulty"
-                                  value={level}
-                                  checked={translationDifficulty === level}
-                                  onChange={() => setTranslationDifficulty(level)}
-                                  aria-label={`Difficulty level ${level}`}
-                                />
-                                <span className="difficulty-bar__face" aria-hidden>
-                                  {level}
-                                </span>
-                              </label>
-                            ))}
-                          </fieldset>
+                          <TargetLanguagePicker
+                            id={`${inputId}-target-language`}
+                            value={targetLanguageCliCode}
+                            onChange={setTargetLanguageCliCode}
+                          />
                         </div>
-                        <InfoPopover label="Recommended languages by difficulty level" align="end">
-                          <DifficultyInfoContent />
-                        </InfoPopover>
-                        <MoodBar mode={translationMood} onMode={setTranslationMood} />
+                        <div className="hero-actions__row hero-actions__row--secondary">
+                          <div className="hero-actions__difficulty-stack">
+                            <span
+                              className="hero-actions__difficulty-label"
+                              title="Choose language difficulty"
+                            >
+                              Choose language difficulty
+                            </span>
+                            <fieldset className="difficulty-bar">
+                              <legend className="sr-only">Translation difficulty</legend>
+                              {([1, 2, 3] as const).map((level) => (
+                                <label
+                                  key={level}
+                                  className={`difficulty-bar__seg${
+                                    translationDifficulty === level
+                                      ? ' difficulty-bar__seg--active'
+                                      : ''
+                                  }`}
+                                >
+                                  <input
+                                    type="radio"
+                                    className="difficulty-bar__input"
+                                    name="translation-difficulty"
+                                    value={level}
+                                    checked={translationDifficulty === level}
+                                    onChange={() => setTranslationDifficulty(level)}
+                                    aria-label={`Difficulty level ${level}`}
+                                  />
+                                  <span className="difficulty-bar__face" aria-hidden>
+                                    {level}
+                                  </span>
+                                </label>
+                              ))}
+                            </fieldset>
+                          </div>
+                          <InfoPopover label="Recommended languages by difficulty level" align="end">
+                            <DifficultyInfoContent />
+                          </InfoPopover>
+                          <MoodBar mode={translationMood} onMode={setTranslationMood} />
+                        </div>
                       </div>
                     </>
                   )}

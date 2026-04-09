@@ -207,8 +207,9 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
         }
         void finishWithToken(() => authOAuthFacebook(tok))
       },
-      // `email` omitted on purpose: avoids Meta advanced access / login-review prompts; API uses a stable internal address.
-      { scope: 'public_profile' },
+      // Do not pass `public_profile` here: we only need an access token so the API can call Graph `me?id`.
+      // Note: Meta’s JS SDK may still default to `public_profile` for the login dialog — that is platform-side.
+      {},
     )
   }
 
