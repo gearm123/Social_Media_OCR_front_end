@@ -1315,7 +1315,7 @@
   }
 }
 
-/* Single flex slot: empty = dashed drop zone grows to fill; with files = hug content (no extra scroll). */
+/* Single flex slot: grows in the card between hero and EXPLORE; filled uses min-height:0 for inner scroll. */
 .upload-slot {
   --upload-slot-cap: min(26vh, 220px);
   flex: 1 1 auto;
@@ -1361,6 +1361,34 @@
 @media (min-width: 720px) {
   .drop-zone--has-files {
     --drop-thumb-h: min(19vh, 162px);
+  }
+
+  /*
+   * Empty vs filled: same flex contract so the dashed drop zone fills space down to EXPLORE (no dead gap).
+   * Tighter hero/padding when nothing uploaded keeps the bar on-screen (same rhythm as .upload-slot--filled).
+   */
+  .upload-slot:not(.upload-slot--filled) {
+    min-height: 0;
+  }
+
+  .upload-slot:not(.upload-slot--filled) .drop-zone {
+    min-height: 0;
+  }
+
+  .app:not(:has(.upload-slot--filled)) .hero {
+    margin-bottom: clamp(0.4rem, 1.2vh, 0.85rem);
+  }
+
+  .app:not(:has(.upload-slot--filled)) .hero-title-block {
+    margin: 0 auto clamp(0.5rem, 2vh, 1.35rem);
+  }
+
+  .app:not(:has(.upload-slot--filled)) .hero-actions {
+    margin-top: clamp(0.45rem, 1.4vh, 0.9rem);
+  }
+
+  .app:not(:has(.upload-slot--filled)) {
+    padding-bottom: clamp(0.55rem, 1.2vh, 1rem);
   }
 }
 
