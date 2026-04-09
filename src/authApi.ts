@@ -27,13 +27,17 @@ export type UserMe = {
 }
 
 /** Maps `fetch` network/CORS failures to a short hint (browser often reports only "Failed to fetch"). */
-async function fetchWithNetworkHint(url: string, init: RequestInit): Promise<Response> {
+async function fetchWithNetworkHint(
+  url: string,
+  init: RequestInit,
+  requestLabel: string,
+): Promise<Response> {
   try {
     return await fetch(url, init)
   } catch (e) {
     if (e instanceof TypeError) {
       throw new Error(
-        'Could not reach the API. Common causes: CORS — add this page’s exact origin to CORS_ORIGINS on Render (https://…, no trailing slash); Netlify deploy previews need their own URL in that list; wrong or missing VITE_API_BASE_URL; or HTTPS site calling an HTTP API. Check DevTools → Network for auth/providers.',
+        `Could not reach the API (${requestLabel}). Common causes: CORS — add this page’s exact origin to CORS_ORIGINS on Render (https://…, no trailing slash); Netlify deploy previews need their own URL; wrong or missing VITE_API_BASE_URL; HTTPS page calling HTTP API; or an extension blocking the request (some ad blockers block URLs containing “facebook”). Check DevTools → Network for ${requestLabel}.`,
       )
     }
     throw e
@@ -62,7 +66,7 @@ export async function fetchAuthProviders(): Promise<AuthProviders> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
   authProvidersInflight = (async () => {
-    const r = await fetchWithNetworkHint(`${base}/auth/providers`, {})
+    const r = await fetchWithNetworkHint(`${base}/auth/providers`, {}, 'GET /auth/providers')
     if (!r.ok) throw new Error(`Auth providers failed: ${r.status}`)
     return (await r.json()) as AuthProviders
   })()
@@ -106,11 +110,15 @@ export async function authOAuthGoogle(creds: { id_token?: string; access_token?:
   const id = creds.id_token?.trim()
   const at = creds.access_token?.trim()
   const body = id ? { id_token: id } : { access_token: at ?? '' }
-  const r = await fetchWithNetworkHint(`${base}/auth/oauth/google`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+  const r = await fetchWithNetworkHint(
+    `${base}/auth/oauth/google`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    'POST /auth/oauth/google',
+  )
   if (!r.ok) throw new Error(await readErrorDetail(r))
   const j = (await r.json()) as { access_token: string }
   return j.access_token
@@ -119,11 +127,15 @@ export async function authOAuthGoogle(creds: { id_token?: string; access_token?:
 export async function authOAuthFacebook(accessToken: string): Promise<string> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
-  const r = await fetchWithNetworkHint(`${base}/auth/oauth/facebook`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ access_token: accessToken }),
-  })
+  const r = await fetchWithNetworkHint(
+    `${base}/auth/oauth/fb`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ access_token: accessToken }),
+    },
+    'POST /auth/oauth/fb',
+  )
   if (!r.ok) throw new Error(await readErrorDetail(r))
   const j = (await r.json()) as { access_token: string }
   return j.access_token
