@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import './App.css'
 import {
   buildPass1BubbleSummaryText,
@@ -59,6 +67,101 @@ function isImageFile(file: File): boolean {
 }
 
 const MAX_MESSAGE_BUBBLES = 30
+
+/** Insets for `object-fit: contain` image inside a box (letterboxing), in px. */
+function objectFitContainInsets(
+  cw: number,
+  ch: number,
+  nw: number,
+  nh: number,
+): { ix: number; iy: number } {
+  if (cw <= 0 || ch <= 0 || nw <= 0 || nh <= 0) return { ix: 0, iy: 0 }
+  const scale = Math.min(cw / nw, ch / nh)
+  const dw = nw * scale
+  const dh = nh * scale
+  return { ix: (cw - dw) / 2, iy: (ch - dh) / 2 }
+}
+
+type DropPairPreviewThumbProps = {
+  url: string
+  fileName: string
+  order: number
+  onZoom: () => void
+  onRemove: () => void
+}
+
+/** Thumb preview: badges align to the visible photo (letterbox), not the outer frame. */
+function DropPairPreviewThumb({
+  url,
+  fileName,
+  order,
+  onZoom,
+  onRemove,
+}: DropPairPreviewThumbProps) {
+  const thumbRef = useRef<HTMLDivElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
+
+  const updateLetterboxInsets = useCallback(() => {
+    const thumb = thumbRef.current
+    const img = imgRef.current
+    if (!thumb) return
+    const nw = img?.naturalWidth ?? 0
+    const nh = img?.naturalHeight ?? 0
+    if (!nw || !nh) {
+      thumb.style.setProperty('--preview-inset-x', '0px')
+      thumb.style.setProperty('--preview-inset-y', '0px')
+      return
+    }
+    const cw = thumb.clientWidth
+    const ch = thumb.clientHeight
+    const { ix, iy } = objectFitContainInsets(cw, ch, nw, nh)
+    thumb.style.setProperty('--preview-inset-x', `${ix}px`)
+    thumb.style.setProperty('--preview-inset-y', `${iy}px`)
+    const scale = Math.min(cw / nw, ch / nh)
+    const dw = nw * scale
+    /* Room inside photo after default 6px inset each side (see .preview-thumb--drop-pair .preview-thumb__badges). */
+    const innerW = dw - 12
+    thumb.classList.toggle('preview-thumb--badges-tight', innerW < 76)
+  }, [])
+
+  useLayoutEffect(() => {
+    const thumb = thumbRef.current
+    if (!thumb) return
+    updateLetterboxInsets()
+    const ro = new ResizeObserver(() => updateLetterboxInsets())
+    ro.observe(thumb)
+    return () => ro.disconnect()
+  }, [updateLetterboxInsets, url])
+
+  return (
+    <div ref={thumbRef} className="preview-thumb preview-thumb--drop-pair">
+      <button
+        type="button"
+        className="preview-thumb__zoom"
+        aria-label={`Enlarge preview ${order}: ${fileName}`}
+        onClick={onZoom}
+      >
+        <img ref={imgRef} src={url} alt="" onLoad={updateLetterboxInsets} />
+      </button>
+      <div className="preview-thumb__badges">
+        <span className="preview-thumb__order" aria-hidden>
+          {order}
+        </span>
+        <button
+          type="button"
+          className="preview-thumb__remove"
+          aria-label={`Remove ${fileName} from upload`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemove()
+          }}
+        >
+          <span aria-hidden>×</span>
+        </button>
+      </div>
+    </div>
+  )
+}
 
 const PATIENCE_LINES = [
   "We're on it.",
@@ -1372,34 +1475,15 @@ function App() {
                     >
                       <div className="preview-drop-pair">
                         <div className="preview-thumb-wrap">
-                          <div className="preview-thumb preview-thumb--drop-pair">
-                            <button
-                              type="button"
-                              className="preview-thumb__zoom"
-                              aria-label={`Enlarge preview ${i + 1}: ${p.file.name}`}
-                              onClick={() =>
-                                setPreviewLightbox({ url: p.url, name: p.file.name })
-                              }
-                            >
-                              <img src={p.url} alt="" />
-                            </button>
-                            <div className="preview-thumb__badges">
-                              <span className="preview-thumb__order" aria-hidden>
-                                {i + 1}
-                              </span>
-                              <button
-                                type="button"
-                                className="preview-thumb__remove"
-                                aria-label={`Remove ${p.file.name} from upload`}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  removeFileAt(i)
-                                }}
-                              >
-                                <span aria-hidden>×</span>
-                              </button>
-                            </div>
-                          </div>
+                          <DropPairPreviewThumb
+                            url={p.url}
+                            fileName={p.file.name}
+                            order={i + 1}
+                            onZoom={() =>
+                              setPreviewLightbox({ url: p.url, name: p.file.name })
+                            }
+                            onRemove={() => removeFileAt(i)}
+                          />
                         </div>
                         <div className="preview-guidance-strip">
                           <p className="preview-guidance-strip__name" title={p.file.name}>

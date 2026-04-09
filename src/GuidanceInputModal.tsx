@@ -162,7 +162,8 @@ export function GuidanceInputModal({
 
   const showSequence = draftCount != null && draftCount >= 1
   const countForSeq = showSequence ? draftCount : 0
-  const needsBodyScroll = showSequence && draftCount >= 11
+  /** Scroll the guidance form whenever bubbles are listed (5–10 use two columns and often overflow before 11). */
+  const needsBodyScroll = showSequence
   const useTwoColGrid = showSequence && draftCount >= 5 && draftCount <= 10
 
   const handleCountChange = (raw: string) => {

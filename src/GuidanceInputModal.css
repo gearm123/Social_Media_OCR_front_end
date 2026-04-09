@@ -235,13 +235,13 @@
   gap: 1rem;
 }
 
-/* Count &lt; 11: no inner scroll — whole dialog fits without vertical scrolling in this section */
+/* No bubble list yet: let the block size to content (count + hint only). */
 .guidance-modal__body--fit {
   overflow: visible;
   flex: 0 1 auto;
 }
 
-/* 11+ bubbles: scroll only the guidance body */
+/* Bubble sequence visible: scroll the form so preview + actions stay usable on short viewports */
 .guidance-modal__body--scroll {
   overflow-x: hidden;
   overflow-y: auto;
@@ -374,7 +374,7 @@
   width: 100%;
 }
 
-/* Fit 5–10 bubbles in two columns so the modal stays within viewport without scrolling */
+/* Fit 5–10 bubbles in two columns; body still scrolls when the panel is shorter than content */
 .guidance-modal__sequence--two-col .bubble-seq__list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
