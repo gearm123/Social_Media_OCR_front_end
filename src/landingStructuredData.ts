@@ -1,6 +1,6 @@
 /**
- * FAQPage, HowTo, and BreadcrumbList JSON-LD for every public route (including home).
- * Single mount point keeps schemas consistent and avoids duplicate/conflicting script tags.
+ * BreadcrumbList JSON-LD on every public route.
+ * FAQPage JSON-LD only on `/faq`; HowTo JSON-LD only on `/how-to` (Google expects these on the URL that actually shows that content).
  */
 
 import type { IntentLanding } from './intentLandings'
@@ -12,6 +12,7 @@ import {
   SEO_HOWTO_DESCRIPTION,
   SEO_HOWTO_STEPS,
   SEO_SITE_NAME,
+  unmountJsonLd,
 } from './seo'
 
 const ID_FAQ = 'jsonld-landing-faqpage'
@@ -24,10 +25,13 @@ function absoluteUrl(origin: string, path: string): string {
   return `${origin}${p}`
 }
 
-function faqPageJsonLd(): Record<string, unknown> {
+function faqPageJsonLd(origin: string): Record<string, unknown> {
+  const pageUrl = absoluteUrl(origin, '/faq')
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
+    '@id': `${pageUrl}#faqpage`,
+    url: pageUrl,
     mainEntity: SEO_FAQ_ITEMS.map((item) => ({
       '@type': 'Question',
       name: item.question,
@@ -98,7 +102,7 @@ function breadcrumbJsonLd(origin: string, pathNorm: string, intent: IntentLandin
 }
 
 /**
- * Mount FAQPage + HowTo + BreadcrumbList (replaces any prior tags with these ids).
+ * Mount BreadcrumbList on all routes; FAQPage only on `/faq`; HowTo only on `/how-to`.
  * No-op when `getSeoSiteOrigin()` is empty (local dev without `VITE_SITE_URL`).
  */
 export function mountLandingStructuredData(
@@ -107,7 +111,18 @@ export function mountLandingStructuredData(
 ): void {
   const origin = getSeoSiteOrigin()
   if (!origin) return
-  mountJsonLd(ID_FAQ, faqPageJsonLd())
-  mountJsonLd(ID_HOWTO, howToJsonLd(origin))
+
+  if (pathNorm === '/faq') {
+    mountJsonLd(ID_FAQ, faqPageJsonLd(origin))
+  } else {
+    unmountJsonLd(ID_FAQ)
+  }
+
+  if (pathNorm === '/how-to') {
+    mountJsonLd(ID_HOWTO, howToJsonLd(origin))
+  } else {
+    unmountJsonLd(ID_HOWTO)
+  }
+
   mountJsonLd(ID_CRUMB, breadcrumbJsonLd(origin, pathNorm, intent))
 }

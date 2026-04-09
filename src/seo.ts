@@ -124,7 +124,8 @@ export function unmountJsonLd(id: string): void {
 }
 
 /**
- * FAQ page content and FAQPage JSON-LD (`/faq`). Wording matches visible Q&amp;A on the FAQ route.
+ * FAQ page content and FAQPage JSON-LD source (`/faq`). Wording matches visible Q&amp;A on the FAQ route.
+ * The script tag is mounted only on `/faq` in `landingStructuredData.ts`.
  */
 export const SEO_FAQ_ITEMS = [
   {
