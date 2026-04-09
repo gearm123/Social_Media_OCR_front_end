@@ -1746,6 +1746,30 @@
   text-align: center;
 }
 
+.preview-guidance-strip__done {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--text);
+  text-align: center;
+}
+
+.preview-guidance-strip__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.preview-guidance-strip__action-btn {
+  flex: 1 1 auto;
+  min-width: 4.25rem;
+  font-weight: 650;
+  font-size: 0.72rem;
+}
+
 @media (prefers-color-scheme: dark) {
   .preview-guidance-strip {
     background: color-mix(in srgb, var(--surface-2) 88%, transparent);

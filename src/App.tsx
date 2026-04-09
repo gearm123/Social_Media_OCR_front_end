@@ -71,6 +71,8 @@ const PATIENCE_LINES = [
 /** Matches backend `POST /jobs` form field `difficulty` (pipeline depth). */
 type TranslationDifficulty = 1 | 2 | 3
 
+type TranslationMood = 'hurry' | 'patient'
+
 /** Live overlay timer: m:ss from Process click until loading ends. */
 function formatProcessElapsed(ms: number): string {
   const t = Math.max(0, ms)
@@ -80,47 +82,19 @@ function formatProcessElapsed(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-/** Expected wall time per pipeline pass (single-image baseline), seconds. */
-const PIPELINE_PASS_EXPECTED_SEC: readonly [number, number, number] = [80, 40, 30]
-
-function expectedSecondsForPassCount(passCount: number): number {
-  const n = Math.max(0, Math.min(3, Math.floor(passCount)))
-  let sum = 0
-  for (let i = 0; i < n; i++) sum += PIPELINE_PASS_EXPECTED_SEC[i]!
-  return sum
-}
-
-/** Multi-image stretch factors vs single-image (same curve as the old 2–3 minute 3-pass model). */
-function pipelineImageCountFactors(imageCount: number): { lo: number; hi: number } {
-  const n = Math.max(1, imageCount)
-  if (n === 1) return { lo: 1, hi: 1 }
-  const lowMin = 2 + Math.floor((n - 1) * 0.9)
-  const highMin = 3 + Math.ceil((n - 1) * 1.2)
-  const refSingleSec = 2 * 60
-  return { lo: (lowMin * 60) / refSingleSec, hi: (highMin * 60) / refSingleSec }
-}
-
 /**
- * Wall-clock estimate in seconds: sum of expected time per pass (80 + 40 + 30 for 3 passes) for the
- * `difficulty` depth, scaled for multi-image using the previous minute-based spread.
+ * Expected total time range shown while processing (seconds), by mood — kept intentionally narrow in the UI.
+ * Hurry up: 1:10–2:00 · Take your time: 2:30–3:30.
  */
-function pipelineEtaSecondsRange(
-  imageCount: number,
-  difficulty: TranslationDifficulty,
-): [number, number] {
-  const core = expectedSecondsForPassCount(difficulty)
-  const { lo: loM, hi: hiM } = pipelineImageCountFactors(imageCount)
-  const loS = Math.max(1, Math.round(core * loM))
-  let hiS = Math.max(1, Math.round(core * hiM))
-  if (loS > hiS) hiS = loS
-  return [loS, hiS]
+function moodEtaSecondsRange(mood: TranslationMood): [number, number] {
+  return mood === 'hurry' ? [70, 120] : [150, 210]
 }
 
 function formatEstimatedTotalTimeFromRange([lo, hi]: [number, number]): string {
   if (lo === hi) {
-    return `Est. total ~${formatProcessElapsed(lo * 1000)}`
+    return `Est. total ~${formatProcessElapsed(lo * 1000)} min`
   }
-  return `Est. total ~${formatProcessElapsed(lo * 1000)}–${formatProcessElapsed(hi * 1000)}`
+  return `Est. total ~${formatProcessElapsed(lo * 1000)}–${formatProcessElapsed(hi * 1000)} min`
 }
 
 /** Short titles for the pipeline overlay (ignore verbose server ``stage_label``). */
@@ -264,8 +238,6 @@ function PlansUsageInfoContent() {
   )
 }
 
-type TranslationMood = 'hurry' | 'patient'
-
 function MoodBar({
   mode,
   onMode,
@@ -349,10 +321,8 @@ function App() {
   const [hints, setHints] = useState<Record<string, ImageBubbleHint>>({})
   const [dragActive, setDragActive] = useState(false)
   const [processing, setProcessing] = useState(false)
-  /** Snapshot at Process click — used for ETA copy while the overlay is open. */
-  const [processingImageCount, setProcessingImageCount] = useState(1)
-  /** Snapshot at Process click — ETA scales by pass count (1–3). */
-  const [processingDifficulty, setProcessingDifficulty] = useState<TranslationDifficulty>(3)
+  /** Snapshot at Process click — shown ETA range matches mood (Hurry up vs Take your time). */
+  const [processingMood, setProcessingMood] = useState<TranslationMood>('patient')
   const [processElapsedMs, setProcessElapsedMs] = useState(0)
   const [loadingPrimary, setLoadingPrimary] = useState<string | null>(null)
   const [pipelineProgress, setPipelineProgress] = useState(0)
@@ -729,10 +699,7 @@ function App() {
     return () => clearInterval(id)
   }, [processing])
 
-  const pipelineEtaSec = useMemo(
-    () => pipelineEtaSecondsRange(processingImageCount, processingDifficulty),
-    [processingImageCount, processingDifficulty],
-  )
+  const pipelineEtaSec = useMemo(() => moodEtaSecondsRange(processingMood), [processingMood])
 
   /** At least as full as elapsed/upper ETA (capped before done); server `progress` can move it faster. */
   const loadingBarProgress = useMemo(() => {
@@ -842,8 +809,7 @@ function App() {
     executionCancelledRef.current = false
     activeJobIdRef.current = null
     uploadAbortRef.current = new AbortController()
-    setProcessingImageCount(files.length)
-    setProcessingDifficulty(translationDifficulty)
+    setProcessingMood(translationMood)
     setProcessing(true)
     setResultExpanded(false)
     setPreviewLightbox(null)
@@ -1020,6 +986,7 @@ function App() {
           fileName={
             previews.find((pv) => fileKey(pv.file) === guidanceModalKey)?.file.name ?? ''
           }
+          imageUrl={previews.find((pv) => fileKey(pv.file) === guidanceModalKey)?.url ?? ''}
           messageCount={(hints[guidanceModalKey] ?? defaultImageBubbleHint()).messageCount}
           sequence={(hints[guidanceModalKey] ?? defaultImageBubbleHint()).sequence}
           maxBubbles={MAX_MESSAGE_BUBBLES}
@@ -1395,6 +1362,7 @@ function App() {
                   const k = fileKey(p.file)
                   const hint = hints[k] ?? defaultImageBubbleHint()
                   const count = hint.messageCount
+                  const guidanceSaved = count != null && count >= 1
 
                   return (
                     <figure
@@ -1435,18 +1403,43 @@ function App() {
                           <p className="preview-guidance-strip__name" title={p.file.name}>
                             {p.file.name}
                           </p>
-                          <button
-                            type="button"
-                            className="btn primary btn--compact preview-guidance-strip__btn"
-                            onClick={() => setGuidanceModalKey(k)}
-                          >
-                            Add guidance input
-                          </button>
-                          <p className="preview-guidance-strip__status">
-                            {count != null && count >= 1
-                              ? `${count} bubble${count === 1 ? '' : 's'} · sequence set`
-                              : 'Optional — improves accuracy'}
-                          </p>
+                          {guidanceSaved ? (
+                            <>
+                              <p className="preview-guidance-strip__done">
+                                Guidance added · {count} message{count === 1 ? '' : 's'} (sender/receiver
+                                sequence set)
+                              </p>
+                              <div className="preview-guidance-strip__actions">
+                                <button
+                                  type="button"
+                                  className="btn ghost btn--compact preview-guidance-strip__action-btn"
+                                  onClick={() => setGuidanceModalKey(k)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn ghost btn--compact preview-guidance-strip__action-btn"
+                                  onClick={() => updateHint(k, defaultImageBubbleHint())}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className="btn primary btn--compact preview-guidance-strip__btn"
+                                onClick={() => setGuidanceModalKey(k)}
+                              >
+                                Add guidance input
+                              </button>
+                              <p className="preview-guidance-strip__status">
+                                Optional — improves accuracy
+                              </p>
+                            </>
+                          )}
                         </div>
                       </div>
                     </figure>

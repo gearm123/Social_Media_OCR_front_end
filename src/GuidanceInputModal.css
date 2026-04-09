@@ -25,8 +25,8 @@
 .guidance-modal__panel {
   position: relative;
   z-index: 1;
-  width: min(26rem, calc(100vw - 1.5rem));
-  max-height: min(92dvh, 40rem);
+  width: min(44rem, calc(100vw - 1.5rem));
+  max-height: min(92dvh, 52rem);
   display: flex;
   flex-direction: column;
   border-radius: 18px;
@@ -89,7 +89,7 @@
 }
 
 .guidance-modal__filename {
-  margin: 0 1rem 0.65rem;
+  margin: 0 1rem 0.5rem;
   font-size: 0.78rem;
   line-height: 1.35;
   color: var(--muted);
@@ -100,6 +100,130 @@
   line-clamp: 2;
   word-break: break-word;
   flex-shrink: 0;
+}
+
+/* Reference screenshot: fixed viewport; scroll zoom + drag pan inside (modal size unchanged). */
+.guidance-modal__preview {
+  flex-shrink: 0;
+  margin: 0 1rem 0.65rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 92%, #0f172a 8%);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  min-height: 0;
+}
+
+.guidance-modal__preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  flex-shrink: 0;
+}
+
+.guidance-modal__preview-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--muted);
+  flex: 1 1 auto;
+  min-width: min(100%, 11rem);
+}
+
+.guidance-modal__preview-zoom-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.guidance-modal__preview-zoom-btn {
+  box-sizing: border-box;
+  min-width: 1.85rem;
+  height: 1.85rem;
+  padding: 0 0.35rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 90%, var(--surface-2));
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.guidance-modal__preview-zoom-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-2) 85%, transparent);
+}
+
+.guidance-modal__preview-zoom-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (prefers-color-scheme: dark) {
+  .guidance-modal__preview-zoom-btn {
+    background: color-mix(in srgb, var(--surface-2) 92%, #0f172a);
+  }
+
+  .guidance-modal__preview-zoom-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--surface-2) 98%, transparent);
+  }
+}
+
+.guidance-modal__preview-zoom-label {
+  min-width: 2.85rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.guidance-modal__preview-viewport {
+  position: relative;
+  width: 100%;
+  min-height: 12.5rem;
+  height: min(36vh, 280px);
+  max-height: min(36vh, 280px);
+  overflow: hidden;
+  touch-action: none;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 88%, #0f172a 12%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guidance-modal__preview-viewport--pannable {
+  cursor: grab;
+}
+
+.guidance-modal__preview-viewport--pannable:active {
+  cursor: grabbing;
+}
+
+.guidance-modal__preview-inner {
+  flex: 0 0 auto;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.guidance-modal__preview-img {
+  display: block;
+  max-width: 100%;
+  max-height: min(36vh, 280px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center center;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .guidance-modal__body {
@@ -123,7 +247,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  max-height: min(58dvh, 24rem);
+  max-height: min(50dvh, 22rem);
 }
 
 .guidance-modal__field {
