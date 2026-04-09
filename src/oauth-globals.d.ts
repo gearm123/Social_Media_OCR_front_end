@@ -31,7 +31,8 @@ declare global {
           status?: string
           errorMessage?: string
         }) => void,
-        opts?: { scope: string },
+        /** Second argument is optional; `scope` omitted lets the SDK use its defaults. */
+        opts?: { scope?: string },
       ) => void
     }
     fbAsyncInit?: () => void
