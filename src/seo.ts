@@ -35,7 +35,7 @@ export const SEO_HOWTO_STEPS: readonly { title: string; body: string }[] = [
   },
   {
     title: 'Add guidance for each image',
-    body: 'For every screenshot, open Add guidance input and enter the total number of message bubbles you see. Set the sequence (sender vs receiver) for each bubble. This optional step significantly improves layout and translation quality.',
+    body: 'For every screenshot, open Add guidance and enter the total number of message bubbles you see. Set the sequence (sender vs receiver) for each bubble. This optional step significantly improves layout and translation quality.',
   },
   {
     title: 'Pick language difficulty',

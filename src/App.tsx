@@ -1433,7 +1433,7 @@ function App() {
                                 className="btn primary btn--compact preview-guidance-strip__btn"
                                 onClick={() => setGuidanceModalKey(k)}
                               >
-                                Add guidance input
+                                Add guidance
                               </button>
                               <p className="preview-guidance-strip__status">
                                 Optional — improves accuracy

@@ -330,7 +330,7 @@ export function GuidanceInputModal({
             needsBodyScroll ? 'guidance-modal__body guidance-modal__body--scroll' : 'guidance-modal__body guidance-modal__body--fit'
           }
         >
-          <div className="guidance-modal__field">
+          <div className="guidance-modal__field guidance-modal__field--count-block">
             <div className="guidance-modal__label-row">
               <label className="guidance-modal__label" htmlFor="guidance-modal-total-messages">
                 Total text bubbles in this image
@@ -341,18 +341,28 @@ export function GuidanceInputModal({
                 </p>
               </InfoPopover>
             </div>
-            <input
-              id="guidance-modal-total-messages"
-              className="guidance-modal__count-input"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={maxBubbles}
-              placeholder="—"
-              title={`How many text bubbles (1–${maxBubbles})`}
-              value={draftCount == null ? '' : String(draftCount)}
-              onChange={(e) => handleCountChange(e.target.value)}
-            />
+            <div className="guidance-modal__count-actions-row">
+              <input
+                id="guidance-modal-total-messages"
+                className="guidance-modal__count-input"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={maxBubbles}
+                placeholder="—"
+                title={`How many text bubbles (1–${maxBubbles})`}
+                value={draftCount == null ? '' : String(draftCount)}
+                onChange={(e) => handleCountChange(e.target.value)}
+              />
+              <div className="guidance-modal__inline-actions">
+                <button type="button" className="btn ghost guidance-modal__action-btn-inline" onClick={onDismiss}>
+                  Cancel
+                </button>
+                <button type="button" className="btn primary guidance-modal__action-btn-inline" onClick={handleSave}>
+                  Done
+                </button>
+              </div>
+            </div>
           </div>
 
           {showSequence ? (
@@ -377,15 +387,6 @@ export function GuidanceInputModal({
           ) : (
             <p className="guidance-modal__hint">Enter a bubble count above to set the sender/receiver sequence.</p>
           )}
-        </div>
-
-        <div className="guidance-modal__actions">
-          <button type="button" className="btn ghost" onClick={onDismiss}>
-            Cancel
-          </button>
-          <button type="button" className="btn primary" onClick={handleSave}>
-            Done
-          </button>
         </div>
       </div>
     </div>

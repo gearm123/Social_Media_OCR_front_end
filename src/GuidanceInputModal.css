@@ -227,7 +227,7 @@
 }
 
 .guidance-modal__body {
-  padding: 0 1rem 0.75rem;
+  padding: 0 1rem 1rem;
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -254,6 +254,44 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.guidance-modal__field--count-block {
+  gap: 0.45rem;
+}
+
+/* Count input + Cancel/Done: one row, shared height (sequence scrolls below, never covers actions). */
+.guidance-modal__count-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem 0.65rem;
+}
+
+.guidance-modal__count-actions-row .guidance-modal__count-input {
+  flex: 0 0 auto;
+}
+
+.guidance-modal__inline-actions {
+  display: flex;
+  flex: 1 1 12rem;
+  gap: 0.5rem;
+  min-width: min(100%, 10.5rem);
+  align-items: stretch;
+}
+
+.guidance-modal__action-btn-inline {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.5rem 0.65rem;
+  line-height: 1.15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .guidance-modal__field--sequence {
@@ -360,22 +398,7 @@
   padding: 0.35rem 0.4rem;
 }
 
-.guidance-modal__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem 1rem;
-  border-top: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  flex-shrink: 0;
-  background: color-mix(in srgb, var(--surface) 88%, var(--surface-2));
-}
-
 @media (prefers-color-scheme: dark) {
-  .guidance-modal__actions {
-    background: color-mix(in srgb, var(--surface-2) 94%, #0f172a);
-  }
-
   .guidance-modal__count-input {
     background: color-mix(in srgb, var(--surface-2) 95%, transparent);
   }

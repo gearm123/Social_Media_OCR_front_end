@@ -1637,7 +1637,8 @@
 /* 1–3 images: equal-width columns, no horizontal scrollbar. 4+ uses default scroll (see .preview-row--upload-slot). */
 .preview-row--upload-slot--fit-three {
   overflow-x: hidden;
-  gap: 0.7rem;
+  /* Tighter gaps so three cards fit without horizontal scroll on typical viewports */
+  gap: 0.5rem;
 }
 
 .preview-row--upload-slot--fit-three .preview-card--drop-pair {
@@ -1648,6 +1649,8 @@
 .preview-row--upload-slot--fit-three .preview-drop-pair {
   min-width: 0;
   max-width: 100%;
+  /* Tight to thumb; strip adds its own small inset */
+  gap: 0.08rem;
 }
 
 .preview-row--upload-slot--fit-three .preview-thumb-wrap {
@@ -1657,13 +1660,17 @@
 
 .preview-row--upload-slot--fit-three .preview-guidance-strip {
   flex: 1 1 0;
+  /* Below base .preview-guidance-strip min-width — keep panel narrow for 3-up */
   min-width: 0;
-  max-width: min(12rem, 38vw);
+  max-width: min(9rem, 30vw);
+  margin-left: 0.22rem;
+  padding: 0.38rem 0.38rem;
+  gap: 0.35rem;
 }
 
 /* Inside a shared third of the row, cap thumb so panel keeps room; aspect ratio unchanged. */
 .upload-slot--filled .preview-row--upload-slot--fit-three .preview-thumb-wrap {
-  max-width: min(11rem, 40%);
+  max-width: min(9.25rem, 42%);
 }
 
 .preview-card--drop-pair {
@@ -1674,7 +1681,7 @@
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  gap: 0.65rem;
+  gap: 0.42rem;
   /* Lock row to preview height so the side panel matches the image strip exactly. */
   height: var(--drop-thumb-h, var(--drop-preview-cap, min(26vh, 220px)));
 }
@@ -1727,15 +1734,24 @@
 }
 
 .preview-guidance-strip__btn {
-  width: 100%;
-  white-space: normal;
+  width: 70%;
+  max-width: 100%;
+  align-self: center;
   text-align: center;
-  line-height: 1.25;
-  min-height: 2.55rem;
   font-weight: 650;
-  font-size: 0.78rem;
-  padding-left: 0.45rem;
-  padding-right: 0.45rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  padding: 0.4rem 0.4rem;
+  box-sizing: border-box;
+  word-break: break-word;
+  /* At most two lines of label text */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  min-height: 2.15rem;
+  max-height: calc(2 * 0.72rem * 1.2 + 0.9rem);
 }
 
 .preview-guidance-strip__status {
@@ -4453,7 +4469,7 @@
     flex-direction: column;
     height: auto;
     align-items: stretch;
-    gap: 0.65rem;
+    gap: 0.42rem;
   }
 
   .upload-slot--filled .preview-thumb-wrap {
