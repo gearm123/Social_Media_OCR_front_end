@@ -474,20 +474,20 @@ function App() {
     prefetchAuthProviders()
   }, [])
 
-  const refreshAuth = useCallback(() => {
+  const refreshAuth = useCallback((): Promise<void> => {
     const t = getAccessToken()
     if (!t) {
       setAuthUser(null)
       if (apiBase()) {
-        void syncGuestBillingFromServer()
+        return syncGuestBillingFromServer()
           .then(() => setBillingTick((x) => x + 1))
           .catch(() => {
             /* optional */
           })
       }
-      return
+      return Promise.resolve()
     }
-    void fetchMe()
+    return fetchMe()
       .then((u) => {
         setAuthUser(u)
         return syncBillingFromServer().catch(() => {
@@ -495,14 +495,15 @@ function App() {
         })
       })
       .then(() => setBillingTick((x) => x + 1))
-      .catch(() => {
+      .catch((e) => {
         clearSession()
         setAuthUser(null)
+        throw e instanceof Error ? e : new Error(String(e))
       })
   }, [])
 
   useEffect(() => {
-    refreshAuth()
+    void refreshAuth()
   }, [refreshAuth])
 
   useEffect(() => {

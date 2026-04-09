@@ -26,6 +26,20 @@ export type UserMe = {
   created_at: string
 }
 
+/** Maps `fetch` network/CORS failures to a short hint (browser often reports only "Failed to fetch"). */
+async function fetchWithNetworkHint(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init)
+  } catch (e) {
+    if (e instanceof TypeError) {
+      throw new Error(
+        'Could not reach the API. Common causes: CORS — set CORS_ORIGINS (or FRONTEND_URL) on the backend to this site’s exact origin (https://…, no trailing slash); wrong VITE_API_BASE_URL; or HTTPS page calling an HTTP API. Open DevTools → Console/Network for details.',
+      )
+    }
+    throw e
+  }
+}
+
 async function readErrorDetail(r: Response): Promise<string> {
   try {
     const j = (await r.json()) as { detail?: unknown }
@@ -92,7 +106,7 @@ export async function authOAuthGoogle(creds: { id_token?: string; access_token?:
   const id = creds.id_token?.trim()
   const at = creds.access_token?.trim()
   const body = id ? { id_token: id } : { access_token: at ?? '' }
-  const r = await fetch(`${base}/auth/oauth/google`, {
+  const r = await fetchWithNetworkHint(`${base}/auth/oauth/google`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -105,7 +119,7 @@ export async function authOAuthGoogle(creds: { id_token?: string; access_token?:
 export async function authOAuthFacebook(accessToken: string): Promise<string> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
-  const r = await fetch(`${base}/auth/oauth/facebook`, {
+  const r = await fetchWithNetworkHint(`${base}/auth/oauth/facebook`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ access_token: accessToken }),

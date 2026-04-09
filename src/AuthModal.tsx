@@ -15,7 +15,7 @@ type Tab = 'signin' | 'signup'
 type Props = {
   open: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: () => void | Promise<void>
   initialTab?: Tab
 }
 
@@ -127,7 +127,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
       try {
         const tok = await getToken()
         persistSession(tok)
-        onSuccess()
+        await Promise.resolve(onSuccess())
         onClose()
       } catch (e) {
         setOauthErr(e instanceof Error ? e.message : String(e))
@@ -231,7 +231,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
       await authRegister(username.trim(), email.trim(), password)
       const tok = await authLogin(email.trim(), password)
       persistSession(tok)
-      onSuccess()
+      await Promise.resolve(onSuccess())
       onClose()
     } catch (err) {
       setFormErr(err instanceof Error ? err.message : String(err))
@@ -247,7 +247,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
     try {
       const tok = await authLogin(signinEmail.trim(), signinPassword)
       persistSession(tok)
-      onSuccess()
+      await Promise.resolve(onSuccess())
       onClose()
     } catch (err) {
       setFormErr(err instanceof Error ? err.message : String(err))
