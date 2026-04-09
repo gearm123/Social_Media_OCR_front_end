@@ -3345,29 +3345,7 @@
   opacity: 0.92;
 }
 
-/* Single compact usage bar — same shell for free / paid; unlocked adds glow + periodic shake */
-@keyframes billing-explainer-nudge {
-  0%,
-  88% {
-    transform: translate3d(0, 0, 0);
-  }
-  90% {
-    transform: translate3d(-4px, 0, 0);
-  }
-  92% {
-    transform: translate3d(4px, 0, 0);
-  }
-  94% {
-    transform: translate3d(-2px, 0, 0);
-  }
-  96% {
-    transform: translate3d(2px, 0, 0);
-  }
-  100% {
-    transform: translate3d(0, 0, 0);
-  }
-}
-
+/* Single compact usage bar — same shell for free / paid; unlocked adds accent ring (shake only via .billing-explainer--shake in JS). */
 .billing-explainer {
   margin: 0 auto 0.85rem;
   max-width: 32rem;
@@ -3470,12 +3448,12 @@
 }
 
 .billing-explainer.billing-explainer--hero.billing-explainer--shake {
-  animation: billing-explainer-shake 0.52s ease-in-out;
+  animation: billing-explainer-shake 0.4s ease-in-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .billing-explainer.billing-explainer--hero.billing-explainer--shake {
-    animation: billing-explainer-attn 0.45s ease-in-out 2;
+    animation: billing-explainer-attn 0.35s ease-in-out 2;
   }
 }
 
@@ -3614,7 +3592,7 @@
   filter: brightness(1.06);
 }
 
-/* Paid: same bar, stronger accent ring + attention shake (respect reduced motion) */
+/* Paid: same bar, stronger accent ring (no periodic motion — see billing-explainer--shake for multi-image block) */
 .billing-explainer--unlocked {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   background: color-mix(in srgb, var(--accent) 9%, var(--surface-2));
@@ -3622,8 +3600,6 @@
     0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent),
     0 4px 20px color-mix(in srgb, var(--accent) 14%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  animation: billing-explainer-nudge 9s ease-in-out infinite;
-  will-change: transform;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -3633,13 +3609,6 @@
       0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent),
       0 6px 24px rgba(0, 0, 0, 0.35),
       inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .billing-explainer--unlocked {
-    animation: none;
-    will-change: auto;
   }
 }
 
