@@ -1383,20 +1383,22 @@ function App() {
                             >
                               <img src={p.url} alt="" />
                             </button>
-                            <span className="preview-thumb__order" aria-hidden>
-                              {i + 1}
-                            </span>
-                            <button
-                              type="button"
-                              className="preview-thumb__remove"
-                              aria-label={`Remove ${p.file.name} from upload`}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                removeFileAt(i)
-                              }}
-                            >
-                              <span aria-hidden>×</span>
-                            </button>
+                            <div className="preview-thumb__badges">
+                              <span className="preview-thumb__order" aria-hidden>
+                                {i + 1}
+                              </span>
+                              <button
+                                type="button"
+                                className="preview-thumb__remove"
+                                aria-label={`Remove ${p.file.name} from upload`}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  removeFileAt(i)
+                                }}
+                              >
+                                <span aria-hidden>×</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                         <div className="preview-guidance-strip">

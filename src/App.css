@@ -2046,11 +2046,25 @@
   z-index: 1;
 }
 
-.preview-thumb__order {
+.preview-thumb__badges {
   grid-area: 1 / 1;
   place-self: start;
-  margin: 6px 0 0 6px;
-  z-index: 2;
+  z-index: 3;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 6px;
+  pointer-events: none;
+}
+
+.preview-thumb__badges .preview-thumb__remove {
+  pointer-events: auto;
+}
+
+.preview-thumb__order {
+  margin: 0;
+  flex-shrink: 0;
   min-width: 1.35rem;
   height: 1.35rem;
   padding: 0 0.35rem;
@@ -2068,10 +2082,8 @@
 }
 
 .preview-thumb__remove {
-  grid-area: 1 / 1;
-  place-self: start end;
-  z-index: 3;
-  margin: 5px;
+  margin: 0;
+  flex-shrink: 0;
   width: 1.55rem;
   height: 1.55rem;
   padding: 0;
