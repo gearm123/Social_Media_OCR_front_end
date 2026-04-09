@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   authLogin,
   authOAuthFacebook,
@@ -6,6 +6,7 @@ import {
   authRegister,
   fetchAuthProviders,
   getCachedAuthProviders,
+  invalidateAuthProvidersCache,
   persistSession,
   type AuthProviders,
 } from './authApi'
@@ -85,40 +86,112 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
   const [busy, setBusy] = useState(false)
   const [formErr, setFormErr] = useState<string | null>(null)
   const [oauthErr, setOauthErr] = useState<string | null>(null)
+  const [fbReady, setFbReady] = useState(false)
+  const [fbSdkErr, setFbSdkErr] = useState<string | null>(null)
+  const fbInitAppIdRef = useRef<string | null>(null)
+
+  const loadProviders = useCallback(() => {
+    const hit = getCachedAuthProviders()
+    if (hit) {
+      setProviders(hit)
+      setProvidersErr(null)
+      return Promise.resolve()
+    }
+    setProvidersErr(null)
+    return fetchAuthProviders()
+      .then((p) => {
+        setProviders(p)
+        setProvidersErr(null)
+      })
+      .catch((e) => {
+        setProviders(null)
+        setProvidersErr(e instanceof Error ? e.message : String(e))
+      })
+  }, [])
 
   useEffect(() => {
     if (open) {
       setTab(initialTab)
       setFormErr(null)
       setOauthErr(null)
+      setFbSdkErr(null)
     }
   }, [open, initialTab])
 
   useEffect(() => {
     if (!open) return
-    const hit = getCachedAuthProviders()
-    if (hit) {
-      setProviders(hit)
-      setProvidersErr(null)
+    void loadProviders()
+  }, [open, loadProviders])
+
+  useEffect(() => {
+    if (!open || !providers?.facebook_app_id) {
+      setFbReady(false)
+      return
     }
-    let cancelled = false
-    fetchAuthProviders()
-      .then((p) => {
-        if (!cancelled) {
-          setProviders(p)
-          setProvidersErr(null)
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setProviders(null)
-          setProvidersErr(e instanceof Error ? e.message : String(e))
-        }
-      })
-    return () => {
-      cancelled = true
+    const appId = providers.facebook_app_id.trim()
+    if (!appId) {
+      setFbReady(false)
+      return
     }
-  }, [open])
+
+    setFbReady(false)
+    setFbSdkErr(null)
+
+    const markReady = () => {
+      fbInitAppIdRef.current = appId
+      setFbReady(true)
+    }
+
+    const initFb = (): boolean => {
+      if (!window.FB) return false
+      try {
+        window.FB.init({
+          appId,
+          cookie: true,
+          xfbml: false,
+          version: 'v18.0',
+        })
+      } catch {
+        /* already initialised for this load */
+      }
+      markReady()
+      return true
+    }
+
+    if (fbInitAppIdRef.current === appId && window.FB) {
+      setFbReady(true)
+      return
+    }
+
+    window.fbAsyncInit = () => {
+      if (window.FB) {
+        window.FB.init({
+          appId,
+          cookie: true,
+          xfbml: false,
+          version: 'v18.0',
+        })
+        markReady()
+      }
+    }
+
+    if (initFb()) return
+
+    void loadScript('https://connect.facebook.net/en_US/sdk.js')
+      .then(() => {
+        const deadline = Date.now() + 12000
+        const poll = () => {
+          if (initFb()) return
+          if (Date.now() < deadline) {
+            window.requestAnimationFrame(poll)
+          } else {
+            setFbSdkErr('Facebook sign-in did not finish loading. Check your network or try disabling ad blockers.')
+          }
+        }
+        poll()
+      })
+      .catch(() => setFbSdkErr('Could not load Facebook’s sign-in script.'))
+  }, [open, providers?.facebook_app_id])
 
   const finishWithToken = useCallback(
     async (getToken: () => Promise<string>) => {
@@ -137,22 +210,6 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
     },
     [onClose, onSuccess],
   )
-
-  useEffect(() => {
-    if (!open || !providers?.facebook_app_id) return
-    const appId = providers.facebook_app_id
-    window.fbAsyncInit = function () {
-      if (window.FB) {
-        window.FB.init({
-          appId,
-          cookie: true,
-          xfbml: false,
-          version: 'v18.0',
-        })
-      }
-    }
-    void loadScript('https://connect.facebook.net/en_US/sdk.js').catch(() => {})
-  }, [open, providers?.facebook_app_id])
 
   const onGoogleClick = async () => {
     if (!providers?.google_client_id) return
@@ -191,8 +248,8 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
 
   const onFacebookClick = () => {
     if (!providers?.facebook_app_id) return
-    if (!window.FB) {
-      setOauthErr('Facebook is still loading — try again in a moment')
+    if (!fbReady || !window.FB) {
+      setOauthErr(fbSdkErr ?? 'Facebook is still loading — try again in a moment')
       return
     }
     window.FB.login(
@@ -258,8 +315,17 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
 
   if (!open) return null
 
-  const hasGoogle = Boolean(providers?.google_client_id)
-  const hasFacebook = Boolean(providers?.facebook_app_id)
+  const hasGoogle = Boolean(providers?.google_client_id?.trim())
+  const hasFacebook = Boolean(providers?.facebook_app_id?.trim())
+  const providersLoading = providers === null && !providersErr
+  const oauthRowDisabled = busy || providersLoading
+  const googleUsable = hasGoogle && !providersLoading
+  const facebookUsable = hasFacebook && !providersLoading && fbReady
+
+  const retryProviders = () => {
+    invalidateAuthProvidersCache()
+    void loadProviders()
+  }
 
   return (
     <div className="auth-modal" role="dialog" aria-modal="true" aria-label="Sign in">
@@ -312,7 +378,10 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
 
         {providersErr ? (
           <p className="auth-modal__warn" role="status">
-            Could not load provider config: {providersErr}
+            Could not load provider config: {providersErr}{' '}
+            <button type="button" className="auth-modal__retry-btn" onClick={retryProviders}>
+              Retry
+            </button>
           </p>
         ) : null}
 
@@ -449,49 +518,63 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
         </div>
 
         <div id="fb-root" />
-        <div className="auth-modal__oauth-row">
-          <div className="auth-modal__oauth-cell">
-            <button
-              type="button"
-              className="auth-modal__oauth-btn auth-modal__oauth-btn--social"
-              disabled={busy || !hasGoogle}
-              title={
-                hasGoogle
-                  ? tab === 'signup'
-                    ? 'Sign up with Google'
-                    : 'Sign in with Google'
-                  : 'Set GOOGLE_OAUTH_CLIENT_ID on the API to enable'
-              }
-              onClick={() => {
-                if (!hasGoogle) return
-                void onGoogleClick()
-              }}
-            >
-              <IconGoogle />
-              <span>Continue with Google</span>
-            </button>
+        {providersLoading ? (
+          <div className="auth-modal__oauth-loading" role="status" aria-live="polite">
+            <span className="auth-modal__oauth-loading-pulse" aria-hidden />
+            <span>Loading Google &amp; Facebook sign-in…</span>
           </div>
-          <div className="auth-modal__oauth-cell">
-            <button
-              type="button"
-              className="auth-modal__oauth-btn auth-modal__oauth-btn--social"
-              disabled={busy || !hasFacebook}
-              title={
-                hasFacebook
-                  ? 'Continue with Facebook'
-                  : 'Set FACEBOOK_APP_ID on the API to enable'
-              }
-              onClick={() => {
-                if (!hasFacebook) return
-                setOauthErr(null)
-                onFacebookClick()
-              }}
-            >
-              <IconFacebook />
-              <span>Continue with Facebook</span>
-            </button>
+        ) : (
+          <div className="auth-modal__oauth-row">
+            <div className="auth-modal__oauth-cell">
+              <button
+                type="button"
+                className="auth-modal__oauth-btn auth-modal__oauth-btn--social"
+                disabled={oauthRowDisabled || !googleUsable}
+                title={
+                  !hasGoogle
+                    ? 'Set GOOGLE_OAUTH_CLIENT_ID on the API to enable'
+                    : tab === 'signup'
+                      ? 'Sign up with Google'
+                      : 'Sign in with Google'
+                }
+                onClick={() => {
+                  if (!googleUsable) return
+                  void onGoogleClick()
+                }}
+              >
+                <IconGoogle />
+                <span>Continue with Google</span>
+              </button>
+            </div>
+            <div className="auth-modal__oauth-cell">
+              <button
+                type="button"
+                className="auth-modal__oauth-btn auth-modal__oauth-btn--social"
+                disabled={oauthRowDisabled || !facebookUsable}
+                title={
+                  !hasFacebook
+                    ? 'Set FACEBOOK_APP_ID on the API to enable'
+                    : !fbReady
+                      ? 'Facebook is still loading'
+                      : 'Continue with Facebook'
+                }
+                onClick={() => {
+                  if (!hasFacebook || !facebookUsable) return
+                  setOauthErr(null)
+                  onFacebookClick()
+                }}
+              >
+                <IconFacebook />
+                <span>{hasFacebook && !fbReady ? 'Facebook (loading…)' : 'Continue with Facebook'}</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+        {fbSdkErr && hasFacebook && !providersLoading ? (
+          <p className="auth-modal__hint auth-modal__hint--fb" role="status">
+            {fbSdkErr}
+          </p>
+        ) : null}
 
         {oauthErr ? (
           <p className="auth-modal__error auth-modal__error--oauth" role="alert">

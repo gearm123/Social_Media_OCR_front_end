@@ -28,7 +28,7 @@ import {
   syncBillingFromServer,
   syncGuestBillingFromServer,
 } from './billingApi'
-import { fetchMe, prefetchAuthProviders, type UserMe } from './authApi'
+import { fetchMe, type UserMe } from './authApi'
 import { clearSession, getAccessToken } from './authStorage'
 import { fileKey } from './fileUtils'
 import { sortImageFilesByNameSequence } from './sortUploadedImages'
@@ -469,10 +469,6 @@ function App() {
       previews.forEach((p) => URL.revokeObjectURL(p.url))
     }
   }, [previews])
-
-  useEffect(() => {
-    prefetchAuthProviders()
-  }, [])
 
   const refreshAuth = useCallback((): Promise<void> => {
     const t = getAccessToken()

@@ -14,9 +14,19 @@ export function getCachedAuthProviders(): AuthProviders | null {
   return authProvidersCache
 }
 
+/** Clear cached provider config (e.g. after a failed load, before Retry). */
+export function invalidateAuthProvidersCache(): void {
+  authProvidersCache = null
+  authProvidersInflight = null
+}
+
 /** Start loading auth providers as early as possible (e.g. on app mount). Errors are ignored. */
 export function prefetchAuthProviders(): void {
   void fetchAuthProviders().catch(() => {})
+}
+
+function isUnreachableApiError(err: unknown): boolean {
+  return err instanceof Error && err.message.includes('Could not reach the API')
 }
 
 export type UserMe = {
@@ -82,11 +92,15 @@ export async function fetchAuthProviders(): Promise<AuthProviders> {
 export async function authRegister(username: string, email: string, password: string): Promise<UserMe> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
-  const r = await fetch(`${base}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, email, password }),
-  })
+  const r = await fetchWithNetworkHint(
+    `${base}/auth/register`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password }),
+    },
+    'POST /auth/register',
+  )
   if (!r.ok) throw new Error(await readErrorDetail(r))
   return r.json() as Promise<UserMe>
 }
@@ -94,11 +108,15 @@ export async function authRegister(username: string, email: string, password: st
 export async function authLogin(email: string, password: string): Promise<string> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
-  const r = await fetch(`${base}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  })
+  const r = await fetchWithNetworkHint(
+    `${base}/auth/login`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    },
+    'POST /auth/login',
+  )
   if (!r.ok) throw new Error(await readErrorDetail(r))
   const j = (await r.json()) as { access_token: string }
   return j.access_token
@@ -124,18 +142,36 @@ export async function authOAuthGoogle(creds: { id_token?: string; access_token?:
   return j.access_token
 }
 
+/**
+ * Exchange a Facebook user access token for our JWT.
+ * Tries `POST /auth/oauth/fb` first (shorter path for strict blockers), then `facebook`, and retries
+ * the alternate path on network failures or HTTP 404 (older APIs without `/fb`).
+ */
 export async function authOAuthFacebook(accessToken: string): Promise<string> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
-  const r = await fetchWithNetworkHint(
-    `${base}/auth/oauth/fb`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ access_token: accessToken }),
-    },
-    'POST /auth/oauth/fb',
-  )
+  const body = JSON.stringify({ access_token: accessToken })
+  const post = (segment: 'fb' | 'facebook') =>
+    fetchWithNetworkHint(
+      `${base}/auth/oauth/${segment}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      },
+      `POST /auth/oauth/${segment}`,
+    )
+
+  let r: Response
+  try {
+    r = await post('fb')
+  } catch (e) {
+    if (!isUnreachableApiError(e)) throw e
+    r = await post('facebook')
+  }
+  if (r.status === 404) {
+    r = await post('facebook')
+  }
   if (!r.ok) throw new Error(await readErrorDetail(r))
   const j = (await r.json()) as { access_token: string }
   return j.access_token
@@ -146,9 +182,11 @@ export async function fetchMe(): Promise<UserMe> {
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
   const t = getAccessToken()
   if (!t) throw new Error('Not signed in')
-  const r = await fetch(`${base}/auth/me`, {
-    headers: { Authorization: `Bearer ${t}` },
-  })
+  const r = await fetchWithNetworkHint(
+    `${base}/auth/me`,
+    { headers: { Authorization: `Bearer ${t}` } },
+    'GET /auth/me',
+  )
   if (!r.ok) throw new Error(await readErrorDetail(r))
   return r.json() as Promise<UserMe>
 }

@@ -21,7 +21,11 @@ import {
   SEO_DEMONSTRATION_DESCRIPTION,
   SEO_SITE_NAME,
 } from './seo'
+import { prefetchAuthProviders } from './authApi'
 import './index.css'
+
+/** Warm OAuth provider config on every entry route so Sign in is not blocked waiting on /auth/providers. */
+prefetchAuthProviders()
 
 const rawPath = window.location.pathname.replace(/\/+$/, '') || '/'
 const pathNorm = rawPath.toLowerCase()
