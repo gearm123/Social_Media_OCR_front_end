@@ -162,9 +162,8 @@ export function GuidanceInputModal({
 
   const showSequence = draftCount != null && draftCount >= 1
   const countForSeq = showSequence ? draftCount : 0
-  /** Scroll the guidance form whenever bubbles are listed (5–10 use two columns and often overflow before 11). */
+  /** Scroll the guidance form whenever bubbles are listed. */
   const needsBodyScroll = showSequence
-  const useTwoColGrid = showSequence && draftCount >= 5 && draftCount <= 10
 
   const handleCountChange = (raw: string) => {
     const t = raw.trim()
@@ -371,13 +370,7 @@ export function GuidanceInputModal({
               <p className="guidance-modal__sequence-intro">
                 For each bubble from <strong>top</strong> to <strong>bottom</strong>, choose receiver or sender.
               </p>
-              <div
-                className={
-                  useTwoColGrid
-                    ? 'guidance-modal__sequence guidance-modal__sequence--two-col'
-                    : 'guidance-modal__sequence'
-                }
-              >
+              <div className="guidance-modal__sequence">
                 <IphoneBubbleSequence
                   count={countForSeq}
                   value={resizeSequence(draftSeq, countForSeq)}
