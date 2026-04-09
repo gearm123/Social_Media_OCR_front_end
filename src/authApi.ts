@@ -33,7 +33,7 @@ async function fetchWithNetworkHint(url: string, init: RequestInit): Promise<Res
   } catch (e) {
     if (e instanceof TypeError) {
       throw new Error(
-        'Could not reach the API. Common causes: CORS — set CORS_ORIGINS (or FRONTEND_URL) on the backend to this site’s exact origin (https://…, no trailing slash); wrong VITE_API_BASE_URL; or HTTPS page calling an HTTP API. Open DevTools → Console/Network for details.',
+        'Could not reach the API. Common causes: CORS — add this page’s exact origin to CORS_ORIGINS on Render (https://…, no trailing slash); Netlify deploy previews need their own URL in that list; wrong or missing VITE_API_BASE_URL; or HTTPS site calling an HTTP API. Check DevTools → Network for auth/providers.',
       )
     }
     throw e
@@ -62,7 +62,7 @@ export async function fetchAuthProviders(): Promise<AuthProviders> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
   authProvidersInflight = (async () => {
-    const r = await fetch(`${base}/auth/providers`)
+    const r = await fetchWithNetworkHint(`${base}/auth/providers`, {})
     if (!r.ok) throw new Error(`Auth providers failed: ${r.status}`)
     return (await r.json()) as AuthProviders
   })()
