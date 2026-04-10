@@ -74,6 +74,8 @@ export type JobStatusResponse = {
   progress?: number
   /** Seconds since pipeline start (from server clock). */
   pipeline_elapsed_sec?: number
+  /** Extra ETA added when the backend retries a Gemini pass. */
+  eta_extra_sec?: number
   /** ISO timestamp when the current `stage` began (new value when phase changes). */
   phase_started_at?: string
   /** Set at job creation when billing is enforced (`guest_free`, `guest_credit`, etc.). */

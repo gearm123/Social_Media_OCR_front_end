@@ -241,6 +241,12 @@ function processingOverlayHeadline(stage: string | undefined, status: string): s
   }
 }
 
+function loadingPrimaryFromJobStatus(j: JobStatusResponse): string {
+  const retryLabel = j.stage_label?.trim()
+  if (retryLabel && /retry/i.test(retryLabel)) return retryLabel
+  return processingOverlayHeadline(j.stage, j.status)
+}
+
 /**
  * Some browsers leave `dataTransfer.files` empty on drop (single file from certain sources);
  * `items` + `getAsFile()` is the reliable fallback.
@@ -442,8 +448,10 @@ function App() {
   /** Snapshot at Process click — shown ETA range matches mood (Hurry up vs Take your time). */
   const [processingMood, setProcessingMood] = useState<TranslationMood>('patient')
   const [processElapsedMs, setProcessElapsedMs] = useState(0)
+  const [serverProcessElapsedMs, setServerProcessElapsedMs] = useState(0)
   const [loadingPrimary, setLoadingPrimary] = useState<string | null>(null)
   const [pipelineProgress, setPipelineProgress] = useState(0)
+  const [pipelineEtaExtraMs, setPipelineEtaExtraMs] = useState(0)
   const [patienceIdx, setPatienceIdx] = useState(0)
   const [jobError, setJobError] = useState<string | null>(null)
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
@@ -833,7 +841,9 @@ function App() {
   useEffect(() => {
     if (!processing) {
       setProcessElapsedMs(0)
+      setServerProcessElapsedMs(0)
       setPipelineProgress(0)
+      setPipelineEtaExtraMs(0)
       return
     }
     const started = Date.now()
@@ -849,13 +859,19 @@ function App() {
     [processingMood, translationDifficulty],
   )
 
+  const effectiveProcessElapsedMs = Math.max(processElapsedMs, serverProcessElapsedMs)
+  const effectivePipelineEtaSec = useMemo<[number, number]>(() => {
+    const extraSec = Math.max(0, Math.round(pipelineEtaExtraMs / 1000))
+    return [pipelineEtaSec[0] + extraSec, pipelineEtaSec[1] + extraSec]
+  }, [pipelineEtaExtraMs, pipelineEtaSec])
+
   /** At least as full as elapsed/upper ETA (capped before done); server `progress` can move it faster. */
   const loadingBarProgress = useMemo(() => {
     if (!processing) return 0
-    const hi = pipelineEtaSec[1]
-    const timeBased = Math.min(0.92, processElapsedMs / (Math.max(1, hi) * 1000))
+    const hi = effectivePipelineEtaSec[1]
+    const timeBased = Math.min(0.92, effectiveProcessElapsedMs / (Math.max(1, hi) * 1000))
     return Math.min(1, Math.max(pipelineProgress, timeBased))
-  }, [processing, pipelineEtaSec, processElapsedMs, pipelineProgress])
+  }, [processing, effectivePipelineEtaSec, effectiveProcessElapsedMs, pipelineProgress])
 
   const apiUrlConfigured = Boolean(apiBase())
 
@@ -989,7 +1005,14 @@ function App() {
         if (typeof j.progress === 'number' && Number.isFinite(j.progress)) {
           setPipelineProgress(Math.max(0, Math.min(1, j.progress)))
         }
-        setLoadingPrimary(processingOverlayHeadline(j.stage, j.status))
+        if (typeof j.pipeline_elapsed_sec === 'number' && Number.isFinite(j.pipeline_elapsed_sec)) {
+          const elapsedMs = Math.round(j.pipeline_elapsed_sec * 1000)
+          setServerProcessElapsedMs((prev) => Math.max(prev, elapsedMs))
+        }
+        if (typeof j.eta_extra_sec === 'number' && Number.isFinite(j.eta_extra_sec)) {
+          setPipelineEtaExtraMs(Math.max(0, Math.round(j.eta_extra_sec * 1000)))
+        }
+        setLoadingPrimary(loadingPrimaryFromJobStatus(j))
       }
 
       // POST /jobs already returns queued status + stage_label; apply before first poll.
@@ -1659,14 +1682,14 @@ function App() {
             <p id="process-loading-progress-desc" className="process-loading__timers" aria-live="polite">
               <span className="process-loading__timer-row">
                 Total time{' '}
-                <span className="process-loading__timer-value">{formatProcessElapsed(processElapsedMs)}</span>
+                <span className="process-loading__timer-value">{formatProcessElapsed(effectiveProcessElapsedMs)}</span>
               </span>
               <span className="process-loading__timer-sep" aria-hidden>
                 ·
               </span>
               <span className="process-loading__timer-row">
                 <span className="process-loading__timer-value">
-                  {formatEstimatedTotalTimeFromRange(pipelineEtaSec)}
+                  {formatEstimatedTotalTimeFromRange(effectivePipelineEtaSec)}
                 </span>
               </span>
             </p>
