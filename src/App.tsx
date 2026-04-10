@@ -208,7 +208,7 @@ function pipelineEtaSecondsRange(
   difficulty: TranslationDifficulty,
 ): [number, number] {
   const sec = mood === 'hurry' ? PIPELINE_ETA_SEC_HURRY[difficulty] : PIPELINE_ETA_SEC_PATIENT[difficulty]
-  return [sec, sec]
+  return [Math.max(1, sec - 30), sec + 30]
 }
 
 function formatEstimatedTotalTimeFromRange([lo, hi]: [number, number]): string {
@@ -245,9 +245,11 @@ function processingOverlayHeadline(stage: string | undefined, status: string): s
 }
 
 function loadingPrimaryFromJobStatus(j: JobStatusResponse): string {
-  const retryLabel = j.stage_label?.trim()
-  if (retryLabel && /retry/i.test(retryLabel)) return retryLabel
   return processingOverlayHeadline(j.stage, j.status)
+}
+
+function isServersOverloadedMessage(msg: string): boolean {
+  return msg.includes('SERVERS_OVERLOADED:')
 }
 
 /**
@@ -1107,7 +1109,12 @@ function App() {
       } else {
         const msg = e instanceof Error ? e.message : String(e)
         console.error('[Process]', e)
-        setJobError(msg)
+        if (isServersOverloadedMessage(msg)) {
+          setJobError(null)
+          setOverloadNoticeOpen(true)
+        } else {
+          setJobError(msg)
+        }
         setLoadingPrimary(null)
       }
     } finally {
