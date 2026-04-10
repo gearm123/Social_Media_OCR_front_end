@@ -186,18 +186,33 @@ function formatProcessElapsed(ms: number): string {
 }
 
 /**
- * Expected total time range shown while processing (seconds), by mood — kept intentionally narrow in the UI.
- * Hurry up: 1:10–2:00 · Take your time: 2:30–3:30.
+ * Rough average expected runtime (seconds) for the loading bar, by mode and language difficulty.
+ * Take your time: 55s / 1m20s / 1m45s · Hurry up: 32s / 50s / 70s (d3 not in original spec — adjust if you measure).
  */
-function moodEtaSecondsRange(mood: TranslationMood): [number, number] {
-  return mood === 'hurry' ? [70, 120] : [150, 210]
+const PIPELINE_ETA_SEC_PATIENT: Record<TranslationDifficulty, number> = {
+  1: 55,
+  2: 80,
+  3: 105,
+}
+const PIPELINE_ETA_SEC_HURRY: Record<TranslationDifficulty, number> = {
+  1: 32,
+  2: 50,
+  3: 70,
+}
+
+function pipelineEtaSecondsRange(
+  mood: TranslationMood,
+  difficulty: TranslationDifficulty,
+): [number, number] {
+  const sec = mood === 'hurry' ? PIPELINE_ETA_SEC_HURRY[difficulty] : PIPELINE_ETA_SEC_PATIENT[difficulty]
+  return [sec, sec]
 }
 
 function formatEstimatedTotalTimeFromRange([lo, hi]: [number, number]): string {
   if (lo === hi) {
-    return `Est. total ~${formatProcessElapsed(lo * 1000)} min`
+    return `Est. total ~${formatProcessElapsed(lo * 1000)}`
   }
-  return `Est. total ~${formatProcessElapsed(lo * 1000)}–${formatProcessElapsed(hi * 1000)} min`
+  return `Est. total ~${formatProcessElapsed(lo * 1000)}–${formatProcessElapsed(hi * 1000)}`
 }
 
 /** Short titles for the pipeline overlay (ignore verbose server ``stage_label``). */
@@ -803,7 +818,10 @@ function App() {
     return () => clearInterval(id)
   }, [processing])
 
-  const pipelineEtaSec = useMemo(() => moodEtaSecondsRange(processingMood), [processingMood])
+  const pipelineEtaSec = useMemo(
+    () => pipelineEtaSecondsRange(processingMood, translationDifficulty),
+    [processingMood, translationDifficulty],
+  )
 
   /** At least as full as elapsed/upper ETA (capped before done); server `progress` can move it faster. */
   const loadingBarProgress = useMemo(() => {
