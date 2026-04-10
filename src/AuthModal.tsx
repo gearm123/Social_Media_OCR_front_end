@@ -158,6 +158,11 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
       setOauthErr(null)
       setSessionHint(null)
       setFbSdkErr(null)
+      const cached = getCachedAuthProviders()
+      if (cached) {
+        setProviders(cached)
+        setProvidersErr(null)
+      }
     }
   }, [open, initialTab])
 

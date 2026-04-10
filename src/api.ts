@@ -33,6 +33,29 @@ function createJobTimeoutMs(): number {
   return 600_000
 }
 
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** True when the browser failed before an HTTP response (cold API, flaky TLS, ad blockers, etc.). */
+function isTransientJobNetworkFailure(e: unknown, userAbortSignal?: AbortSignal): boolean {
+  if (userAbortSignal?.aborted) return false
+  if (e instanceof DOMException && e.name === 'AbortError') return false
+  if (e instanceof TypeError) {
+    const m = String(e.message ?? e).toLowerCase()
+    return (
+      m.includes('fetch') ||
+      m.includes('network') ||
+      m.includes('load failed') ||
+      m.includes('networkerror') ||
+      m.includes('failed to load')
+    )
+  }
+  return false
+}
+
+const CREATE_JOB_NETWORK_ATTEMPTS = 4
+
 export type JobStatusResponse = {
   job_id: string
   status: string
@@ -74,13 +97,7 @@ export type CreateJobOptions = {
   signal?: AbortSignal
 }
 
-export async function createJob(
-  files: File[],
-  options?: CreateJobOptions,
-): Promise<JobStatusResponse> {
-  const base = apiBase()
-  if (!base) throw new Error('VITE_API_BASE_URL is not set')
-
+function buildCreateJobFormData(files: File[], options?: CreateJobOptions): FormData {
   const fd = new FormData()
   for (const f of files) {
     fd.append('files', f)
@@ -100,45 +117,65 @@ export async function createJob(
   if (options?.hurryUp === true) {
     fd.append('hurry_up', '1')
   }
+  return fd
+}
 
-  const controller = new AbortController()
+export async function createJob(
+  files: File[],
+  options?: CreateJobOptions,
+): Promise<JobStatusResponse> {
+  const base = apiBase()
+  if (!base) throw new Error('VITE_API_BASE_URL is not set')
+
   const timeoutMs = createJobTimeoutMs()
-  const tid = setTimeout(() => controller.abort(), timeoutMs)
   const uploadSignal = options?.signal
-  const combinedSignal =
-    uploadSignal != null ? AbortSignal.any([controller.signal, uploadSignal]) : controller.signal
-  let r: Response
-  try {
-    r = await fetch(`${base}/jobs`, {
-      method: 'POST',
-      body: fd,
-      signal: combinedSignal,
-      headers: jobRequestHeaders(),
-    })
-  } catch (e) {
-    if (e instanceof DOMException && e.name === 'AbortError') {
-      if (uploadSignal?.aborted) {
-        throw e
-      }
-      throw new Error(
-        `Upload / create job timed out after ${timeoutMs / 1000}s (large images or a slow network need more time — set VITE_CREATE_JOB_TIMEOUT_MS on the build, e.g. 900000 for 15 minutes).`,
-      )
-    }
-    if (e instanceof TypeError && String(e.message).toLowerCase().includes('fetch')) {
-      throw new Error(
-        'Network error (could not reach the API). If this site uses HTTPS, the API URL must also be HTTPS. Confirm VITE_API_BASE_URL on Netlify and redeploy.',
-      )
-    }
-    throw e
-  } finally {
-    clearTimeout(tid)
-  }
+  let lastErr: unknown
 
-  if (!r.ok) {
-    const t = await r.text()
-    throw new Error(`Create job failed: ${r.status} ${t}`)
+  for (let attempt = 0; attempt < CREATE_JOB_NETWORK_ATTEMPTS; attempt++) {
+    const fd = buildCreateJobFormData(files, options)
+    const controller = new AbortController()
+    const tid = setTimeout(() => controller.abort(), timeoutMs)
+    const combinedSignal =
+      uploadSignal != null ? AbortSignal.any([controller.signal, uploadSignal]) : controller.signal
+    try {
+      const r = await fetch(`${base}/jobs`, {
+        method: 'POST',
+        body: fd,
+        signal: combinedSignal,
+        headers: jobRequestHeaders(),
+      })
+      clearTimeout(tid)
+      if (!r.ok) {
+        const t = await r.text()
+        throw new Error(`Create job failed: ${r.status} ${t}`)
+      }
+      return r.json() as Promise<JobStatusResponse>
+    } catch (e) {
+      clearTimeout(tid)
+      lastErr = e
+      const transient =
+        attempt < CREATE_JOB_NETWORK_ATTEMPTS - 1 && isTransientJobNetworkFailure(e, uploadSignal)
+      if (transient) {
+        await sleepMs(450 + attempt * 700)
+        continue
+      }
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        if (uploadSignal?.aborted) {
+          throw e
+        }
+        throw new Error(
+          `Upload / create job timed out after ${timeoutMs / 1000}s (large images or a slow network need more time — set VITE_CREATE_JOB_TIMEOUT_MS on the build, e.g. 900000 for 15 minutes).`,
+        )
+      }
+      if (e instanceof TypeError && isTransientJobNetworkFailure(e, uploadSignal)) {
+        throw new Error(
+          'Network error (could not reach the API after several tries). If this site uses HTTPS, the API URL must also be HTTPS. The API may be cold-starting — wait a few seconds and try again. Confirm VITE_API_BASE_URL on Netlify and CORS_ORIGINS on the API.',
+        )
+      }
+      throw e
+    }
   }
-  return r.json() as Promise<JobStatusResponse>
+  throw lastErr
 }
 
 export async function getJob(
@@ -156,10 +193,25 @@ export async function getJob(
       : timeoutController.signal
   let r: Response
   try {
-    r = await fetch(`${base}/jobs/${encodeURIComponent(jobId)}`, {
-      signal: combinedSignal,
-      headers: jobRequestHeaders(),
-    })
+    try {
+      r = await fetch(`${base}/jobs/${encodeURIComponent(jobId)}`, {
+        signal: combinedSignal,
+        headers: jobRequestHeaders(),
+      })
+    } catch (firstErr) {
+      if (userSignal?.aborted) {
+        throw firstErr
+      }
+      if (isTransientJobNetworkFailure(firstErr, userSignal)) {
+        await sleepMs(500)
+        r = await fetch(`${base}/jobs/${encodeURIComponent(jobId)}`, {
+          signal: combinedSignal,
+          headers: jobRequestHeaders(),
+        })
+      } else {
+        throw firstErr
+      }
+    }
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
       if (userSignal?.aborted) {
@@ -233,29 +285,37 @@ export async function fetchArtifact(path: string, options?: { signal?: AbortSign
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
   const url = path.startsWith('http') ? path : `${base}${path}`
-  const timeoutController = new AbortController()
-  const tid = setTimeout(() => timeoutController.abort(), 120_000)
   const userSignal = options?.signal
-  const combinedSignal =
-    userSignal != null
-      ? AbortSignal.any([timeoutController.signal, userSignal])
-      : timeoutController.signal
-  try {
-    const r = await fetch(url, { signal: combinedSignal, headers: jobRequestHeaders() })
-    if (!r.ok) {
-      const t = await r.text()
-      throw new Error(`Artifact fetch failed: ${r.status} ${t}`)
-    }
-    return r.blob()
-  } catch (e) {
-    if (e instanceof DOMException && e.name === 'AbortError') {
-      if (userSignal?.aborted) {
-        throw e
+  const ARTIFACT_TIMEOUT_MS = 120_000
+  const ARTIFACT_ATTEMPTS = 3
+
+  for (let attempt = 0; attempt < ARTIFACT_ATTEMPTS; attempt++) {
+    const timeoutController = new AbortController()
+    const tid = setTimeout(() => timeoutController.abort(), ARTIFACT_TIMEOUT_MS)
+    const combinedSignal =
+      userSignal != null
+        ? AbortSignal.any([timeoutController.signal, userSignal])
+        : timeoutController.signal
+    try {
+      const r = await fetch(url, { signal: combinedSignal, headers: jobRequestHeaders() })
+      clearTimeout(tid)
+      if (!r.ok) {
+        const t = await r.text()
+        throw new Error(`Artifact fetch failed: ${r.status} ${t}`)
       }
-      throw new Error('Downloading the result timed out.')
+      return await r.blob()
+    } catch (e) {
+      clearTimeout(tid)
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        if (userSignal?.aborted) throw e
+        throw new Error('Downloading the result timed out.')
+      }
+      if (isTransientJobNetworkFailure(e, userSignal) && attempt < ARTIFACT_ATTEMPTS - 1) {
+        await sleepMs(600 + attempt * 800)
+        continue
+      }
+      throw e
     }
-    throw e
-  } finally {
-    clearTimeout(tid)
   }
+  throw new Error('Artifact download failed after several attempts.')
 }

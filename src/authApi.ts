@@ -20,18 +20,14 @@ export function invalidateAuthProvidersCache(): void {
   authProvidersInflight = null
 }
 
-/** Start loading auth providers as early as possible (e.g. on app mount). Retries a few times for cold API. */
+/**
+ * Warm `/auth/providers` as early as possible. `fetchAuthProviders` already retries transient
+ * network failures; one fire-and-forget call is enough (no staggered outer loop).
+ */
 export function prefetchAuthProviders(): void {
-  void (async () => {
-    for (let i = 0; i < 3; i++) {
-      try {
-        await fetchAuthProviders()
-        return
-      } catch {
-        if (i < 2) await delay(700 + i * 550)
-      }
-    }
-  })()
+  void fetchAuthProviders().catch(() => {
+    /* Sign-in modal will retry; avoid duplicate staggered timers here */
+  })
 }
 
 function isTransientFetchFailure(err: unknown): boolean {
@@ -108,12 +104,13 @@ async function fetchWithNetworkHintRetry(
   init: RequestInit,
   requestLabel: string,
   extraAttempts: number,
+  timeoutMs: number = AUTH_FETCH_TIMEOUT_MS,
 ): Promise<Response> {
   let last: unknown
   const attempts = Math.max(0, extraAttempts)
   for (let i = 0; i <= attempts; i++) {
     try {
-      return await fetchWithNetworkHint(url, init, requestLabel)
+      return await fetchWithNetworkHint(url, init, requestLabel, timeoutMs)
     } catch (e) {
       last = e
       if (!isTransientFetchFailure(e) || i === attempts) throw e
@@ -151,10 +148,11 @@ export async function fetchAuthProviders(): Promise<AuthProviders> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
   authProvidersInflight = (async () => {
-    const r = await fetchWithNetworkHint(
+    const r = await fetchWithNetworkHintRetry(
       `${base}/auth/providers`,
       {},
       'GET /auth/providers',
+      3,
       AUTH_PROVIDERS_TIMEOUT_MS,
     )
     if (!r.ok) throw new Error(`Auth providers failed: ${r.status}`)

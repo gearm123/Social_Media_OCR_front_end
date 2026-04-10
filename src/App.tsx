@@ -450,6 +450,8 @@ function App() {
   const [resultExpanded, setResultExpanded] = useState(false)
   const [previewLightbox, setPreviewLightbox] = useState<PreviewLightbox | null>(null)
   const [authUser, setAuthUser] = useState<UserMe | null>(null)
+  /** True while we have a stored JWT and have not finished validating it with `GET /auth/me`. */
+  const [authBootstrapping, setAuthBootstrapping] = useState(() => Boolean(getAccessToken()))
   const [authModalOpen, setAuthModalOpen] = useState(false)
   const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup'>('signin')
   const [billingTick, setBillingTick] = useState(0)
@@ -516,7 +518,27 @@ function App() {
   }, [])
 
   useEffect(() => {
+    let cancelled = false
+    if (!getAccessToken()) {
+      setAuthBootstrapping(false)
+      void refreshAuth().catch(() => {
+        /* guest billing sync is optional */
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+    setAuthBootstrapping(true)
     void refreshAuth()
+      .catch(() => {
+        /* `refreshAuth` rethrows after updating state */
+      })
+      .finally(() => {
+        if (!cancelled) setAuthBootstrapping(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [refreshAuth])
 
   useEffect(() => {
@@ -1156,6 +1178,7 @@ function App() {
                     onClick={() => {
                       clearSession()
                       setAuthUser(null)
+                      setAuthBootstrapping(false)
                       if (apiBase()) {
                         void syncGuestBillingFromServer().then(() => setBillingTick((t) => t + 1))
                       }
@@ -1164,6 +1187,10 @@ function App() {
                     Sign out
                   </button>
                 </>
+              ) : authBootstrapping ? (
+                <span className="app-auth-bar__muted" aria-live="polite">
+                  Signing you in…
+                </span>
               ) : (
                 <>
                   <button
