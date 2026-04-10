@@ -208,28 +208,19 @@ function pipelineEtaSecondsRange(
   difficulty: TranslationDifficulty,
 ): [number, number] {
   const sec = mood === 'hurry' ? PIPELINE_ETA_SEC_HURRY[difficulty] : PIPELINE_ETA_SEC_PATIENT[difficulty]
-  return [sec, sec]
+  return [Math.max(1, sec - 30), sec + 30]
 }
 
 /**
- * Show a mathematically stable total-time estimate:
- * actual elapsed so far + baseline remaining work for the current progress.
- * This keeps retries from exploding the ETA after a stage finally succeeds.
+ * Keep the total ETA stable during normal execution and only step it upward when
+ * the backend reports extra penalty time for a retried Gemini attempt.
  */
-function effectivePipelineEtaRange(
-  baseTotalSec: number,
-  progress: number,
-  elapsedMs: number,
+function addEtaPenaltyToRange(
+  baseRange: [number, number],
+  extraMs: number,
 ): [number, number] {
-  const safeBaseSec = Math.max(1, Math.round(baseTotalSec))
-  const safeProgress = Math.max(0, Math.min(1, progress))
-  const elapsedSec = Math.max(0, Math.round(elapsedMs / 1000))
-  if (safeProgress <= 0) {
-    return [Math.max(1, safeBaseSec - 30), safeBaseSec + 30]
-  }
-  const remainingBaseSec = Math.max(0, Math.round(safeBaseSec * (1 - safeProgress)))
-  const totalSec = Math.max(safeBaseSec, elapsedSec + remainingBaseSec)
-  return [Math.max(1, totalSec - 30), totalSec + 30]
+  const extraSec = Math.max(0, Math.round(extraMs / 1000))
+  return [Math.max(1, baseRange[0] + extraSec), baseRange[1] + extraSec]
 }
 
 function formatEstimatedTotalTimeFromRange([lo, hi]: [number, number]): string {
@@ -478,6 +469,7 @@ function App() {
   const [serverProcessElapsedMs, setServerProcessElapsedMs] = useState(0)
   const [loadingPrimary, setLoadingPrimary] = useState<string | null>(null)
   const [pipelineProgress, setPipelineProgress] = useState(0)
+  const [pipelineEtaExtraMs, setPipelineEtaExtraMs] = useState(0)
   const [overloadNoticeOpen, setOverloadNoticeOpen] = useState(false)
   const [patienceIdx, setPatienceIdx] = useState(0)
   const [jobError, setJobError] = useState<string | null>(null)
@@ -871,6 +863,7 @@ function App() {
       setProcessElapsedMs(0)
       setServerProcessElapsedMs(0)
       setPipelineProgress(0)
+      setPipelineEtaExtraMs(0)
       return
     }
     const started = Date.now()
@@ -888,16 +881,16 @@ function App() {
 
   const effectiveProcessElapsedMs = Math.max(processElapsedMs, serverProcessElapsedMs)
   const effectivePipelineEtaSec = useMemo<[number, number]>(() => {
-    return effectivePipelineEtaRange(pipelineEtaSec[0], pipelineProgress, effectiveProcessElapsedMs)
-  }, [effectiveProcessElapsedMs, pipelineEtaSec, pipelineProgress])
+    return addEtaPenaltyToRange(pipelineEtaSec, pipelineEtaExtraMs)
+  }, [pipelineEtaExtraMs, pipelineEtaSec])
 
   /** At least as full as elapsed/upper ETA (capped before done); server `progress` can move it faster. */
   const loadingBarProgress = useMemo(() => {
     if (!processing) return 0
-    const hi = pipelineEtaSec[1]
+    const hi = effectivePipelineEtaSec[1]
     const timeBased = Math.min(0.92, effectiveProcessElapsedMs / (Math.max(1, hi) * 1000))
     return Math.min(1, Math.max(pipelineProgress, timeBased))
-  }, [processing, pipelineEtaSec, effectiveProcessElapsedMs, pipelineProgress])
+  }, [processing, effectivePipelineEtaSec, effectiveProcessElapsedMs, pipelineProgress])
 
   const apiUrlConfigured = Boolean(apiBase())
 
@@ -1043,6 +1036,9 @@ function App() {
         if (typeof j.pipeline_elapsed_sec === 'number' && Number.isFinite(j.pipeline_elapsed_sec)) {
           const elapsedMs = Math.round(j.pipeline_elapsed_sec * 1000)
           setServerProcessElapsedMs((prev) => Math.max(prev, elapsedMs))
+        }
+        if (typeof j.eta_extra_sec === 'number' && Number.isFinite(j.eta_extra_sec)) {
+          setPipelineEtaExtraMs(Math.max(0, Math.round(j.eta_extra_sec * 1000)))
         }
         setLoadingPrimary(loadingPrimaryFromJobStatus(j))
       }
