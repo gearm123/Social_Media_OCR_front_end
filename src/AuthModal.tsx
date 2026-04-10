@@ -4,7 +4,7 @@ import {
   authOAuthFacebook,
   authOAuthGoogle,
   authRegister,
-  errorMessageFromUnknown,
+
   fetchAuthProviders,
   getCachedAuthProviders,
   invalidateAuthProvidersCache,
@@ -24,6 +24,24 @@ type Props = {
 /** Allow several cold-start `/auth/me` attempts (see `fetchMe` retries + ~26s fetch timeout each). */
 const PROFILE_SYNC_TIMEOUT_MS = 90_000
 const PROFILE_SYNC_TIMEOUT_MARKER = '__translate_chat_profile_sync_timeout__'
+
+/**
+ * Convert a raw network/API error into a user-facing message.
+ * Technical hints (CORS, Render, Netlify config) are for developers, not end users.
+ */
+function userFacingAuthError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e)
+  if (
+    msg.includes('Could not reach the API') ||
+    msg.includes('Request timed out') ||
+    msg.includes('NetworkError') ||
+    msg.includes('Failed to fetch') ||
+    msg.includes('Load failed')
+  ) {
+    return 'Could not reach the server — it may be waking up. Please try again in a moment.'
+  }
+  return msg
+}
 
 /**
  * After a token is saved, `onSuccess` runs `fetchMe` + billing sync — that can hang on a cold API.
@@ -258,7 +276,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
             ),
         )
       } catch (e) {
-        setOauthErr(errorMessageFromUnknown(e))
+        setOauthErr(userFacingAuthError(e))
       } finally {
         setBusy(false)
       }
@@ -297,7 +315,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
       })
       client.requestAccessToken()
     } catch (e) {
-      setOauthErr(errorMessageFromUnknown(e) || 'Could not load Google sign-in')
+      setOauthErr(userFacingAuthError(e) || 'Could not load Google sign-in')
     }
   }
 
@@ -352,7 +370,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
           ),
       )
     } catch (err) {
-      setFormErr(errorMessageFromUnknown(err))
+      setFormErr(userFacingAuthError(err))
     } finally {
       setBusy(false)
     }
@@ -374,7 +392,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
           ),
       )
     } catch (err) {
-      setFormErr(errorMessageFromUnknown(err))
+      setFormErr(userFacingAuthError(err))
     } finally {
       setBusy(false)
     }

@@ -55,6 +55,14 @@ function isTransientJobNetworkFailure(e: unknown, userAbortSignal?: AbortSignal)
 }
 
 const CREATE_JOB_NETWORK_ATTEMPTS = 4
+const MAX_CONSECUTIVE_POLL_FAILURES = 12
+
+function isRecoverableJobPollingError(e: unknown, userAbortSignal?: AbortSignal): boolean {
+  if (isTransientJobNetworkFailure(e, userAbortSignal)) return true
+  if (!(e instanceof Error)) return false
+  const msg = e.message.toLowerCase()
+  return msg.includes('polling timed out') || msg.includes('could not reach the api')
+}
 
 export type JobStatusResponse = {
   job_id: string
@@ -269,11 +277,24 @@ export async function waitForJob(
   options?: { signal?: AbortSignal },
 ): Promise<JobStatusResponse> {
   const sig = options?.signal
+  let consecutivePollFailures = 0
   for (let i = 0; i < MAX_POLLS; i++) {
-    const j = await getJob(jobId, { signal: sig })
-    onPoll?.(j)
-    if (j.status === 'completed' || j.status === 'failed' || j.status === 'cancelled') {
-      return j
+    try {
+      const j = await getJob(jobId, { signal: sig })
+      consecutivePollFailures = 0
+      onPoll?.(j)
+      if (j.status === 'completed' || j.status === 'failed' || j.status === 'cancelled') {
+        return j
+      }
+    } catch (e) {
+      if (sig?.aborted) throw e
+      if (!isRecoverableJobPollingError(e, sig) || consecutivePollFailures >= MAX_CONSECUTIVE_POLL_FAILURES) {
+        throw e
+      }
+      consecutivePollFailures += 1
+      const hidden = typeof document !== 'undefined' && document.visibilityState === 'hidden'
+      await delay(hidden ? 3_000 : 1_500, sig)
+      continue
     }
     await delay(POLL_MS, sig)
   }

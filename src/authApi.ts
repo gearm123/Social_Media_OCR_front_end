@@ -170,7 +170,7 @@ export async function fetchAuthProviders(): Promise<AuthProviders> {
 export async function authRegister(username: string, email: string, password: string): Promise<UserMe> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
-  const r = await fetchWithNetworkHint(
+  const r = await fetchWithNetworkHintRetry(
     `${base}/auth/register`,
     {
       method: 'POST',
@@ -178,6 +178,7 @@ export async function authRegister(username: string, email: string, password: st
       body: JSON.stringify({ username, email, password }),
     },
     'POST /auth/register',
+    3,
   )
   if (!r.ok) throw new Error(await readErrorDetail(r))
   return r.json() as Promise<UserMe>
@@ -186,7 +187,7 @@ export async function authRegister(username: string, email: string, password: st
 export async function authLogin(email: string, password: string): Promise<string> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
-  const r = await fetchWithNetworkHint(
+  const r = await fetchWithNetworkHintRetry(
     `${base}/auth/login`,
     {
       method: 'POST',
@@ -194,6 +195,7 @@ export async function authLogin(email: string, password: string): Promise<string
       body: JSON.stringify({ email, password }),
     },
     'POST /auth/login',
+    3,
   )
   if (!r.ok) throw new Error(await readErrorDetail(r))
   const j = (await r.json()) as { access_token: string }
