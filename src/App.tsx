@@ -465,6 +465,8 @@ function App() {
   const [processing, setProcessing] = useState(false)
   /** Snapshot at Process click — shown ETA range matches mood (Hurry up vs Take your time). */
   const [processingMood, setProcessingMood] = useState<TranslationMood>('patient')
+  /** Snapshot at Process click so ETA does not jump if the live difficulty control changes mid-run. */
+  const [processingDifficulty, setProcessingDifficulty] = useState<TranslationDifficulty>(3)
   const [processElapsedMs, setProcessElapsedMs] = useState(0)
   const [serverProcessElapsedMs, setServerProcessElapsedMs] = useState(0)
   const [loadingPrimary, setLoadingPrimary] = useState<string | null>(null)
@@ -875,8 +877,8 @@ function App() {
   }, [processing])
 
   const pipelineEtaSec = useMemo(
-    () => pipelineEtaSecondsRange(processingMood, translationDifficulty),
-    [processingMood, translationDifficulty],
+    () => pipelineEtaSecondsRange(processingMood, processingDifficulty),
+    [processingDifficulty, processingMood],
   )
 
   const effectiveProcessElapsedMs = Math.max(processElapsedMs, serverProcessElapsedMs)
@@ -1002,6 +1004,7 @@ function App() {
     activeJobIdRef.current = null
     uploadAbortRef.current = new AbortController()
     setProcessingMood(translationMood)
+    setProcessingDifficulty(translationDifficulty)
     setProcessing(true)
     setResultExpanded(false)
     setPreviewLightbox(null)
@@ -1479,7 +1482,7 @@ function App() {
                             >
                               Choose language difficulty
                             </span>
-                            <fieldset className="difficulty-bar">
+                            <fieldset className="difficulty-bar" disabled={processing}>
                               <legend className="sr-only">Translation difficulty</legend>
                               {([1, 2, 3] as const).map((level) => (
                                 <label

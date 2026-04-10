@@ -324,6 +324,11 @@ export async function fetchArtifact(path: string, options?: { signal?: AbortSign
       clearTimeout(tid)
       if (!r.ok) {
         const t = await r.text()
+        const artifactMissingTemporarily = r.status === 404 && t.includes('Artifact file is missing')
+        if (artifactMissingTemporarily && attempt < ARTIFACT_ATTEMPTS - 1) {
+          await sleepMs(1_000 + attempt * 1_500)
+          continue
+        }
         throw new Error(`Artifact fetch failed: ${r.status} ${t}`)
       }
       return await r.blob()
