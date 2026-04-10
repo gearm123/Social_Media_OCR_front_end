@@ -200,6 +200,9 @@ const PIPELINE_ETA_SEC_HURRY: Record<TranslationDifficulty, number> = {
   3: 70,
 }
 
+/** Allow one full Pass 1 restart plus some finalization buffer before auto-stopping. */
+const OVERLOADED_RUN_ABORT_MS = 285_000
+
 function pipelineEtaSecondsRange(
   mood: TranslationMood,
   difficulty: TranslationDifficulty,
@@ -438,6 +441,7 @@ function App() {
   const activeJobIdRef = useRef<string | null>(null)
   const uploadAbortRef = useRef<AbortController | null>(null)
   const executionCancelledRef = useRef(false)
+  const overloadAbortTriggeredRef = useRef(false)
   /** Captured when Process starts so Back restores hints exactly as before that run. */
   const preProcessSnapshotRef = useRef<Record<string, ImageBubbleHint> | null>(null)
 
@@ -452,6 +456,7 @@ function App() {
   const [loadingPrimary, setLoadingPrimary] = useState<string | null>(null)
   const [pipelineProgress, setPipelineProgress] = useState(0)
   const [pipelineEtaExtraMs, setPipelineEtaExtraMs] = useState(0)
+  const [overloadNoticeOpen, setOverloadNoticeOpen] = useState(false)
   const [patienceIdx, setPatienceIdx] = useState(0)
   const [jobError, setJobError] = useState<string | null>(null)
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null)
@@ -840,6 +845,7 @@ function App() {
 
   useEffect(() => {
     if (!processing) {
+      overloadAbortTriggeredRef.current = false
       setProcessElapsedMs(0)
       setServerProcessElapsedMs(0)
       setPipelineProgress(0)
@@ -953,6 +959,14 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!processing || overloadAbortTriggeredRef.current) return
+    if (effectiveProcessElapsedMs < OVERLOADED_RUN_ABORT_MS) return
+    overloadAbortTriggeredRef.current = true
+    setOverloadNoticeOpen(true)
+    cancelExecution()
+  }, [cancelExecution, effectiveProcessElapsedMs, processing])
+
   const runProcess = async () => {
     if (files.length === 0) return
     const snap = readBillingSnapshot()
@@ -971,6 +985,7 @@ function App() {
       return
     }
     executionCancelledRef.current = false
+    overloadAbortTriggeredRef.current = false
     activeJobIdRef.current = null
     uploadAbortRef.current = new AbortController()
     setProcessingMood(translationMood)
@@ -1706,6 +1721,38 @@ function App() {
               onClick={cancelExecution}
             >
               Cancel execution
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {overloadNoticeOpen ? (
+        <div
+          className="process-overload-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="process-overload-title"
+        >
+          <button
+            type="button"
+            className="process-overload-modal__backdrop"
+            aria-label="Close overload notice"
+            onClick={() => setOverloadNoticeOpen(false)}
+          />
+          <div className="process-overload-modal__panel">
+            <h2 id="process-overload-title" className="process-overload-modal__title">
+              Servers are overloaded
+            </h2>
+            <p className="process-overload-modal__body">
+              We stopped this run because it took too long under heavy load. Please try again later. This run did
+              not count against your allowance.
+            </p>
+            <button
+              type="button"
+              className="btn primary btn--compact"
+              onClick={() => setOverloadNoticeOpen(false)}
+            >
+              Close
             </button>
           </div>
         </div>
