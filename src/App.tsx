@@ -500,21 +500,23 @@ function App() {
       }
       return Promise.resolve()
     }
-    return fetchMe()
-      .then((u) => {
-        setAuthUser(u)
-        return syncBillingFromServer().catch(() => {
-          /* billing endpoint optional; stay signed in */
-        })
+    return (async () => {
+      const u = await fetchMe()
+      // Sync billing BEFORE setting authUser so both land in the same React render.
+      // Without this, the UI shows "signed in + guest billing" for one render cycle,
+      // which makes privileged accounts appear as limited until a refresh.
+      await syncBillingFromServer().catch(() => {
+        /* billing endpoint optional; stay signed in */
       })
-      .then(() => setBillingTick((x) => x + 1))
-      .catch((e) => {
-        setAuthUser(null)
-        if (e instanceof AuthInvalidError) {
-          clearSession()
-        }
-        throw e instanceof Error ? e : new Error(String(e))
-      })
+      setAuthUser(u)
+      setBillingTick((x) => x + 1)
+    })().catch((e) => {
+      setAuthUser(null)
+      if (e instanceof AuthInvalidError) {
+        clearSession()
+      }
+      throw e instanceof Error ? e : new Error(String(e))
+    })
   }, [])
 
   useEffect(() => {
