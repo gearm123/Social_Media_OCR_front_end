@@ -20,9 +20,18 @@ export function invalidateAuthProvidersCache(): void {
   authProvidersInflight = null
 }
 
-/** Start loading auth providers as early as possible (e.g. on app mount). Errors are ignored. */
+/** Start loading auth providers as early as possible (e.g. on app mount). Retries a few times for cold API. */
 export function prefetchAuthProviders(): void {
-  void fetchAuthProviders().catch(() => {})
+  void (async () => {
+    for (let i = 0; i < 3; i++) {
+      try {
+        await fetchAuthProviders()
+        return
+      } catch {
+        if (i < 2) await delay(700 + i * 550)
+      }
+    }
+  })()
 }
 
 function isUnreachableApiError(err: unknown): boolean {
@@ -40,21 +49,46 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/** Default cap so a hung request cannot leave the sign-in UI stuck on “Please wait…”. */
+const AUTH_FETCH_TIMEOUT_MS = 26_000
+/** Provider IDs load first; keep slightly shorter so OAuth buttons fail fast on cold API. */
+const AUTH_PROVIDERS_TIMEOUT_MS = 14_000
+
+function isAbortError(e: unknown): boolean {
+  return (
+    (e instanceof DOMException && e.name === 'AbortError') ||
+    (typeof e === 'object' &&
+      e !== null &&
+      'name' in e &&
+      (e as { name?: string }).name === 'AbortError')
+  )
+}
+
 /** Maps `fetch` network/CORS failures to a short hint (browser often reports only "Failed to fetch"). */
 async function fetchWithNetworkHint(
   url: string,
   init: RequestInit,
   requestLabel: string,
+  timeoutMs: number = AUTH_FETCH_TIMEOUT_MS,
 ): Promise<Response> {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
   try {
-    return await fetch(url, init)
+    return await fetch(url, { ...init, signal: ctrl.signal })
   } catch (e) {
+    if (isAbortError(e)) {
+      throw new Error(
+        `Request timed out (${requestLabel}). The API may be cold-starting — try again in a few seconds.`,
+      )
+    }
     if (e instanceof TypeError) {
       throw new Error(
         `Could not reach the API (${requestLabel}). Common causes: CORS — add this page’s exact origin to CORS_ORIGINS on Render (https://…, no trailing slash); Netlify **deploy preview** URLs need their own entry; wrong or missing VITE_API_BASE_URL; HTTPS page calling HTTP API; API cold start (retry below); or extensions blocking requests (some lists match “google” or “facebook” in the path). Check DevTools → Network for ${requestLabel}.`,
       )
     }
     throw e
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -81,7 +115,7 @@ async function fetchWithNetworkHintRetry(
 
 async function readErrorDetail(r: Response): Promise<string> {
   try {
-    const j = (await r.json()) as { detail?: unknown }
+    const j = (await r.json()) as { detail?: unknown; message?: unknown }
     const d = j.detail
     if (typeof d === 'string') return d
     if (Array.isArray(d)) {
@@ -89,6 +123,12 @@ async function readErrorDetail(r: Response): Promise<string> {
         .map((x: { msg?: string }) => (typeof x === 'object' && x && 'msg' in x ? String(x.msg) : JSON.stringify(x)))
         .join('; ')
     }
+    if (d && typeof d === 'object') {
+      const o = d as Record<string, unknown>
+      if (typeof o.msg === 'string') return o.msg
+      if (typeof o.message === 'string') return o.message
+    }
+    if (typeof j.message === 'string') return j.message
     return r.statusText
   } catch {
     return r.statusText
@@ -101,7 +141,12 @@ export async function fetchAuthProviders(): Promise<AuthProviders> {
   const base = apiBase()
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
   authProvidersInflight = (async () => {
-    const r = await fetchWithNetworkHint(`${base}/auth/providers`, {}, 'GET /auth/providers')
+    const r = await fetchWithNetworkHint(
+      `${base}/auth/providers`,
+      {},
+      'GET /auth/providers',
+      AUTH_PROVIDERS_TIMEOUT_MS,
+    )
     if (!r.ok) throw new Error(`Auth providers failed: ${r.status}`)
     return (await r.json()) as AuthProviders
   })()
@@ -237,5 +282,12 @@ export async function fetchMe(): Promise<UserMe> {
 
 export function persistSession(accessToken: string): void {
   setAccessToken(accessToken)
+}
+
+/** Safe message for `catch (e)` when the value may not be an Error (e.g. thrown strings). */
+export function errorMessageFromUnknown(e: unknown): string {
+  if (e instanceof Error) return e.message
+  if (typeof e === 'string') return e
+  return String(e)
 }
 

@@ -4,6 +4,7 @@ import {
   authOAuthFacebook,
   authOAuthGoogle,
   authRegister,
+  errorMessageFromUnknown,
   fetchAuthProviders,
   getCachedAuthProviders,
   invalidateAuthProvidersCache,
@@ -20,18 +21,57 @@ type Props = {
   initialTab?: Tab
 }
 
-function loadScript(src: string): Promise<void> {
+const PROFILE_SYNC_TIMEOUT_MS = 20_000
+const PROFILE_SYNC_TIMEOUT_MARKER = '__translate_chat_profile_sync_timeout__'
+
+/**
+ * After a token is saved, `onSuccess` runs `fetchMe` + billing sync — that can hang on a cold API.
+ * Never block closing the modal or clearing `busy` indefinitely.
+ */
+async function finishSessionAndClose(
+  onSuccess: () => void | Promise<void>,
+  onClose: () => void,
+  onSyncTimeout: () => void,
+): Promise<void> {
+  try {
+    await Promise.race([
+      Promise.resolve(onSuccess()),
+      new Promise<never>((_, rej) =>
+        setTimeout(() => rej(new Error(PROFILE_SYNC_TIMEOUT_MARKER)), PROFILE_SYNC_TIMEOUT_MS),
+      ),
+    ])
+    onClose()
+  } catch (e) {
+    if (e instanceof Error && e.message === PROFILE_SYNC_TIMEOUT_MARKER) {
+      onSyncTimeout()
+      // Keep the modal open so the hint is visible; token is already saved.
+      return
+    }
+    throw e
+  }
+}
+
+function loadScript(src: string, timeoutMs = 20_000): Promise<void> {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector(`script[src="${src}"]`)
     if (existing) {
       resolve()
       return
     }
+    const timer = window.setTimeout(() => {
+      reject(new Error('Sign-in script took too long to load. Check your network or try again.'))
+    }, timeoutMs)
     const s = document.createElement('script')
     s.src = src
     s.async = true
-    s.onload = () => resolve()
-    s.onerror = () => reject(new Error(`Failed to load script`))
+    s.onload = () => {
+      clearTimeout(timer)
+      resolve()
+    }
+    s.onerror = () => {
+      clearTimeout(timer)
+      reject(new Error(`Failed to load script`))
+    }
     document.head.appendChild(s)
   })
 }
@@ -86,6 +126,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
   const [busy, setBusy] = useState(false)
   const [formErr, setFormErr] = useState<string | null>(null)
   const [oauthErr, setOauthErr] = useState<string | null>(null)
+  const [sessionHint, setSessionHint] = useState<string | null>(null)
   const [fbReady, setFbReady] = useState(false)
   const [fbSdkErr, setFbSdkErr] = useState<string | null>(null)
   const fbInitAppIdRef = useRef<string | null>(null)
@@ -114,6 +155,7 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
       setTab(initialTab)
       setFormErr(null)
       setOauthErr(null)
+      setSessionHint(null)
       setFbSdkErr(null)
     }
   }, [open, initialTab])
@@ -196,14 +238,21 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
   const finishWithToken = useCallback(
     async (getToken: () => Promise<string>) => {
       setOauthErr(null)
+      setSessionHint(null)
       setBusy(true)
       try {
         const tok = await getToken()
         persistSession(tok)
-        await Promise.resolve(onSuccess())
-        onClose()
+        await finishSessionAndClose(
+          onSuccess,
+          onClose,
+          () =>
+            setSessionHint(
+              'Signed in, but loading your profile is slow. Refresh the page if your name does not appear.',
+            ),
+        )
       } catch (e) {
-        setOauthErr(e instanceof Error ? e.message : String(e))
+        setOauthErr(errorMessageFromUnknown(e))
       } finally {
         setBusy(false)
       }
@@ -241,8 +290,8 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
         },
       })
       client.requestAccessToken()
-    } catch {
-      setOauthErr('Could not load Google sign-in')
+    } catch (e) {
+      setOauthErr(errorMessageFromUnknown(e) || 'Could not load Google sign-in')
     }
   }
 
@@ -288,10 +337,16 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
       await authRegister(username.trim(), email.trim(), password)
       const tok = await authLogin(email.trim(), password)
       persistSession(tok)
-      await Promise.resolve(onSuccess())
-      onClose()
+      await finishSessionAndClose(
+        onSuccess,
+        onClose,
+        () =>
+          setSessionHint(
+            'Account created, but syncing is slow. Refresh the page if something looks out of date.',
+          ),
+      )
     } catch (err) {
-      setFormErr(err instanceof Error ? err.message : String(err))
+      setFormErr(errorMessageFromUnknown(err))
     } finally {
       setBusy(false)
     }
@@ -304,10 +359,16 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
     try {
       const tok = await authLogin(signinEmail.trim(), signinPassword)
       persistSession(tok)
-      await Promise.resolve(onSuccess())
-      onClose()
+      await finishSessionAndClose(
+        onSuccess,
+        onClose,
+        () =>
+          setSessionHint(
+            'Signed in, but loading your profile is slow. Refresh the page if your name does not appear.',
+          ),
+      )
     } catch (err) {
-      setFormErr(err instanceof Error ? err.message : String(err))
+      setFormErr(errorMessageFromUnknown(err))
     } finally {
       setBusy(false)
     }
@@ -381,6 +442,15 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
             Could not load provider config: {providersErr}{' '}
             <button type="button" className="auth-modal__retry-btn" onClick={retryProviders}>
               Retry
+            </button>
+          </p>
+        ) : null}
+
+        {sessionHint ? (
+          <p className="auth-modal__hint" role="status">
+            {sessionHint}{' '}
+            <button type="button" className="auth-modal__retry-btn" onClick={onClose}>
+              Close
             </button>
           </p>
         ) : null}
