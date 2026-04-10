@@ -21,7 +21,8 @@ type Props = {
   initialTab?: Tab
 }
 
-const PROFILE_SYNC_TIMEOUT_MS = 20_000
+/** Allow several cold-start `/auth/me` attempts (see `fetchMe` retries + ~26s fetch timeout each). */
+const PROFILE_SYNC_TIMEOUT_MS = 90_000
 const PROFILE_SYNC_TIMEOUT_MARKER = '__translate_chat_profile_sync_timeout__'
 
 /**

@@ -28,7 +28,7 @@ import {
   syncBillingFromServer,
   syncGuestBillingFromServer,
 } from './billingApi'
-import { fetchMe, type UserMe } from './authApi'
+import { AuthInvalidError, fetchMe, type UserMe } from './authApi'
 import { clearSession, getAccessToken } from './authStorage'
 import { fileKey } from './fileUtils'
 import { sortImageFilesByNameSequence } from './sortUploadedImages'
@@ -507,8 +507,10 @@ function App() {
       })
       .then(() => setBillingTick((x) => x + 1))
       .catch((e) => {
-        clearSession()
         setAuthUser(null)
+        if (e instanceof AuthInvalidError) {
+          clearSession()
+        }
         throw e instanceof Error ? e : new Error(String(e))
       })
   }, [])

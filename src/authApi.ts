@@ -34,8 +34,18 @@ export function prefetchAuthProviders(): void {
   })()
 }
 
-function isUnreachableApiError(err: unknown): boolean {
-  return err instanceof Error && err.message.includes('Could not reach the API')
+function isTransientFetchFailure(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  const m = err.message
+  return m.includes('Could not reach the API') || m.includes('Request timed out')
+}
+
+/** Only for 401 from `GET /auth/me` — client should drop the stored JWT. */
+export class AuthInvalidError extends Error {
+  override readonly name = 'AuthInvalidError'
+  constructor(message: string) {
+    super(message)
+  }
 }
 
 export type UserMe = {
@@ -106,7 +116,7 @@ async function fetchWithNetworkHintRetry(
       return await fetchWithNetworkHint(url, init, requestLabel)
     } catch (e) {
       last = e
-      if (!isUnreachableApiError(e) || i === attempts) throw e
+      if (!isTransientFetchFailure(e) || i === attempts) throw e
       await delay(650 + i * 400)
     }
   }
@@ -220,7 +230,7 @@ export async function authOAuthGoogle(creds: { id_token?: string; access_token?:
   try {
     r = await post('google')
   } catch (e) {
-    if (!isUnreachableApiError(e)) throw e
+    if (!isTransientFetchFailure(e)) throw e
     r = await post('gsi')
   }
   if (r.status === 404) {
@@ -241,7 +251,7 @@ export async function authOAuthFacebook(accessToken: string): Promise<string> {
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
   const body = JSON.stringify({ access_token: accessToken })
   const post = (segment: 'fb' | 'facebook') =>
-    fetchWithNetworkHint(
+    fetchWithNetworkHintRetry(
       `${base}/auth/oauth/${segment}`,
       {
         method: 'POST',
@@ -249,13 +259,14 @@ export async function authOAuthFacebook(accessToken: string): Promise<string> {
         body,
       },
       `POST /auth/oauth/${segment}`,
+      1,
     )
 
   let r: Response
   try {
     r = await post('fb')
   } catch (e) {
-    if (!isUnreachableApiError(e)) throw e
+    if (!isTransientFetchFailure(e)) throw e
     r = await post('facebook')
   }
   if (r.status === 404) {
@@ -271,13 +282,34 @@ export async function fetchMe(): Promise<UserMe> {
   if (!base) throw new Error('VITE_API_BASE_URL is not set')
   const t = getAccessToken()
   if (!t) throw new Error('Not signed in')
-  const r = await fetchWithNetworkHint(
-    `${base}/auth/me`,
-    { headers: { Authorization: `Bearer ${t}` } },
-    'GET /auth/me',
-  )
-  if (!r.ok) throw new Error(await readErrorDetail(r))
-  return r.json() as Promise<UserMe>
+
+  let last: unknown
+  for (let i = 0; i < 3; i++) {
+    try {
+      const r = await fetchWithNetworkHint(
+        `${base}/auth/me`,
+        { headers: { Authorization: `Bearer ${t}` } },
+        'GET /auth/me',
+      )
+      if (!r.ok) {
+        const detail = await readErrorDetail(r)
+        if (r.status === 401) {
+          throw new AuthInvalidError(detail)
+        }
+        throw new Error(detail)
+      }
+      return r.json() as Promise<UserMe>
+    } catch (e) {
+      last = e
+      if (e instanceof AuthInvalidError) throw e
+      if (isTransientFetchFailure(e) && i < 2) {
+        await delay(650 + i * 400)
+        continue
+      }
+      throw e
+    }
+  }
+  throw last
 }
 
 export function persistSession(accessToken: string): void {
