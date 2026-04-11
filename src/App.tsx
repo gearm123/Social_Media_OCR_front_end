@@ -176,6 +176,36 @@ type TranslationDifficulty = 1 | 2 | 3
 
 type TranslationMood = 'hurry' | 'patient'
 
+type RunPresetContext = 'guest-free' | 'user-free' | 'paid'
+
+function runPresetForAccess(hasPaidAccess: boolean): {
+  difficulty: TranslationDifficulty
+  mood: TranslationMood
+} {
+  return hasPaidAccess
+    ? { difficulty: 3, mood: 'patient' }
+    : { difficulty: 2, mood: 'hurry' }
+}
+
+function runPresetContextForSession(signedIn: boolean, hasPaidAccess: boolean): RunPresetContext {
+  if (hasPaidAccess) return 'paid'
+  return signedIn ? 'user-free' : 'guest-free'
+}
+
+function initialRunPresetState(): {
+  difficulty: TranslationDifficulty
+  mood: TranslationMood
+  context: RunPresetContext
+} {
+  const signedIn = Boolean(getAccessToken())
+  const billing = readBillingSnapshot()
+  const hasPaidAccess = hasPaidJobAccessForSession(billing, signedIn)
+  return {
+    ...runPresetForAccess(hasPaidAccess),
+    context: runPresetContextForSession(signedIn, hasPaidAccess),
+  }
+}
+
 /** Live overlay timer: m:ss from Process click until loading ends. */
 function formatProcessElapsed(ms: number): string {
   const t = Math.max(0, ms)
@@ -456,6 +486,8 @@ function App() {
   const uploadAbortRef = useRef<AbortController | null>(null)
   const executionCancelledRef = useRef(false)
   const overloadAbortTriggeredRef = useRef(false)
+  const initialRunPreset = useMemo(() => initialRunPresetState(), [])
+  const appliedRunPresetContextRef = useRef<RunPresetContext>(initialRunPreset.context)
   /** Captured when Process starts so Back restores hints exactly as before that run. */
   const preProcessSnapshotRef = useRef<Record<string, ImageBubbleHint> | null>(null)
 
@@ -491,8 +523,10 @@ function App() {
   >('free_exhausted')
   /** Which image (file key) has the guidance modal open */
   const [guidanceModalKey, setGuidanceModalKey] = useState<string | null>(null)
-  const [translationDifficulty, setTranslationDifficulty] = useState<TranslationDifficulty>(3)
-  const [translationMood, setTranslationMood] = useState<TranslationMood>('patient')
+  const [translationDifficulty, setTranslationDifficulty] = useState<TranslationDifficulty>(
+    initialRunPreset.difficulty,
+  )
+  const [translationMood, setTranslationMood] = useState<TranslationMood>(initialRunPreset.mood)
   /** Empty string = English (default); POST /jobs omits `language` in that case (same as no `--language`). */
   const [targetLanguageCliCode, setTargetLanguageCliCode] = useState(
     DEFAULT_TARGET_LANGUAGE_CODE,
@@ -902,6 +936,15 @@ function App() {
   const quotaStuck = subscriptionQuotaStuckForSession(billing, signedIn)
   const subAccess = hasSubscriptionAccessForSession(billing, signedIn)
   const blockReason = processBlockReasonForSession(billing, files.length, signedIn)
+  const runPresetContext = runPresetContextForSession(signedIn, planUnlocked)
+
+  useEffect(() => {
+    if (appliedRunPresetContextRef.current === runPresetContext) return
+    appliedRunPresetContextRef.current = runPresetContext
+    const preset = runPresetForAccess(planUnlocked)
+    setTranslationDifficulty(preset.difficulty)
+    setTranslationMood(preset.mood)
+  }, [planUnlocked, runPresetContext])
 
   const billingCopy = useMemo(() => {
     const cap = billing.subscriptionRunsCap ?? 7
