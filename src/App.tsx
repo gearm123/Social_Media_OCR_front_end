@@ -936,15 +936,18 @@ function App() {
   const quotaStuck = subscriptionQuotaStuckForSession(billing, signedIn)
   const subAccess = hasSubscriptionAccessForSession(billing, signedIn)
   const blockReason = processBlockReasonForSession(billing, files.length, signedIn)
-  const runPresetContext = runPresetContextForSession(signedIn, planUnlocked)
+  // Keep the preset aligned with the token-backed snapshot while auth is still bootstrapping.
+  const runPresetSignedIn = signedIn || authBootstrapping
+  const runPresetUnlocked = hasPaidJobAccessForSession(billing, runPresetSignedIn)
+  const runPresetContext = runPresetContextForSession(runPresetSignedIn, runPresetUnlocked)
 
   useEffect(() => {
     if (appliedRunPresetContextRef.current === runPresetContext) return
     appliedRunPresetContextRef.current = runPresetContext
-    const preset = runPresetForAccess(planUnlocked)
+    const preset = runPresetForAccess(runPresetUnlocked)
     setTranslationDifficulty(preset.difficulty)
     setTranslationMood(preset.mood)
-  }, [planUnlocked, runPresetContext])
+  }, [runPresetContext, runPresetUnlocked])
 
   const billingCopy = useMemo(() => {
     const cap = billing.subscriptionRunsCap ?? 7
