@@ -4,9 +4,13 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { CANONICAL_SITE_ORIGIN } from './src/canonicalSite'
 import { INTENT_LANDINGS, USES_HUB_PATH } from './src/intentLandings'
+import { buildLandingStructuredData } from './src/landingStructuredDataShared'
+import { PRERENDER_ROUTES } from './src/prerenderRoutes'
 
 const HOME_TITLE = 'Translate Chat'
 const HOME_DESC = 'Turn your chat screenshots into a translated conversation'
+const SEO_HEAD_START = '<!-- SEO_HEAD_START -->'
+const SEO_HEAD_END = '<!-- SEO_HEAD_END -->'
 
 function escAttr(s: string): string {
   return s
@@ -14,6 +18,10 @@ function escAttr(s: string): string {
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+}
+
+function escRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function seoInjectHtml(siteUrl: string): string {
@@ -91,7 +99,51 @@ function seoInjectHtml(siteUrl: string): string {
     '@graph': graph,
   }).replace(/</g, '\\u003c')
   lines.push(`<script type="application/ld+json">${jsonLd}</script>`)
-  return `\n    ${lines.join('\n    ')}\n  `
+  return `\n    ${SEO_HEAD_START}\n    ${lines.join('\n    ')}\n    ${SEO_HEAD_END}\n  `
+}
+
+function routeSeoHtml(
+  siteUrl: string,
+  route: (typeof PRERENDER_ROUTES)[number],
+): string {
+  const base = siteUrl.replace(/\/$/, '')
+  const pagePath = route.seo.path === '/' ? '/' : route.seo.path.startsWith('/') ? route.seo.path : `/${route.seo.path}`
+  const pageUrl = pagePath === '/' ? `${base}/` : `${base}${pagePath}`
+  const lines = [
+    `<meta name="description" content="${escAttr(route.seo.description)}" />`,
+    `<meta name="robots" content="${escAttr(route.seo.robots || 'index, follow, max-image-preview:large')}" />`,
+    `<meta name="theme-color" content="#0f172a" />`,
+    `<meta name="format-detection" content="telephone=no" />`,
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:site_name" content="${escAttr(HOME_TITLE)}" />`,
+    `<meta property="og:locale" content="en_US" />`,
+    `<meta property="og:title" content="${escAttr(route.seo.title)}" />`,
+    `<meta property="og:description" content="${escAttr(route.seo.description)}" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:title" content="${escAttr(route.seo.title)}" />`,
+    `<meta name="twitter:description" content="${escAttr(route.seo.description)}" />`,
+    `<link rel="canonical" href="${escAttr(pageUrl)}" />`,
+    `<meta property="og:url" content="${escAttr(pageUrl)}" />`,
+    `<meta property="og:image" content="${escAttr(`${base}/translate-chat-mark.svg`)}" />`,
+    `<meta property="og:image:alt" content="${escAttr(HOME_TITLE)}" />`,
+    `<meta name="twitter:image" content="${escAttr(`${base}/translate-chat-mark.svg`)}" />`,
+  ]
+
+  for (const entry of buildLandingStructuredData(route.pathNorm, route.intent, base)) {
+    const jsonLd = JSON.stringify(entry.data).replace(/</g, '\\u003c')
+    lines.push(`<script type="application/ld+json" id="${escAttr(entry.id)}">${jsonLd}</script>`)
+  }
+
+  return `\n    ${SEO_HEAD_START}\n    ${lines.join('\n    ')}\n    ${SEO_HEAD_END}\n  `
+}
+
+function replaceSeoHead(html: string, seoHtml: string): string {
+  const pattern = new RegExp(`${escRegex(SEO_HEAD_START)}[\\s\\S]*?${escRegex(SEO_HEAD_END)}`)
+  return html.replace(pattern, seoHtml.trim())
+}
+
+function replaceTitle(html: string, title: string): string {
+  return html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escAttr(title)}</title>`)
 }
 
 function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
@@ -142,6 +194,19 @@ function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
         `User-agent: *\nAllow: /\n\nSitemap: ${base}/sitemap.xml\n`,
         'utf8',
       )
+      const indexHtmlPath = path.join(distDir, 'index.html')
+      if (fs.existsSync(indexHtmlPath)) {
+        const template = fs.readFileSync(indexHtmlPath, 'utf8')
+        for (const route of PRERENDER_ROUTES) {
+          let routeHtml = replaceTitle(template, route.seo.title)
+          routeHtml = replaceSeoHead(routeHtml, routeSeoHtml(base, route))
+          routeHtml = routeHtml.replace('<div id="root"></div>', `<div id="root">${route.bodyHtml}</div>`)
+
+          const outDir = path.join(distDir, route.pathNorm.replace(/^\/+/, ''))
+          fs.mkdirSync(outDir, { recursive: true })
+          fs.writeFileSync(path.join(outDir, 'index.html'), routeHtml, 'utf8')
+        }
+      }
       console.log(`[seo-build] sitemap.xml + robots.txt written with base: ${base}`)
       if (base.includes('netlify.app')) {
         console.warn(
