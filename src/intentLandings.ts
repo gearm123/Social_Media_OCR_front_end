@@ -9,6 +9,8 @@ export type IntentLanding = {
   /** Meta description — must equal {@link lead} (single paragraph). */
   seoDescription: string
   h1: string
+  /** Whether this landing should be promoted in sitemap.xml. */
+  includeInSitemap?: boolean
   /** First paragraph; duplicated in seoDescription. */
   lead: string
   /** Extra paragraphs (optional). */
@@ -87,6 +89,7 @@ export const INTENT_LANDINGS: IntentLanding[] = [
     seoDescription:
       'Use AI to translate chat screenshots into English: upload images, get structured dialogue and a rendered chat image powered by vision models and OCR hints.',
     h1: 'AI chat screenshot translator',
+    includeInSitemap: false,
     lead: 'Use AI to translate chat screenshots into English: upload images, get structured dialogue and a rendered chat image powered by vision models and OCR hints.',
     more: [
       'Built for real screenshots — glare, compression, and UI chrome — not just clean mockups.',
@@ -103,6 +106,7 @@ export const INTENT_LANDINGS: IntentLanding[] = [
     seoDescription:
       'Use AI to translate chat screenshots: upload images from messaging apps and get English dialogue in a clean chat-style layout with vision and OCR-backed parsing.',
     h1: 'AI translate chat screenshots',
+    includeInSitemap: false,
     lead: 'Use AI to translate chat screenshots: upload images from messaging apps and get English dialogue in a clean chat-style layout with vision and OCR-backed parsing.',
     more: [
       'Built for real threads — timestamps, avatars, and app chrome help the model infer who said what before translation.',
@@ -119,6 +123,7 @@ export const INTENT_LANDINGS: IntentLanding[] = [
     seoDescription:
       'Translate chat screenshots with AI: turn phone captures into readable English while preserving bubble order, replies, and typical messenger UI structure.',
     h1: 'Translate chat screenshots with AI',
+    includeInSitemap: false,
     lead: 'Translate chat screenshots with AI: turn phone captures into readable English while preserving bubble order, replies, and typical messenger UI structure.',
     more: [
       'The same pipeline powers every guide here — this page focuses on the general “chat + AI translation” workflow.',
@@ -135,6 +140,7 @@ export const INTENT_LANDINGS: IntentLanding[] = [
     seoDescription:
       'Chat screenshot AI translation for busy threads: extract text from UI bubbles, translate with AI, and export a single stitched conversation image you can share.',
     h1: 'Chat screenshot AI translation',
+    includeInSitemap: false,
     lead: 'Chat screenshot AI translation for busy threads: extract text from UI bubbles, translate with AI, and export a single stitched conversation image you can share.',
     more: [
       'Suited to DMs and small groups where reading order follows the on-screen stack.',
@@ -151,6 +157,7 @@ export const INTENT_LANDINGS: IntentLanding[] = [
     seoDescription:
       'AI conversation screenshot translator: convert back-and-forth chat captures into fluent English while keeping the feel of a natural messaging transcript.',
     h1: 'AI conversation screenshot translator',
+    includeInSitemap: false,
     lead: 'AI conversation screenshot translator: convert back-and-forth chat captures into fluent English while keeping the feel of a natural messaging transcript.',
     more: [
       'Helpful when you need the whole exchange, not isolated phrases — the output stays in conversational order.',
@@ -167,6 +174,7 @@ export const INTENT_LANDINGS: IntentLanding[] = [
     seoDescription:
       'Translate chat UI screenshots with AI: menus, headers, and bubble chrome stay visually familiar while message text is translated for quick reading.',
     h1: 'Translate chat UI screenshots with AI',
+    includeInSitemap: false,
     lead: 'Translate chat UI screenshots with AI: menus, headers, and bubble chrome stay visually familiar while message text is translated for quick reading.',
     more: [
       'Useful when you want context from the surrounding interface, not just raw extracted lines.',
