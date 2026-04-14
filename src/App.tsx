@@ -217,17 +217,18 @@ function formatProcessElapsed(ms: number): string {
 
 /**
  * Rough average expected runtime (seconds) for the loading bar, by mode and language difficulty.
- * Take your time: 55s / 1m20s / 1m45s · Hurry up: 32s / 50s / 70s (d3 not in original spec — adjust if you measure).
+ * Anchored to an observed d3 + take-your-time mean of ~4m40s, with the other presets scaled from
+ * the original relative ratios so the ETA stays consistent across configurations.
  */
 const PIPELINE_ETA_SEC_PATIENT: Record<TranslationDifficulty, number> = {
-  1: 55,
-  2: 80,
-  3: 105,
+  1: 150,
+  2: 210,
+  3: 280,
 }
 const PIPELINE_ETA_SEC_HURRY: Record<TranslationDifficulty, number> = {
-  1: 32,
-  2: 50,
-  3: 70,
+  1: 85,
+  2: 135,
+  3: 185,
 }
 
 /** Allow one full Pass 1 restart plus some finalization buffer before auto-stopping. */
