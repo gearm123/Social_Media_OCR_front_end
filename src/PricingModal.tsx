@@ -133,8 +133,8 @@ export function PricingModal({ open, onClose, onApplied, isGuest, onOpenAuth }: 
             <p className="pricing-modal__subtitle">
               {isGuest ? (
                 <>
-                  Without an account, use the email below to buy a <strong>one-time</strong> run (Debug test or Single
-                  full run). You will be redirected to Paddle checkout.
+                  Without an account, use the email below to buy a <strong>one-time</strong> full run (Single). You
+                  will be redirected to Paddle checkout.
                 </>
               ) : (
                 <>
@@ -189,7 +189,7 @@ export function PricingModal({ open, onClose, onApplied, isGuest, onOpenAuth }: 
                 onClose()
               }}
             >
-              Sign up for subscription options
+              Sign up for Basic or Pro subscriptions
             </button>
           </p>
         ) : null}
@@ -203,7 +203,7 @@ export function PricingModal({ open, onClose, onApplied, isGuest, onOpenAuth }: 
         {subscriptionGuestPrompt ? (
           <div className="pricing-modal__account-prompt" role="status">
             <p className="pricing-modal__account-prompt-text">
-              Monthly and annual plans need a <strong>free account</strong> so we can manage your subscription and
+              Basic and Pro subscriptions need a <strong>free account</strong> so we can manage your subscription and
               usage. Sign up or sign in, then open Plans again.
             </p>
             <div className="pricing-modal__account-prompt-actions">

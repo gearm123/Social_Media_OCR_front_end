@@ -16,6 +16,8 @@ export type BillingSnapshot = {
   paidJobCredits: number
   subscriptionRunsCap: number
   subscriptionRunsUsedThisMonth: number
+  /** Recurring Paddle price id when subscribed; used for Basic vs Pro labeling. */
+  paddleSubscriptionPriceId?: string | null
 }
 
 /** Effective free-try cap (server may send guest/user max separately). */
@@ -26,6 +28,35 @@ export function freeRunsCap(s: BillingSnapshot): number {
 }
 
 export type PricingPlanId = 'single' | 'debug' | 'month' | 'sixmo' | 'year'
+
+/** Match backend ``PADDLE_PRICE_MONTH`` / Basic tier. */
+export const PADDLE_SUB_PRICE_BASIC = 'pri_01kn7nj080p77a6m41q1310bvd'
+/** Match backend ``PADDLE_PRICE_SIXMO`` / Pro tier. */
+export const PADDLE_SUB_PRICE_PRO = 'pri_01kn7nq3avypna497bb0d1rx63'
+
+const BASIC_RUNS = 10
+const PRO_RUNS = 25
+
+function priceBasicLabel(): string {
+  const s = import.meta.env.VITE_PRICE_BASIC_DISPLAY?.trim()
+  return s || '—'
+}
+
+function priceProLabel(): string {
+  const s = import.meta.env.VITE_PRICE_PRO_DISPLAY?.trim()
+  return s || '—'
+}
+
+/** Human label for the current subscription tier when the price id is known. */
+export function subscriptionTierName(
+  paddlePriceId: string | null | undefined,
+): 'Basic' | 'Pro' | null {
+  const id = paddlePriceId?.trim()
+  if (!id) return null
+  if (id === PADDLE_SUB_PRICE_BASIC) return 'Basic'
+  if (id === PADDLE_SUB_PRICE_PRO) return 'Pro'
+  return null
+}
 
 /** One-time purchases (guests may buy without an account). */
 export function isOneTimePlan(id: PricingPlanId): boolean {
@@ -67,28 +98,20 @@ export const PRICING_PLANS: PricingPlan[] = [
   },
   {
     id: 'month',
-    name: 'Monthly',
-    priceUsd: 8,
-    priceLabel: '$8',
-    periodHint: 'per month',
-    blurb: 'Recurring monthly. Included runs per calendar month, then wait or buy a single run.',
-    featured: true,
+    name: 'Basic',
+    priceUsd: 0,
+    priceLabel: priceBasicLabel(),
+    periodHint: 'per billing period',
+    blurb: `Subscription · up to ${BASIC_RUNS} successful full jobs per calendar month. Multi-image uploads included.`,
   },
   {
     id: 'sixmo',
-    name: '6 months',
-    priceUsd: 36,
-    priceLabel: '$36',
-    periodHint: 'every 6 months',
-    blurb: '$6/mo effective — billed $36 every six months. Same monthly run quota.',
-  },
-  {
-    id: 'year',
-    name: 'Annual',
-    priceUsd: 48,
-    priceLabel: '$48',
-    periodHint: 'per year',
-    blurb: '$4/mo effective — full year charged upfront, renews yearly. Same monthly run quota.',
+    name: 'Pro',
+    priceUsd: 0,
+    priceLabel: priceProLabel(),
+    periodHint: 'per billing period',
+    blurb: `Subscription · up to ${PRO_RUNS} successful full jobs per calendar month. Multi-image uploads included.`,
+    featured: true,
   },
 ]
 
@@ -106,6 +129,7 @@ export type BillingMeResponse = {
   paid_job_credits: number
   free_runs_used: number
   free_runs_max?: number
+  paddle_subscription_price_id?: string | null
 }
 
 function defaultSnapshot(): BillingSnapshot {
@@ -113,8 +137,9 @@ function defaultSnapshot(): BillingSnapshot {
     freeRunsUsed: 0,
     unlimitedUntil: null,
     paidJobCredits: 0,
-    subscriptionRunsCap: 7,
+    subscriptionRunsCap: 10,
     subscriptionRunsUsedThisMonth: 0,
+    paddleSubscriptionPriceId: null,
   }
 }
 
@@ -127,13 +152,20 @@ export function readBillingSnapshot(): BillingSnapshot {
     const freeRunsMax =
       Number.isFinite(maxRaw) && maxRaw >= 1 ? Math.floor(maxRaw) : undefined
     const cap = freeRunsCap({ ...defaultSnapshot(), freeRunsMax })
+    const ppi =
+      typeof j.paddleSubscriptionPriceId === 'string'
+        ? j.paddleSubscriptionPriceId
+        : j.paddleSubscriptionPriceId === null
+          ? null
+          : undefined
     return {
       freeRunsUsed: Math.min(cap, Math.max(0, Number(j.freeRunsUsed) || 0)),
       freeRunsMax,
       unlimitedUntil: typeof j.unlimitedUntil === 'string' ? j.unlimitedUntil : null,
       paidJobCredits: Math.max(0, Number(j.paidJobCredits) || 0),
-      subscriptionRunsCap: Math.max(1, Number(j.subscriptionRunsCap) || 7),
+      subscriptionRunsCap: Math.max(1, Number(j.subscriptionRunsCap) || 10),
       subscriptionRunsUsedThisMonth: Math.max(0, Number(j.subscriptionRunsUsedThisMonth) || 0),
+      paddleSubscriptionPriceId: ppi !== undefined ? ppi : null,
     }
   } catch {
     return defaultSnapshot()
@@ -157,7 +189,7 @@ export function subscriptionPeriodActive(s: BillingSnapshot): boolean {
 
 export function subscriptionRunsRemaining(s: BillingSnapshot): number {
   if (!subscriptionPeriodActive(s)) return 0
-  const cap = s.subscriptionRunsCap ?? 7
+  const cap = s.subscriptionRunsCap ?? 10
   const used = s.subscriptionRunsUsedThisMonth ?? 0
   return Math.max(0, cap - used)
 }
@@ -220,8 +252,9 @@ export function billingMeToSnapshot(me: BillingMeResponse): BillingSnapshot {
     freeRunsMax,
     unlimitedUntil: me.access_until,
     paidJobCredits: me.paid_job_credits,
-    subscriptionRunsCap: Math.max(1, me.subscription_runs_cap || 7),
+    subscriptionRunsCap: Math.max(1, me.subscription_runs_cap || 10),
     subscriptionRunsUsedThisMonth: Math.max(0, me.subscription_runs_used_this_month || 0),
+    paddleSubscriptionPriceId: me.paddle_subscription_price_id ?? null,
   }
 }
 
@@ -313,6 +346,8 @@ export function applyMockPurchase(planId: PricingPlanId): BillingSnapshot {
         ...next,
         unlimitedUntil: new Date(now + 32 * 24 * 60 * 60 * 1000).toISOString(),
         subscriptionRunsUsedThisMonth: 0,
+        subscriptionRunsCap: BASIC_RUNS,
+        paddleSubscriptionPriceId: PADDLE_SUB_PRICE_BASIC,
       }
       break
     case 'sixmo':
@@ -320,6 +355,8 @@ export function applyMockPurchase(planId: PricingPlanId): BillingSnapshot {
         ...next,
         unlimitedUntil: new Date(now + 186 * 24 * 60 * 60 * 1000).toISOString(),
         subscriptionRunsUsedThisMonth: 0,
+        subscriptionRunsCap: PRO_RUNS,
+        paddleSubscriptionPriceId: PADDLE_SUB_PRICE_PRO,
       }
       break
     case 'year':
@@ -327,6 +364,8 @@ export function applyMockPurchase(planId: PricingPlanId): BillingSnapshot {
         ...next,
         unlimitedUntil: new Date(now + 370 * 24 * 60 * 60 * 1000).toISOString(),
         subscriptionRunsUsedThisMonth: 0,
+        subscriptionRunsCap: PRO_RUNS,
+        paddleSubscriptionPriceId: PADDLE_SUB_PRICE_PRO,
       }
       break
     default:

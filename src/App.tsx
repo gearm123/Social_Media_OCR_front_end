@@ -44,6 +44,7 @@ import {
   recordSuccessfulJob,
   subscriptionQuotaStuckForSession,
   subscriptionRunsRemaining,
+  subscriptionTierName,
 } from './billingStorage'
 import { GuidanceInputModal } from './GuidanceInputModal'
 import { ChatReconstructHoverPreview } from './ChatReconstructHoverPreview'
@@ -951,8 +952,9 @@ function App() {
   }, [runPresetContext, runPresetUnlocked])
 
   const billingCopy = useMemo(() => {
-    const cap = billing.subscriptionRunsCap ?? 7
+    const cap = billing.subscriptionRunsCap ?? 10
     const rem = subscriptionRunsRemaining(billing)
+    const tier = subscriptionTierName(billing.paddleSubscriptionPriceId)
     const proUntil = billing.unlimitedUntil
       ? new Date(billing.unlimitedUntil).toLocaleDateString(undefined, {
           month: 'short',
@@ -969,9 +971,11 @@ function App() {
 
     let planLong = ''
     if (subAccess && proUntil) {
-      planLong = `Active subscription · renews ${proUntil} · ${rem}/${cap} runs left this month`
+      const subj = tier ? `Active ${tier} subscription` : 'Active subscription'
+      planLong = `${subj} · renews ${proUntil} · ${rem}/${cap} runs left this month`
     } else if (quotaStuck && proUntil) {
-      planLong = `Subscription · monthly runs used · renews ${proUntil}`
+      const subj = tier ? `${tier} subscription` : 'Subscription'
+      planLong = `${subj} · runs used this month · renews ${proUntil}`
     } else if (billing.paidJobCredits > 0) {
       planLong = !signedIn
         ? `Guest · ${billing.paidJobCredits} paid full run${billing.paidJobCredits === 1 ? '' : 's'} (multi-image)`
@@ -1498,7 +1502,7 @@ function App() {
                               : !apiUrlConfigured
                                 ? 'Set VITE_API_BASE_URL at build time (see notice on the right)'
                                 : blockReason === 'quota_exhausted'
-                                  ? 'Monthly run quota used — open Plans or wait for renewal'
+                                  ? 'Included runs used — open Plans or wait for renewal'
                                   : blockReason === 'free_exhausted'
                                     ? 'Free try used — open Plans to purchase or subscribe'
                                     : blockReason === 'multi_on_free'

@@ -21,9 +21,9 @@ const COPY: Record<PaywallReason, { title: string; body: string }> = {
       'On the free tier you can upload one screenshot per run. Use an active subscription (with runs left), a single-run credit, or upgrade.',
   },
   quota_exhausted: {
-    title: 'Monthly runs used',
+    title: 'Included runs used',
     body:
-      'Your plan includes a limited number of full jobs per calendar month. Wait for the next month, buy a one-time run, or upgrade billing period in Plans.',
+      'Your Basic or Pro subscription includes a limited number of successful full jobs per calendar month. Wait for the next month, buy a one-time run, or change plan in Plans.',
   },
 }
 
