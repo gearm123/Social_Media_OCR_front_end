@@ -1729,6 +1729,9 @@ function App() {
 
           <SiteExploreBar />
 
+          <label htmlFor={inputId} className="sr-only">
+            Choose chat screenshot images
+          </label>
           <input
             ref={fileInputRef}
             id={inputId}
@@ -1736,6 +1739,7 @@ function App() {
             type="file"
             accept={ACCEPT_IMAGES}
             multiple={multiUploadAllowed}
+            tabIndex={-1}
             onChange={(e) => onPickFiles(e.target.files)}
           />
         </div>
