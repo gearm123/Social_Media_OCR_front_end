@@ -28,7 +28,7 @@ import {
   syncBillingFromServer,
   syncGuestBillingFromServer,
 } from './billingApi'
-import { AuthInvalidError, fetchMe, type UserMe } from './authApi'
+import { AuthInvalidError, fetchMe, prefetchAuthProviders, type UserMe } from './authApi'
 import { clearSession, getAccessToken } from './authStorage'
 import { fileKey } from './fileUtils'
 import { sortImageFilesByNameSequence } from './sortUploadedImages'
@@ -52,7 +52,7 @@ import { InfoPopover } from './InfoPopover'
 import { PaywallModal } from './PaywallModal'
 import { PricingModal } from './PricingModal'
 import SiteExploreBar from './SiteExploreBar'
-import { applyDocumentSeo, SEO_HOME_DESCRIPTION, SEO_SITE_NAME } from './seo'
+import { applyDocumentSeo, SEO_HOME_DESCRIPTION, SEO_HOME_H1, SEO_HOME_TITLE } from './seo'
 import { DEFAULT_TARGET_LANGUAGE_CODE } from './supportedTargetLanguages'
 import { TargetLanguagePicker } from './TargetLanguagePicker'
 
@@ -552,6 +552,10 @@ function App() {
     }
   }, [previews])
 
+  useEffect(() => {
+    prefetchAuthProviders()
+  }, [])
+
   const refreshAuth = useCallback((): Promise<void> => {
     const t = getAccessToken()
     if (!t) {
@@ -610,7 +614,7 @@ function App() {
 
   useEffect(() => {
     applyDocumentSeo({
-      title: SEO_SITE_NAME,
+      title: SEO_HOME_TITLE,
       description: SEO_HOME_DESCRIPTION,
       path: '/',
     })
@@ -1332,26 +1336,24 @@ function App() {
 
               <header className="hero">
                 <div className="hero-title-block">
-                  <h1 className="hero-brand">
+                  <p className="hero-brand">
                     <span className="hero-brand__lockup">
                       <img
                         className="hero-brand__mark"
                         src="/translate-chat-mark.svg"
-                        alt="Translate Chat"
+                        alt=""
                         width={44}
                         height={44}
                         decoding="async"
-                        fetchPriority="high"
+                        {...{ fetchpriority: 'high' }}
                       />
                       <span className="hero-brand__row">
                         <span className="hero-brand__translate">Translate</span>
                         <span className="hero-brand__chat-pill">Chat</span>
                       </span>
                     </span>
-                  </h1>
-                  <p className="hero-tagline">
-                    Turn your chat screenshots into a translated conversation
                   </p>
+                  <h1 className="hero-tagline">{SEO_HOME_H1}</h1>
                 </div>
 
                 <section

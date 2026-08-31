@@ -1,6 +1,6 @@
 import GuideWorkflowSection from './GuideWorkflowSection'
 import type { IntentLanding } from './intentLandings'
-import { INTENT_LANDINGS, USES_HUB_PATH } from './intentLandings'
+import { INTENT_LANDINGS, USES_HUB_PATH, isIntentIndexed } from './intentLandings'
 
 type Props = {
   intent: IntentLanding
@@ -54,6 +54,20 @@ export default function IntentLandingPage({ intent }: Props) {
               ))}
             </ul>
 
+            {intent.faq && intent.faq.length > 0 ? (
+              <section className="seo-home-faq seo-home-faq--page" aria-label="Questions about this guide">
+                <h2 className="intent-landing__h2">Questions about this guide</h2>
+                <dl className="seo-home-faq__list">
+                  {intent.faq.map((item) => (
+                    <div className="seo-home-faq__item" key={item.question}>
+                      <dt className="seo-home-faq__q">{item.question}</dt>
+                      <dd className="seo-home-faq__a">{item.answer}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ) : null}
+
             <p className="intent-landing__cta-wrap">
               <a className="support-page__mailto intent-landing__cta" href="/">
                 Start translating — upload screenshots
@@ -65,7 +79,9 @@ export default function IntentLandingPage({ intent }: Props) {
               <ul className="intent-landing__related-list">
                 {others.map((x) => (
                   <li key={x.path}>
-                    <a href={x.path}>{x.h1}</a>
+                    <a href={x.path} rel={isIntentIndexed(x) ? undefined : 'nofollow'}>
+                      {x.h1}
+                    </a>
                   </li>
                 ))}
                 <li>

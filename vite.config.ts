@@ -2,13 +2,21 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
-import { CANONICAL_SITE_ORIGIN } from './src/canonicalSite'
+import { absoluteSiteUrl, CANONICAL_SITE_ORIGIN } from './src/canonicalSite'
+import { DEMO_RECONSTRUCTION_GIF_PATH } from './src/demoReconstructionMedia'
 import { INTENT_LANDINGS, USES_HUB_PATH } from './src/intentLandings'
 import { buildLandingStructuredData } from './src/landingStructuredDataShared'
 import { PRERENDER_ROUTES } from './src/prerenderRoutes'
+import {
+  OG_IMAGE_ALT,
+  OG_IMAGE_HEIGHT,
+  OG_IMAGE_PATH,
+  OG_IMAGE_TYPE,
+  OG_IMAGE_WIDTH,
+} from './src/seoAssets'
+import { SEO_HOME_DESCRIPTION, SEO_HOME_TITLE, SEO_SITE_NAME } from './src/seoContent'
+import type { DocumentSeo } from './src/seoTypes'
 
-const HOME_TITLE = 'Translate Chat'
-const HOME_DESC = 'Turn your chat screenshots into a translated conversation'
 const SEO_HEAD_START = '<!-- SEO_HEAD_START -->'
 const SEO_HEAD_END = '<!-- SEO_HEAD_END -->'
 
@@ -24,117 +32,75 @@ function escRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-function seoInjectHtml(siteUrl: string): string {
+function socialImageTags(base: string): string[] {
+  const image = `${base}${OG_IMAGE_PATH}`
+  return [
+    `<meta property="og:image" content="${escAttr(image)}" />`,
+    `<meta property="og:image:alt" content="${escAttr(OG_IMAGE_ALT)}" />`,
+    `<meta property="og:image:type" content="${escAttr(OG_IMAGE_TYPE)}" />`,
+    `<meta property="og:image:width" content="${OG_IMAGE_WIDTH}" />`,
+    `<meta property="og:image:height" content="${OG_IMAGE_HEIGHT}" />`,
+    `<meta name="twitter:image" content="${escAttr(image)}" />`,
+    `<meta name="twitter:image:alt" content="${escAttr(OG_IMAGE_ALT)}" />`,
+  ]
+}
+
+function documentHeadLines(siteUrl: string, seo: DocumentSeo): string[] {
+  const base = siteUrl.replace(/\/$/, '')
+  const canonPath = seo.canonicalPath || seo.path
+  const pageUrl = base ? absoluteSiteUrl(base, canonPath) : ''
   const lines = [
-    `<meta name="description" content="${escAttr(HOME_DESC)}" />`,
-    `<meta name="robots" content="index, follow, max-image-preview:large" />`,
+    `<meta name="description" content="${escAttr(seo.description)}" />`,
+    `<meta name="robots" content="${escAttr(seo.robots || 'index, follow, max-image-preview:large')}" />`,
     `<meta name="theme-color" content="#0f172a" />`,
     `<meta name="format-detection" content="telephone=no" />`,
     `<meta property="og:type" content="website" />`,
-    `<meta property="og:site_name" content="${escAttr(HOME_TITLE)}" />`,
+    `<meta property="og:site_name" content="${escAttr(SEO_SITE_NAME)}" />`,
     `<meta property="og:locale" content="en_US" />`,
-    `<meta property="og:title" content="${escAttr(HOME_TITLE)}" />`,
-    `<meta property="og:description" content="${escAttr(HOME_DESC)}" />`,
+    `<meta property="og:title" content="${escAttr(seo.title)}" />`,
+    `<meta property="og:description" content="${escAttr(seo.description)}" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
-    `<meta name="twitter:title" content="${escAttr(HOME_TITLE)}" />`,
-    `<meta name="twitter:description" content="${escAttr(HOME_DESC)}" />`,
+    `<meta name="twitter:title" content="${escAttr(seo.title)}" />`,
+    `<meta name="twitter:description" content="${escAttr(seo.description)}" />`,
   ]
-  const base = siteUrl.replace(/\/$/, '')
-  const siteHome = base ? `${base}/` : ''
-  if (siteHome) {
-    lines.push(`<link rel="canonical" href="${escAttr(siteHome)}" />`)
-    lines.push(`<meta property="og:url" content="${escAttr(siteHome)}" />`)
-    lines.push(`<meta property="og:image" content="${escAttr(`${base}/translate-chat-mark.svg`)}" />`)
-    lines.push(`<meta property="og:image:alt" content="${escAttr(HOME_TITLE)}" />`)
-    lines.push(`<meta name="twitter:image" content="${escAttr(`${base}/translate-chat-mark.svg`)}" />`)
+  if (pageUrl) {
+    lines.push(`<link rel="canonical" href="${escAttr(pageUrl)}" />`)
+    lines.push(`<link rel="alternate" hreflang="en" href="${escAttr(pageUrl)}" />`)
+    lines.push(`<link rel="alternate" hreflang="x-default" href="${escAttr(pageUrl)}" />`)
+    lines.push(`<meta property="og:url" content="${escAttr(pageUrl)}" />`)
+    lines.push(...socialImageTags(base))
   }
-  const graph: Record<string, unknown>[] = []
-  if (siteHome) {
-    const orgId = `${base}/#organization`
-    graph.push(
-      {
-        '@type': 'Organization',
-        '@id': orgId,
-        name: HOME_TITLE,
-        url: siteHome,
-      },
-      {
-        '@type': 'WebSite',
-        '@id': `${base}/#website`,
-        name: HOME_TITLE,
-        description: HOME_DESC,
-        url: siteHome,
-        publisher: { '@id': orgId },
-        inLanguage: 'en',
-      },
-      {
-        '@type': 'WebApplication',
-        '@id': `${base}/#webapp`,
-        name: HOME_TITLE,
-        description: HOME_DESC,
-        url: siteHome,
-        applicationCategory: 'UtilitiesApplication',
-        operatingSystem: 'Web',
-        browserRequirements: 'Requires JavaScript',
-        offers: {
-          '@type': 'Offer',
-          price: '0',
-          priceCurrency: 'USD',
-          description: 'Free tier available; paid plans for more usage',
-        },
-        publisher: { '@id': orgId },
-      },
-    )
-  } else {
-    graph.push({
-      '@type': 'WebApplication',
-      name: HOME_TITLE,
-      description: HOME_DESC,
-      applicationCategory: 'UtilitiesApplication',
-      operatingSystem: 'Web',
-    })
-  }
-  const jsonLd = JSON.stringify({
-    '@context': 'https://schema.org',
-    '@graph': graph,
-  }).replace(/</g, '\\u003c')
-  lines.push(`<script type="application/ld+json">${jsonLd}</script>`)
+  return lines
+}
+
+function wrapSeoHead(lines: string[]): string {
   return `\n    ${SEO_HEAD_START}\n    ${lines.join('\n    ')}\n    ${SEO_HEAD_END}\n  `
 }
 
-function routeSeoHtml(
-  siteUrl: string,
-  route: (typeof PRERENDER_ROUTES)[number],
-): string {
+function seoInjectHtml(siteUrl: string): string {
   const base = siteUrl.replace(/\/$/, '')
-  const pagePath = route.seo.path === '/' ? '/' : route.seo.path.startsWith('/') ? route.seo.path : `/${route.seo.path}`
-  const pageUrl = pagePath === '/' ? `${base}/` : `${base}${pagePath}`
-  const lines = [
-    `<meta name="description" content="${escAttr(route.seo.description)}" />`,
-    `<meta name="robots" content="${escAttr(route.seo.robots || 'index, follow, max-image-preview:large')}" />`,
-    `<meta name="theme-color" content="#0f172a" />`,
-    `<meta name="format-detection" content="telephone=no" />`,
-    `<meta property="og:type" content="website" />`,
-    `<meta property="og:site_name" content="${escAttr(HOME_TITLE)}" />`,
-    `<meta property="og:locale" content="en_US" />`,
-    `<meta property="og:title" content="${escAttr(route.seo.title)}" />`,
-    `<meta property="og:description" content="${escAttr(route.seo.description)}" />`,
-    `<meta name="twitter:card" content="summary_large_image" />`,
-    `<meta name="twitter:title" content="${escAttr(route.seo.title)}" />`,
-    `<meta name="twitter:description" content="${escAttr(route.seo.description)}" />`,
-    `<link rel="canonical" href="${escAttr(pageUrl)}" />`,
-    `<meta property="og:url" content="${escAttr(pageUrl)}" />`,
-    `<meta property="og:image" content="${escAttr(`${base}/translate-chat-mark.svg`)}" />`,
-    `<meta property="og:image:alt" content="${escAttr(HOME_TITLE)}" />`,
-    `<meta name="twitter:image" content="${escAttr(`${base}/translate-chat-mark.svg`)}" />`,
-  ]
+  const lines = documentHeadLines(siteUrl, {
+    title: SEO_HOME_TITLE,
+    description: SEO_HOME_DESCRIPTION,
+    path: '/',
+  })
+  if (base) {
+    for (const entry of buildLandingStructuredData('/', null, base)) {
+      const jsonLd = JSON.stringify(entry.data).replace(/</g, '\\u003c')
+      lines.push(`<script type="application/ld+json" id="${escAttr(entry.id)}">${jsonLd}</script>`)
+    }
+  }
+  return wrapSeoHead(lines)
+}
 
+function routeSeoHtml(siteUrl: string, route: (typeof PRERENDER_ROUTES)[number]): string {
+  const base = siteUrl.replace(/\/$/, '')
+  const lines = documentHeadLines(siteUrl, route.seo)
   for (const entry of buildLandingStructuredData(route.pathNorm, route.intent, base)) {
     const jsonLd = JSON.stringify(entry.data).replace(/</g, '\\u003c')
     lines.push(`<script type="application/ld+json" id="${escAttr(entry.id)}">${jsonLd}</script>`)
   }
-
-  return `\n    ${SEO_HEAD_START}\n    ${lines.join('\n    ')}\n    ${SEO_HEAD_END}\n  `
+  return wrapSeoHead(lines)
 }
 
 function replaceSeoHead(html: string, seoHtml: string): string {
@@ -150,7 +116,6 @@ function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
   return {
     name: 'seo-build',
     transformIndexHtml(html) {
-      // GA4 gtag lives in index.html (official snippet). SEO meta/JSON-LD injected before </head>.
       return html.replace('</head>', `${seoInjectHtml(siteUrl)}\n  </head>`)
     },
     closeBundle() {
@@ -168,30 +133,52 @@ function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
       const distDir = path.join(process.cwd(), 'dist')
       if (!fs.existsSync(distDir)) return
 
-      type Row = { loc: string; changefreq: string; priority: string }
+      const lastmod = new Date().toISOString().slice(0, 10)
+      type Row = { loc: string; changefreq: string; priority: string; images?: { loc: string; title: string }[] }
       const rows: Row[] = [
-        { loc: `${base}/`, changefreq: 'weekly', priority: '1.0' },
+        {
+          loc: `${base}/`,
+          changefreq: 'weekly',
+          priority: '1.0',
+          images: [{ loc: `${base}${OG_IMAGE_PATH}`, title: SEO_SITE_NAME }],
+        },
         { loc: `${base}${USES_HUB_PATH}`, changefreq: 'weekly', priority: '0.9' },
         { loc: `${base}/faq`, changefreq: 'monthly', priority: '0.75' },
         { loc: `${base}/how-to`, changefreq: 'monthly', priority: '0.78' },
-        { loc: `${base}/demonstration`, changefreq: 'monthly', priority: '0.8' },
+        {
+          loc: `${base}/demonstration`,
+          changefreq: 'monthly',
+          priority: '0.8',
+          images: [{ loc: `${base}${DEMO_RECONSTRUCTION_GIF_PATH}`, title: 'Demonstration' }],
+        },
         ...INTENT_LANDINGS.filter((x) => x.includeInSitemap !== false).map((x) => ({
           loc: `${base}${x.path}`,
           changefreq: 'monthly',
           priority: '0.85',
         })),
+        { loc: `${base}/privacy`, changefreq: 'yearly', priority: '0.5' },
+        { loc: `${base}/terms`, changefreq: 'yearly', priority: '0.5' },
         { loc: `${base}/contact`, changefreq: 'yearly', priority: '0.4' },
         { loc: `${base}/feedback`, changefreq: 'yearly', priority: '0.4' },
       ]
-      const urlBlocks = rows.map(
-        (r) =>
-          `  <url>\n    <loc>${r.loc}</loc>\n    <changefreq>${r.changefreq}</changefreq>\n    <priority>${r.priority}</priority>\n  </url>`,
-      )
-      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlBlocks.join('\n')}\n</urlset>\n`
+      const urlBlocks = rows.map((r) => {
+        const images = (r.images || [])
+          .map(
+            (img) =>
+              `    <image:image>\n      <image:loc>${img.loc}</image:loc>\n      <image:title>${escAttr(img.title)}</image:title>\n    </image:image>`,
+          )
+          .join('\n')
+        const extra = images ? `\n${images}` : ''
+        return `  <url>\n    <loc>${r.loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${r.changefreq}</changefreq>\n    <priority>${r.priority}</priority>${extra}\n  </url>`
+      })
+      const sitemap =
+        `<?xml version="1.0" encoding="UTF-8"?>\n` +
+        `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n` +
+        `${urlBlocks.join('\n')}\n</urlset>\n`
       fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemap, 'utf8')
       fs.writeFileSync(
         path.join(distDir, 'robots.txt'),
-        `User-agent: *\nAllow: /\n\nSitemap: ${base}/sitemap.xml\n`,
+        `User-agent: *\nAllow: /\nDisallow: /pay\n\nSitemap: ${base}/sitemap.xml\n`,
         'utf8',
       )
       const indexHtmlPath = path.join(distDir, 'index.html')
@@ -202,7 +189,8 @@ function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
           routeHtml = replaceSeoHead(routeHtml, routeSeoHtml(base, route))
           routeHtml = routeHtml.replace('<div id="root"></div>', `<div id="root">${route.bodyHtml}</div>`)
 
-          const outDir = path.join(distDir, route.pathNorm.replace(/^\/+/, ''))
+          const rel = route.pathNorm.replace(/^\/+/, '')
+          const outDir = rel ? path.join(distDir, rel) : distDir
           fs.mkdirSync(outDir, { recursive: true })
           fs.writeFileSync(path.join(outDir, 'index.html'), routeHtml, 'utf8')
         }
@@ -220,7 +208,6 @@ function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
   }
 }
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const fromEnv = String(env.VITE_SITE_URL || process.env.VITE_SITE_URL || '').trim()
@@ -228,11 +215,23 @@ export default defineConfig(({ mode }) => {
     !fromEnv &&
     (mode === 'production' ||
       Boolean(process.env.NETLIFY || process.env.CI || process.env.CONTINUOUS_INTEGRATION))
-  // Explicit VITE_SITE_URL (e.g. Netlify UI) always wins. If unset on Netlify/production, use repo default
-  // so sitemap <loc> URLs match the custom domain and Google Search Console accepts the sitemap.
   const siteUrl = fromEnv || (useCanonicalFallback ? CANONICAL_SITE_ORIGIN : '')
 
   return {
     plugins: [react(), seoBuildPlugin(siteUrl, mode)],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/react-dom') || id.includes('node_modules\\react-dom')) {
+              return 'react'
+            }
+            if (id.includes('node_modules/react/') || id.includes('node_modules\\react\\')) {
+              return 'react'
+            }
+          },
+        },
+      },
+    },
   }
 })

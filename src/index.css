@@ -105,7 +105,11 @@ body {
   .intent-landing__tips,
   .intent-landing__related-list,
   .intent-landing__hub-list,
-  .seo-breadcrumbs__list {
+  .seo-breadcrumbs__list,
+  .seo-home-faq,
+  .seo-home-faq__q,
+  .seo-home-faq__a,
+  .seo-home-faq__more {
     overflow-wrap: break-word;
     word-wrap: break-word;
   }
@@ -437,6 +441,72 @@ a {
 
 .intent-landing__cta-wrap {
   margin: 0 0 1.5rem;
+}
+
+.intent-landing .seo-home-faq {
+  margin: 0 0 1.35rem;
+  max-width: none;
+}
+
+.intent-landing .seo-home-faq .intent-landing__h2 {
+  margin-top: 0;
+}
+
+.seo-home-faq {
+  margin-top: 1.15rem;
+  padding: 1rem 0.85rem 0.15rem;
+  border-top: 1px solid color-mix(in srgb, var(--muted) 30%, transparent);
+  max-width: 40rem;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+}
+
+.seo-home-faq__title {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.seo-home-faq__list {
+  margin: 0;
+}
+
+.seo-home-faq__item {
+  margin: 0 0 0.85rem;
+}
+
+.seo-home-faq__q {
+  margin: 0 0 0.25rem;
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.seo-home-faq__a {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.seo-home-faq__more {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+}
+
+.seo-home-faq__more a {
+  font-weight: 650;
+  color: color-mix(in srgb, var(--accent) 50%, var(--text));
+}
+
+.seo-home-faq--page {
+  margin-top: 0.5rem;
+  padding: 0;
+  border-top: none;
+  max-width: 42rem;
 }
 
 .intent-landing__cta {

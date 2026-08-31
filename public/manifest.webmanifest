@@ -1,16 +1,29 @@
 {
   "name": "Translate Chat",
   "short_name": "Translate Chat",
-  "description": "Turn your chat screenshots into a translated conversation.",
+  "description": "Turn chat screenshots from Messenger, WhatsApp, LINE, and similar apps into a translated English conversation image you can save or share.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
+  "lang": "en",
   "icons": [
     {
       "src": "/translate-chat-mark.svg",
       "sizes": "any",
       "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/translate-chat-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
       "purpose": "any"
     }
   ]

@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /pay
 
 Sitemap: https://chatreconstruct.com/sitemap.xml

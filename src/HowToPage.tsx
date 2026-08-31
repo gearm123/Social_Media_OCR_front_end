@@ -34,6 +34,8 @@ export default function HowToPage() {
               <a href="/uses">App-specific tips (Messenger, WhatsApp, LINE, Thai, …) →</a>
               {' · '}
               <a href="/faq">FAQ →</a>
+              {' · '}
+              <a href="/demonstration">Demonstration →</a>
             </p>
           </div>
         </div>

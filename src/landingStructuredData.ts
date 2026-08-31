@@ -1,6 +1,7 @@
 /**
  * BreadcrumbList JSON-LD on every public route.
- * FAQPage JSON-LD only on `/faq`; HowTo JSON-LD only on `/how-to` (Google expects these on the URL that actually shows that content).
+ * FAQPage JSON-LD on `/faq` and on indexed intent guides that show their own Q&A.
+ * HowTo JSON-LD only on `/how-to` (Google expects these on the URL that actually shows that content).
  */
 
 import type { IntentLanding } from './intentLandings'

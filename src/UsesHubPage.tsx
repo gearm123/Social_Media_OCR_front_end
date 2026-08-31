@@ -1,10 +1,6 @@
 import GuideWorkflowSection from './GuideWorkflowSection'
-import { INTENT_LANDINGS } from './intentLandings'
-
-const HUB_LEAD =
-  'Short guides for common search intents — same tool on the home page, with tips tailored to each chat app or language.'
-
-export const USES_HUB_SEO_DESCRIPTION = HUB_LEAD
+import { INTENT_LANDINGS, isIntentIndexed } from './intentLandings'
+import { SEO_USES_DESCRIPTION } from './seoContent'
 
 export default function UsesHubPage() {
   return (
@@ -26,7 +22,7 @@ export default function UsesHubPage() {
           </ol>
         </nav>
         <h1 className="support-page__title">Translation guides</h1>
-        <p className="support-page__lead">{HUB_LEAD}</p>
+        <p className="support-page__lead">{SEO_USES_DESCRIPTION}</p>
 
         <div className="guide-page__split">
           <aside className="guide-page__rail" aria-label="Screen recordings of the translator workflow">
@@ -40,7 +36,9 @@ export default function UsesHubPage() {
             <ul className="intent-landing__hub-list">
               {INTENT_LANDINGS.map((x) => (
                 <li key={x.path}>
-                  <a href={x.path}>{x.h1}</a>
+                  <a href={x.path} rel={isIntentIndexed(x) ? undefined : 'nofollow'}>
+                    {x.h1}
+                  </a>
                 </li>
               ))}
             </ul>

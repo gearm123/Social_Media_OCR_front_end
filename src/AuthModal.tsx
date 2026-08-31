@@ -190,6 +190,18 @@ export function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: P
   }, [open, loadProviders])
 
   useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      if (busy) return
+      onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, busy, onClose])
+
+  useEffect(() => {
     if (!open || !providers?.facebook_app_id) {
       setFbReady(false)
       return

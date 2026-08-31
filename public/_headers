@@ -1,0 +1,33 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/og-image.png
+  Cache-Control: public, max-age=2592000
+
+/translate-chat-logo.png
+  Cache-Control: public, max-age=2592000
+
+/apple-touch-icon.png
+  Cache-Control: public, max-age=2592000
+
+/pay
+  X-Robots-Tag: noindex, nofollow
+
+/ai-chat-screenshot-translator
+  X-Robots-Tag: noindex, follow
+
+/ai-translate-chat-screenshots
+  X-Robots-Tag: noindex, follow
+
+/translate-chat-screenshots-with-ai
+  X-Robots-Tag: noindex, follow
+
+/chat-screenshot-ai-translation
+  X-Robots-Tag: noindex, follow
+
+/ai-conversation-screenshot-translator
+  X-Robots-Tag: noindex, follow
+
+/translate-chat-ui-screenshots-ai
+  X-Robots-Tag: noindex, follow

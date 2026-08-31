@@ -2,7 +2,18 @@
  * SEO helpers — meta descriptions match visible copy on each route (no new marketing text).
  */
 
-import { CANONICAL_SITE_ORIGIN } from './canonicalSite'
+import { absoluteSiteUrl, CANONICAL_SITE_ORIGIN } from './canonicalSite'
+import {
+  OG_IMAGE_ALT,
+  OG_IMAGE_HEIGHT,
+  OG_IMAGE_PATH,
+  OG_IMAGE_TYPE,
+  OG_IMAGE_WIDTH,
+} from './seoAssets'
+import { SEO_SITE_NAME } from './seoContent'
+import type { DocumentSeo } from './seoTypes'
+
+export type { DocumentSeo } from './seoTypes'
 export {
   SEO_CONTACT_DESCRIPTION,
   SEO_DEMONSTRATION_DESCRIPTION,
@@ -10,6 +21,8 @@ export {
   SEO_FAQ_ITEMS,
   SEO_FEEDBACK_DESCRIPTION,
   SEO_HOME_DESCRIPTION,
+  SEO_HOME_H1,
+  SEO_HOME_TITLE,
   SEO_HOWTO_DESCRIPTION,
   SEO_HOWTO_STEPS,
   SEO_SITE_NAME,
@@ -37,16 +50,20 @@ function upsertMetaProperty(property: string, content: string): void {
   el.setAttribute('content', content)
 }
 
-function upsertCanonical(href: string): void {
-  const id = 'seo-canonical'
+function upsertLink(id: string, rel: string, href: string, attrs?: Record<string, string>): void {
   let el = document.getElementById(id) as HTMLLinkElement | null
   if (!el) {
     el = document.createElement('link')
     el.id = id
-    el.rel = 'canonical'
     document.head.appendChild(el)
   }
+  el.rel = rel
   el.href = href
+  if (attrs) {
+    for (const [key, value] of Object.entries(attrs)) {
+      el.setAttribute(key, value)
+    }
+  }
 }
 
 function siteOrigin(): string {
@@ -56,17 +73,6 @@ function siteOrigin(): string {
   return ''
 }
 
-export type DocumentSeo = {
-  title: string
-  description: string
-  /** Path starting with `/` (e.g. `/`, `/contact`). */
-  path: string
-  robots?: string
-}
-
-/**
- * Updates document title, description, Open Graph, Twitter, and canonical (when `VITE_SITE_URL` is set).
- */
 /** Public site origin from `VITE_SITE_URL` (no trailing slash). Used for JSON-LD URLs. */
 export function getSeoSiteOrigin(): string {
   return siteOrigin()
@@ -86,11 +92,19 @@ export function unmountJsonLd(id: string): void {
   document.getElementById(id)?.remove()
 }
 
-export function applyDocumentSeo({ title, description, path, robots }: DocumentSeo): void {
+export function applyDocumentSeo({
+  title,
+  description,
+  path,
+  robots,
+  canonicalPath,
+}: DocumentSeo): void {
   document.title = title
   upsertMetaName('description', description)
   upsertMetaName('robots', robots || 'index, follow, max-image-preview:large')
   upsertMetaProperty('og:type', 'website')
+  upsertMetaProperty('og:site_name', SEO_SITE_NAME)
+  upsertMetaProperty('og:locale', 'en_US')
   upsertMetaProperty('og:title', title)
   upsertMetaProperty('og:description', description)
   upsertMetaName('twitter:card', 'summary_large_image')
@@ -99,11 +113,19 @@ export function applyDocumentSeo({ title, description, path, robots }: DocumentS
 
   const origin = siteOrigin()
   if (origin) {
-    const norm = path === '/' ? '/' : path.startsWith('/') ? path : `/${path}`
-    const url = norm === '/' ? `${origin}/` : `${origin}${norm}`
+    const canonPath = canonicalPath || path
+    const url = absoluteSiteUrl(origin, canonPath)
+    const imageUrl = `${origin}${OG_IMAGE_PATH}`
     upsertMetaProperty('og:url', url)
-    upsertCanonical(url)
-    upsertMetaProperty('og:image', `${origin}/translate-chat-mark.svg`)
-    upsertMetaName('twitter:image', `${origin}/translate-chat-mark.svg`)
+    upsertLink('seo-canonical', 'canonical', url)
+    upsertLink('seo-hreflang-en', 'alternate', url, { hreflang: 'en' })
+    upsertLink('seo-hreflang-default', 'alternate', url, { hreflang: 'x-default' })
+    upsertMetaProperty('og:image', imageUrl)
+    upsertMetaProperty('og:image:alt', OG_IMAGE_ALT)
+    upsertMetaProperty('og:image:type', OG_IMAGE_TYPE)
+    upsertMetaProperty('og:image:width', String(OG_IMAGE_WIDTH))
+    upsertMetaProperty('og:image:height', String(OG_IMAGE_HEIGHT))
+    upsertMetaName('twitter:image', imageUrl)
+    upsertMetaName('twitter:image:alt', OG_IMAGE_ALT)
   }
 }

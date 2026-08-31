@@ -54,7 +54,7 @@ export default function DemonstrationPage() {
                 height={DEMO_RECONSTRUCTION_HEIGHT}
                 loading="eager"
                 decoding="async"
-                fetchPriority="high"
+                {...{ fetchpriority: 'high' }}
               />
             </div>
             <p className="demonstration-page__cta">

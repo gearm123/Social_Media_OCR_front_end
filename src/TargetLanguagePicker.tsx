@@ -204,6 +204,7 @@ export function TargetLanguagePicker({ id, value, onChange }: TargetLanguagePick
                       type="button"
                       role="option"
                       aria-selected={isActive}
+                      aria-label={`${l.label} (${short}), ${l.countryName}`}
                       className={`target-language-picker__option${isActive ? ' target-language-picker__option--active' : ''}`}
                       onClick={() => {
                         onChange(l.cliCode)

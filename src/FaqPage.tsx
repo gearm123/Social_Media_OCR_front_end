@@ -25,6 +25,12 @@ export default function FaqPage() {
           </dl>
           <p className="seo-home-faq__more">
             <a href="/uses">More guides by app and language →</a>
+            {' · '}
+            <a href="/demonstration">Demonstration</a>
+            {' · '}
+            <a href="/privacy">Privacy</a>
+            {' · '}
+            <a href="/terms">Terms</a>
           </p>
         </section>
       </main>

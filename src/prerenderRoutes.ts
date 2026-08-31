@@ -1,17 +1,35 @@
-import { INTENT_LANDINGS, USES_HUB_PATH, type IntentLanding } from './intentLandings'
+import { DEMO_RECONSTRUCTION_GIF_PATH, DEMO_RECONSTRUCTION_HEIGHT, DEMO_RECONSTRUCTION_WIDTH } from './demoReconstructionMedia'
+import {
+  CONTACT_DOCUMENT_SEO,
+  DEMONSTRATION_DOCUMENT_SEO,
+  FAQ_DOCUMENT_SEO,
+  FEEDBACK_DOCUMENT_SEO,
+  HOME_DOCUMENT_SEO,
+  HOWTO_DOCUMENT_SEO,
+  PAY_DOCUMENT_SEO,
+  PRIVACY_DOCUMENT_SEO,
+  TERMS_DOCUMENT_SEO,
+  USES_DOCUMENT_SEO,
+  intentDocumentSeo,
+} from './documentSeo'
+import { GUIDE_WORKFLOW_STEPS } from './guideWorkflowSteps'
+import { INTENT_LANDINGS, USES_HUB_PATH, isIntentIndexed, type IntentLanding } from './intentLandings'
 import {
   SEO_CONTACT_DESCRIPTION,
   SEO_DEMONSTRATION_DESCRIPTION,
-  SEO_FAQ_DESCRIPTION,
   SEO_FAQ_ITEMS,
   SEO_FEEDBACK_DESCRIPTION,
-  SEO_HOWTO_DESCRIPTION,
+  SEO_HOME_H1,
   SEO_HOWTO_STEPS,
-  SEO_HOME_DESCRIPTION,
+  SEO_PRIVACY_DESCRIPTION,
+  SEO_PRIVACY_SECTIONS,
   SEO_SITE_NAME,
+  SEO_TERMS_DESCRIPTION,
+  SEO_TERMS_SECTIONS,
+  SEO_USES_DESCRIPTION,
 } from './seoContent'
 import { SUPPORT_EMAIL } from './supportEmail'
-import type { DocumentSeo } from './seoRoutes'
+import type { DocumentSeo } from './seoTypes'
 
 export type PrerenderRoute = {
   pathNorm: string
@@ -41,8 +59,33 @@ function breadcrumb(items: readonly { label: string; href?: string }[]): string 
   return `<nav class="seo-breadcrumbs" aria-label="Breadcrumb"><ol class="seo-breadcrumbs__list">${rows}</ol></nav>`
 }
 
-function wrapSupportPage(content: string, backHref = '/', backLabel = 'Back to Translate Chat'): string {
-  return `<div class="support-page"><header class="support-page__header"><a class="support-page__back" href="${backHref}">${escHtml(backLabel)}</a></header><main class="support-page__main">${content}</main></div>`
+function wrapSupportPage(
+  content: string,
+  backHref = '/',
+  backLabel = 'Back to Translate Chat',
+  extraClass = '',
+): string {
+  const cls = extraClass ? `support-page ${extraClass}` : 'support-page'
+  return `<div class="${cls}"><header class="support-page__header"><a class="support-page__back" href="${backHref}">${escHtml(backLabel)}</a></header><main class="support-page__main">${content}</main></div>`
+}
+
+function workflowRailHtml(heading: string, intro: string): string {
+  const steps = GUIDE_WORKFLOW_STEPS.map((step, index) => {
+    const micro = step.microSrc
+      ? `<div class="guide-workflow__micro-wrap"><p class="guide-workflow__micro-label">Detail</p><video class="guide-workflow__clip guide-workflow__clip--micro" src="${escHtml(step.microSrc)}" muted playsinline controls preload="metadata" aria-label="${escHtml(`${step.title}: detail`)}"></video></div>`
+      : ''
+    return `<li class="guide-workflow__step"><div class="guide-workflow__step-head"><span class="guide-workflow__step-badge" aria-hidden>${index + 1}</span><div><h3 class="guide-workflow__step-title">${escHtml(step.title)}</h3><p class="guide-workflow__step-desc">${escHtml(step.description)}</p></div></div><div class="guide-workflow__media"><div class="guide-workflow__primary"><video class="guide-workflow__clip" src="${escHtml(step.mainSrc)}" muted playsinline controls preload="metadata" aria-label="${escHtml(`${step.title}: overview`)}"></video></div>${micro}</div></li>`
+  }).join('')
+  return `<aside class="guide-page__rail" aria-label="Screen recordings of the translator workflow"><section id="visual-walkthrough" class="guide-workflow guide-workflow--rail" aria-labelledby="guide-workflow-heading"><h2 id="guide-workflow-heading" class="guide-workflow__heading">${escHtml(heading)}</h2><p class="guide-workflow__intro">${escHtml(intro)}</p><ol class="guide-workflow__steps">${steps}</ol></section></aside>`
+}
+
+function legalSectionsHtml(sections: readonly { title: string; body: string }[]): string {
+  return sections
+    .map(
+      (section) =>
+        `<section><h2 class="intent-landing__h2">${escHtml(section.title)}</h2><p class="support-page__lead intent-landing__more">${escHtml(section.body)}</p></section>`,
+    )
+    .join('')
 }
 
 function contactBody(): string {
@@ -74,10 +117,10 @@ function faqBody(): string {
   ).join('')
   return wrapSupportPage(
     `<h1 class="support-page__title">Common questions</h1>
-    <p class="support-page__lead">${escHtml(SEO_FAQ_DESCRIPTION)}</p>
+    <p class="support-page__lead">${escHtml(FAQ_DOCUMENT_SEO.description)}</p>
     <section class="seo-home-faq seo-home-faq--page" aria-label="Frequently asked questions">
       <dl class="seo-home-faq__list">${items}</dl>
-      <p class="seo-home-faq__more"><a href="${USES_HUB_PATH}">More guides by app and language →</a></p>
+      <p class="seo-home-faq__more"><a href="${USES_HUB_PATH}">More guides by app and language →</a> · <a href="/demonstration">Demonstration</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
     </section>`,
   )
 }
@@ -89,9 +132,17 @@ function howToBody(): string {
   ).join('')
   return wrapSupportPage(
     `<h1 class="support-page__title">How to use ${escHtml(SEO_SITE_NAME)}</h1>
-    <p class="support-page__lead">${escHtml(SEO_HOWTO_DESCRIPTION)}</p>
-    <ol class="howto-page__steps">${steps}</ol>
-    <p class="support-page__note"><a href="${USES_HUB_PATH}">App-specific tips (Messenger, WhatsApp, LINE, Thai, …) →</a> · <a href="/faq">FAQ →</a></p>`,
+    <p class="support-page__lead">${escHtml(HOWTO_DOCUMENT_SEO.description)}</p>
+    <div class="guide-page__split">
+      ${workflowRailHtml('See the flow in the app', 'Videos on the left; detailed written steps on the right.')}
+      <div class="guide-page__body">
+        <ol class="howto-page__steps">${steps}</ol>
+        <p class="support-page__note"><a href="${USES_HUB_PATH}">App-specific tips (Messenger, WhatsApp, LINE, Thai, …) →</a> · <a href="/faq">FAQ →</a> · <a href="/demonstration">Demonstration →</a></p>
+      </div>
+    </div>`,
+    '/',
+    'Back to Translate Chat',
+    'guide-page',
   )
 }
 
@@ -100,33 +151,48 @@ function demonstrationBody(): string {
     `${breadcrumb([{ label: 'Home', href: '/' }, { label: 'Demonstration' }])}
     <h1 class="support-page__title">Demonstration</h1>
     <p class="support-page__lead demonstration-page__lead">${escHtml(SEO_DEMONSTRATION_DESCRIPTION)}</p>
-    <div class="guide-page__body guide-page__body--demonstration">
-      <div class="demonstration-page__visual">
-        <img
-          class="demonstration-page__media"
-          src="/demonstration-chat-reconstruction.gif"
-          alt="Before and after: cracked phone screens with reconstructed chat bubbles overlaid for legibility"
-          width="3924"
-          height="1744"
-          loading="eager"
-          decoding="async"
-        />
+    <div class="guide-page__split guide-page__split--demonstration">
+      ${workflowRailHtml('Using the translator', 'Workflow on the left; reconstruction example on the right.')}
+      <div class="guide-page__body guide-page__body--demonstration">
+        <div class="demonstration-page__visual">
+          <img
+            class="demonstration-page__media"
+            src="${escHtml(DEMO_RECONSTRUCTION_GIF_PATH)}"
+            alt="Before and after: cracked phone screens with reconstructed chat bubbles overlaid for legibility"
+            width="${DEMO_RECONSTRUCTION_WIDTH}"
+            height="${DEMO_RECONSTRUCTION_HEIGHT}"
+            loading="eager"
+            decoding="async"
+          />
+        </div>
+        <p class="demonstration-page__cta"><a class="support-page__mailto" href="/">Open the translator</a></p>
       </div>
-      <p class="demonstration-page__cta"><a class="support-page__mailto" href="/">Open the translator</a></p>
     </div>`,
+    '/',
+    'Back to Translate Chat',
+    'demonstration-page guide-page',
   )
 }
 
 function usesBody(): string {
-  const links = INTENT_LANDINGS.map(
-    (entry) => `<li><a href="${entry.path}">${escHtml(entry.h1)}</a></li>`,
-  ).join('')
+  const links = INTENT_LANDINGS.map((entry) => {
+    const rel = isIntentIndexed(entry) ? '' : ' rel="nofollow"'
+    return `<li><a href="${entry.path}"${rel}>${escHtml(entry.h1)}</a></li>`
+  }).join('')
   return wrapSupportPage(
     `${breadcrumb([{ label: 'Home', href: '/' }, { label: 'Translation guides' }])}
     <h1 class="support-page__title">Translation guides</h1>
-    <p class="support-page__lead">Short guides for common search intents — same tool on the home page, with tips tailored to each chat app or language.</p>
-    <ul class="intent-landing__hub-list">${links}</ul>
-    <p class="intent-landing__cta-wrap"><a class="support-page__mailto intent-landing__cta" href="/">Open the translator</a></p>`,
+    <p class="support-page__lead">${escHtml(SEO_USES_DESCRIPTION)}</p>
+    <div class="guide-page__split">
+      ${workflowRailHtml('Quick walkthrough', 'Same four steps for every topic. Pick a guide on the right for app-specific tips.')}
+      <div class="guide-page__body">
+        <ul class="intent-landing__hub-list">${links}</ul>
+        <p class="intent-landing__cta-wrap"><a class="support-page__mailto intent-landing__cta" href="/">Open the translator</a></p>
+      </div>
+    </div>`,
+    '/',
+    'Back to Translate Chat',
+    'intent-landing guide-page',
   )
 }
 
@@ -136,7 +202,10 @@ function intentBody(intent: IntentLanding): string {
     .join('')
   const tips = intent.tips.map((tip) => `<li>${escHtml(tip)}</li>`).join('')
   const others = INTENT_LANDINGS.filter((entry) => entry.path !== intent.path)
-    .map((entry) => `<li><a href="${entry.path}">${escHtml(entry.h1)}</a></li>`)
+    .map((entry) => {
+      const rel = isIntentIndexed(entry) ? '' : ' rel="nofollow"'
+      return `<li><a href="${entry.path}"${rel}>${escHtml(entry.h1)}</a></li>`
+    })
     .join('')
 
   return wrapSupportPage(
@@ -148,95 +217,148 @@ function intentBody(intent: IntentLanding): string {
     <h1 class="support-page__title">${escHtml(intent.h1)}</h1>
     <p class="support-page__lead">${escHtml(intent.lead)}</p>
     ${more}
-    <h2 class="intent-landing__h2">Tips for better results</h2>
-    <ul class="intent-landing__tips">${tips}</ul>
-    <p class="intent-landing__cta-wrap"><a class="support-page__mailto intent-landing__cta" href="/">Start translating — upload screenshots</a></p>
-    <nav class="intent-landing__related" aria-label="Other guides">
-      <h2 class="intent-landing__h2">Other guides</h2>
-      <ul class="intent-landing__related-list">${others}<li><a href="${USES_HUB_PATH}">All guides on one page</a></li></ul>
-    </nav>`,
+    <div class="guide-page__split">
+      ${workflowRailHtml('How the translator flows', 'Left: the four steps in order. Right: tips for this guide.')}
+      <div class="guide-page__body">
+        <h2 class="intent-landing__h2">Tips for better results</h2>
+        <ul class="intent-landing__tips">${tips}</ul>
+        ${
+          intent.faq && intent.faq.length > 0
+            ? `<section class="seo-home-faq seo-home-faq--page" aria-label="Questions about this guide"><h2 class="intent-landing__h2">Questions about this guide</h2><dl class="seo-home-faq__list">${intent.faq
+                .map(
+                  (item) =>
+                    `<div class="seo-home-faq__item"><dt class="seo-home-faq__q">${escHtml(item.question)}</dt><dd class="seo-home-faq__a">${escHtml(item.answer)}</dd></div>`,
+                )
+                .join('')}</dl></section>`
+            : ''
+        }
+        <p class="intent-landing__cta-wrap"><a class="support-page__mailto intent-landing__cta" href="/">Start translating — upload screenshots</a></p>
+        <nav class="intent-landing__related" aria-label="Other guides">
+          <h2 class="intent-landing__h2">Other guides</h2>
+          <ul class="intent-landing__related-list">${others}<li><a href="${USES_HUB_PATH}">All guides on one page</a></li></ul>
+        </nav>
+      </div>
+    </div>`,
     USES_HUB_PATH,
     'All translation guides',
+    'intent-landing guide-page',
   )
+}
+
+function privacyBody(): string {
+  return wrapSupportPage(
+    `<h1 class="support-page__title">Privacy</h1>
+    <p class="support-page__lead">${escHtml(SEO_PRIVACY_DESCRIPTION)}</p>
+    ${legalSectionsHtml(SEO_PRIVACY_SECTIONS)}
+    <p class="support-page__note"><a href="/terms">Terms of use →</a> · <a href="/contact">Contact →</a></p>`,
+  )
+}
+
+function termsBody(): string {
+  return wrapSupportPage(
+    `<h1 class="support-page__title">Terms of use</h1>
+    <p class="support-page__lead">${escHtml(SEO_TERMS_DESCRIPTION)}</p>
+    ${legalSectionsHtml(SEO_TERMS_SECTIONS)}
+    <p class="support-page__note"><a href="/privacy">Privacy →</a> · <a href="/contact">Contact →</a></p>`,
+  )
+}
+
+function homeBody(): string {
+  return `<main class="app-shell"><div class="app">
+    <header class="app-top-bar">
+      <nav class="app-top-bar__nav" aria-label="Help and feedback">
+        <a class="app-top-bar__link" href="/contact">Contact us</a>
+        <a class="app-top-bar__link" href="/feedback">Feedback</a>
+      </nav>
+    </header>
+    <header class="hero">
+      <div class="hero-title-block">
+        <p class="hero-brand">
+          <span class="hero-brand__lockup">
+            <img class="hero-brand__mark" src="/translate-chat-mark.svg" alt="" width="44" height="44" decoding="async" />
+            <span class="hero-brand__row">
+              <span class="hero-brand__translate">Translate</span>
+              <span class="hero-brand__chat-pill">Chat</span>
+            </span>
+          </span>
+        </p>
+        <h1 class="hero-tagline">${escHtml(SEO_HOME_H1)}</h1>
+      </div>
+    </header>
+    <nav class="site-explore-bar" aria-label="More pages">
+      <div class="site-explore-bar__track">
+        <span class="site-explore-bar__eyebrow">Explore</span>
+        <div class="site-explore-bar__chips">
+          <a class="site-explore-bar__chip site-explore-bar__chip--accent" href="/how-to">How to</a>
+          <a class="site-explore-bar__chip" href="/uses">Guides</a>
+          <a class="site-explore-bar__chip" href="/faq">FAQ</a>
+        </div>
+      </div>
+    </nav>
+  </div></main>`
 }
 
 export const PRERENDER_ROUTES: readonly PrerenderRoute[] = [
   {
+    pathNorm: '/',
+    intent: null,
+    seo: HOME_DOCUMENT_SEO,
+    bodyHtml: homeBody(),
+  },
+  {
     pathNorm: '/contact',
     intent: null,
-    seo: {
-      title: `Contact us · ${SEO_SITE_NAME}`,
-      description: SEO_CONTACT_DESCRIPTION,
-      path: '/contact',
-    },
+    seo: CONTACT_DOCUMENT_SEO,
     bodyHtml: contactBody(),
   },
   {
     pathNorm: '/feedback',
     intent: null,
-    seo: {
-      title: `Feedback · ${SEO_SITE_NAME}`,
-      description: SEO_FEEDBACK_DESCRIPTION,
-      path: '/feedback',
-    },
+    seo: FEEDBACK_DOCUMENT_SEO,
     bodyHtml: feedbackBody(),
+  },
+  {
+    pathNorm: '/privacy',
+    intent: null,
+    seo: PRIVACY_DOCUMENT_SEO,
+    bodyHtml: privacyBody(),
+  },
+  {
+    pathNorm: '/terms',
+    intent: null,
+    seo: TERMS_DOCUMENT_SEO,
+    bodyHtml: termsBody(),
   },
   {
     pathNorm: '/faq',
     intent: null,
-    seo: {
-      title: `FAQ · ${SEO_SITE_NAME}`,
-      description: SEO_FAQ_DESCRIPTION,
-      path: '/faq',
-    },
+    seo: FAQ_DOCUMENT_SEO,
     bodyHtml: faqBody(),
   },
   {
     pathNorm: '/how-to',
     intent: null,
-    seo: {
-      title: `How to · ${SEO_SITE_NAME}`,
-      description: SEO_HOWTO_DESCRIPTION,
-      path: '/how-to',
-    },
+    seo: HOWTO_DOCUMENT_SEO,
     bodyHtml: howToBody(),
   },
   {
     pathNorm: '/demonstration',
     intent: null,
-    seo: {
-      title: `Demonstration · ${SEO_SITE_NAME}`,
-      description: SEO_DEMONSTRATION_DESCRIPTION,
-      path: '/demonstration',
-    },
+    seo: DEMONSTRATION_DOCUMENT_SEO,
     bodyHtml: demonstrationBody(),
   },
   {
     pathNorm: USES_HUB_PATH,
     intent: null,
-    seo: {
-      title: `Translation guides · ${SEO_SITE_NAME}`,
-      description:
-        'Short guides for common search intents — same tool on the home page, with tips tailored to each chat app or language.',
-      path: USES_HUB_PATH,
-    },
+    seo: USES_DOCUMENT_SEO,
     bodyHtml: usesBody(),
   },
   ...INTENT_LANDINGS.map((intent) => ({
     pathNorm: intent.path,
     intent,
-    seo: {
-      title: `${intent.seoTitle} · ${SEO_SITE_NAME}`,
-      description: intent.seoDescription,
-      path: intent.path,
-    },
+    seo: intentDocumentSeo(intent),
     bodyHtml: intentBody(intent),
   })),
 ]
 
-export const PAY_ROUTE_SEO: DocumentSeo = {
-  title: `Checkout · ${SEO_SITE_NAME}`,
-  description: SEO_HOME_DESCRIPTION,
-  path: '/pay',
-  robots: 'noindex, nofollow',
-}
+export const PAY_ROUTE_SEO: DocumentSeo = PAY_DOCUMENT_SEO
