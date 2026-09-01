@@ -302,7 +302,7 @@ function homeBody(): string {
         </div>
       </div>
     </nav>
-    <p class="product-wing-badge"><a target="_blank" rel="noopener noreferrer" href="https://productwing.com/product/chatreconstruct"><img src="https://productwing.com/assets/images/badge.png" alt="Product Wing" height="54" loading="lazy" /></a><a target="_blank" rel="noopener noreferrer" href="https://submitmysaas.com"><img src="https://submitmysaas.com/featured-badge.png" alt="Featured on SubmitMySaas" height="54" loading="lazy" /></a></p>
+    <p class="product-wing-badge"><a target="_blank" rel="noopener noreferrer" href="https://productwing.com/product/chatreconstruct"><img src="https://productwing.com/assets/images/badge.png" alt="Product Wing" height="54" loading="lazy" /></a><a target="_blank" rel="noopener noreferrer" href="https://submitmysaas.com"><img src="https://submitmysaas.com/featured-badge.png" alt="Featured on SubmitMySaas" height="54" loading="lazy" /></a><a target="_blank" rel="noopener noreferrer" href="https://www.launchory.app/startups/chatreconstruct?ref=badge"><img src="https://www.launchory.app/api/badge/chatreconstruct?theme=light" alt="Featured on Launchory" width="240" height="54" loading="lazy" /></a></p>
   </div></main>`
 }
 

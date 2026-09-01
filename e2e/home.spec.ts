@@ -15,6 +15,10 @@ test.describe('home translator UI', () => {
     await expect(page.getByRole('link', { name: 'Guides' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Videos' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'FAQ' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Featured on Launchory' })).toHaveAttribute(
+      'href',
+      'https://www.launchory.app/startups/chatreconstruct?ref=badge',
+    )
 
     await page.getByRole('button', { name: 'View plans' }).click()
     const plans = page.getByRole('dialog', { name: 'Choose a plan' })
