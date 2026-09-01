@@ -103,13 +103,18 @@ body {
   .howto-page__step-title,
   .howto-page__step-body,
   .intent-landing__tips,
+  .intent-landing__workflow,
   .intent-landing__related-list,
   .intent-landing__hub-list,
   .seo-breadcrumbs__list,
   .seo-home-faq,
   .seo-home-faq__q,
   .seo-home-faq__a,
-  .seo-home-faq__more {
+  .seo-home-faq__more,
+  .seo-article__callout-text,
+  .seo-article__cta-note,
+  .seo-article__caption,
+  .blog-hub__blurb {
     overflow-wrap: break-word;
     word-wrap: break-word;
   }
@@ -190,6 +195,10 @@ a {
 /* Wider column when guide videos sit beside copy */
 .support-page.guide-page {
   max-width: min(58rem, 100%);
+}
+
+.support-page.seo-article {
+  max-width: min(46rem, 100%);
 }
 
 .support-page__header {
@@ -460,6 +469,17 @@ a {
   margin-bottom: 0.45rem;
 }
 
+.intent-landing__workflow {
+  margin: 0 0 1.25rem;
+  padding-left: 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.intent-landing__workflow li {
+  margin-bottom: 0.4rem;
+}
+
 .intent-landing__cta-wrap {
   margin: 0 0 1.5rem;
 }
@@ -540,6 +560,13 @@ a {
   border-top: 1px solid var(--border);
 }
 
+.intent-landing__related--inline {
+  margin-top: 0.85rem;
+  margin-bottom: 0.35rem;
+  padding-top: 0;
+  border-top: none;
+}
+
 .intent-landing__related-list {
   margin: 0;
   padding-left: 1.25rem;
@@ -570,6 +597,101 @@ a {
 
 .intent-landing__hub-list a {
   font-weight: 650;
+}
+
+.seo-article__callout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin: 0.85rem 0 1.1rem;
+}
+
+.seo-article__callout-link {
+  text-align: left;
+}
+
+.seo-article__callout-text,
+.seo-article__cta-note {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-weight: 450;
+}
+
+.intent-landing__cta-wrap .seo-article__cta-note {
+  text-align: left;
+  max-width: 42rem;
+}
+
+.seo-article__section {
+  margin-bottom: 0.35rem;
+}
+
+.seo-article__table-wrap {
+  overflow-x: auto;
+  margin: 0.75rem 0 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: var(--surface-2);
+}
+
+.seo-article__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.seo-article__caption {
+  caption-side: bottom;
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.seo-article__table th,
+.seo-article__table td {
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+
+.seo-article__table thead th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.seo-article__table tbody th {
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.blog-hub__list {
+  margin: 0 0 1.5rem;
+  padding-left: 1.25rem;
+}
+
+.blog-hub__list li {
+  margin-bottom: 0.85rem;
+}
+
+.blog-hub__list a {
+  font-weight: 650;
+}
+
+.blog-hub__blurb {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--muted);
 }
 
 /* Visible breadcrumbs — pairs with BreadcrumbList JSON-LD on guide routes. */

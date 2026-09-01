@@ -1,13 +1,13 @@
 import GuideWorkflowSection from './GuideWorkflowSection'
 import type { IntentLanding } from './intentLandings'
-import { INTENT_LANDINGS, USES_HUB_PATH } from './intentLandings'
+import { USES_HUB_PATH } from './intentLandings'
 
 type Props = {
   intent: IntentLanding
 }
 
 export default function IntentLandingPage({ intent }: Props) {
-  const others = INTENT_LANDINGS.filter((x) => x.path !== intent.path)
+  const related = intent.related ?? []
 
   return (
     <div className="support-page intent-landing guide-page">
@@ -47,6 +47,17 @@ export default function IntentLandingPage({ intent }: Props) {
             />
           </aside>
           <div className="guide-page__body">
+            {intent.workflow && intent.workflow.length > 0 ? (
+              <>
+                <h2 className="intent-landing__h2">Short workflow</h2>
+                <ol className="intent-landing__workflow">
+                  {intent.workflow.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ol>
+              </>
+            ) : null}
+
             <h2 className="intent-landing__h2">Tips for better results</h2>
             <ul className="intent-landing__tips">
               {intent.tips.map((t, i) => (
@@ -74,19 +85,21 @@ export default function IntentLandingPage({ intent }: Props) {
               </a>
             </p>
 
-            <nav className="intent-landing__related" aria-label="Other guides">
-              <h2 className="intent-landing__h2">Other guides</h2>
-              <ul className="intent-landing__related-list">
-                {others.map((x) => (
-                  <li key={x.path}>
-                    <a href={x.path}>{x.h1}</a>
+            {related.length > 0 ? (
+              <nav className="intent-landing__related" aria-label="Related translation guides">
+                <h2 className="intent-landing__h2">Related translation guides</h2>
+                <ul className="intent-landing__related-list">
+                  {related.map((item) => (
+                    <li key={item.path}>
+                      <a href={item.path}>{item.label}</a>
+                    </li>
+                  ))}
+                  <li>
+                    <a href={USES_HUB_PATH}>Every guide on the hub</a>
                   </li>
-                ))}
-                <li>
-                  <a href={USES_HUB_PATH}>All guides on one page</a>
-                </li>
-              </ul>
-            </nav>
+                </ul>
+              </nav>
+            ) : null}
           </div>
         </div>
       </main>

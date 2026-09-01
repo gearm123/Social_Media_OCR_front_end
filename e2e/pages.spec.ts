@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { GUIDE_VIDEO_CLIPS, GUIDE_WORKFLOW_STEPS, VIDEOS_HUB_PATH } from '../src/guideWorkflowSteps'
 import { INTENT_LANDINGS, LEGACY_LANDING_REDIRECTS, USES_HUB_PATH } from '../src/intentLandings'
+import { BLOG_HUB_PATH, SEO_ARTICLES } from '../src/articles'
 import { attachPageGuards, gotoReady } from './helpers'
 
 const CONTENT_PAGES: { path: string; h1: string | RegExp; title: RegExp }[] = [
@@ -15,12 +16,18 @@ const CONTENT_PAGES: { path: string; h1: string | RegExp; title: RegExp }[] = [
   { path: '/terms', h1: 'Terms of use', title: /Terms/i },
   { path: '/pay', h1: 'Checkout', title: /Checkout|Translate Chat/i },
   { path: VIDEOS_HUB_PATH, h1: 'Workflow videos', title: /Workflow videos/i },
+  { path: BLOG_HUB_PATH, h1: 'Articles', title: /Articles/i },
   ...GUIDE_VIDEO_CLIPS.map((clip) => ({
     path: clip.path,
     h1: clip.title,
     title: new RegExp(clip.seoTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
   })),
   ...INTENT_LANDINGS.map((entry) => ({
+    path: entry.path,
+    h1: entry.h1,
+    title: new RegExp(entry.seoTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+  })),
+  ...SEO_ARTICLES.map((entry) => ({
     path: entry.path,
     h1: entry.h1,
     title: new RegExp(entry.seoTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
@@ -44,7 +51,6 @@ test.describe('public pages', () => {
       const guards = attachPageGuards(page, new URL(baseURL!).origin)
       await gotoReady(page, from)
       await expect(page).toHaveURL(new RegExp(`${to.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/?$`))
-      await expect(page.locator('h1').first()).toHaveText('Translation guides')
       guards.assertClean()
     })
   }

@@ -9,9 +9,12 @@ import {
   TERMS_DOCUMENT_SEO,
   USES_DOCUMENT_SEO,
   VIDEOS_DOCUMENT_SEO,
+  BLOG_DOCUMENT_SEO,
   intentDocumentSeo,
   videoClipDocumentSeo,
+  articleDocumentSeo,
 } from './documentSeo'
+import { ARTICLE_BY_PATH, BLOG_HUB_PATH, SEO_ARTICLES, type SeoArticle } from './articles'
 import { GUIDE_VIDEO_BY_PATH, GUIDE_VIDEO_CLIPS, VIDEOS_HUB_PATH } from './guideWorkflowSteps'
 import type { GuideWorkflowClip } from './guideWorkflowSteps'
 import { INTENT_BY_PATH, INTENT_LANDINGS, USES_HUB_PATH, type IntentLanding } from './intentLandings'
@@ -32,6 +35,8 @@ export type SeoPageKind =
   | 'demonstration'
   | 'videos'
   | 'video'
+  | 'blog'
+  | 'article'
 
 export type ResolvedSeoRoute = {
   pathNorm: string
@@ -39,6 +44,7 @@ export type ResolvedSeoRoute = {
   page: SeoPageKind
   intent: IntentLanding | null
   clip: GuideWorkflowClip | null
+  article: SeoArticle | null
 }
 
 export function normalizeSeoPath(pathname: string): string {
@@ -55,50 +61,59 @@ export const PRERENDER_ROUTE_PATHS = [
   '/terms',
   USES_HUB_PATH,
   VIDEOS_HUB_PATH,
+  BLOG_HUB_PATH,
   ...INTENT_LANDINGS.map((entry) => entry.path),
   ...GUIDE_VIDEO_CLIPS.map((entry) => entry.path),
+  ...SEO_ARTICLES.map((entry) => entry.path),
 ] as const
 
 export function resolveSeoRoute(pathname: string): ResolvedSeoRoute | null {
   const pathNorm = normalizeSeoPath(pathname)
   const intent = INTENT_BY_PATH[pathNorm] ?? null
   const clip = GUIDE_VIDEO_BY_PATH[pathNorm] ?? null
+  const article = ARTICLE_BY_PATH[pathNorm] ?? null
 
   if (pathNorm === '/contact') {
-    return { pathNorm, intent: null, clip: null, page: 'contact', seo: CONTACT_DOCUMENT_SEO }
+    return { pathNorm, intent: null, clip: null, article: null, page: 'contact', seo: CONTACT_DOCUMENT_SEO }
   }
   if (pathNorm === '/feedback') {
-    return { pathNorm, intent: null, clip: null, page: 'feedback', seo: FEEDBACK_DOCUMENT_SEO }
+    return { pathNorm, intent: null, clip: null, article: null, page: 'feedback', seo: FEEDBACK_DOCUMENT_SEO }
   }
   if (pathNorm === '/privacy') {
-    return { pathNorm, intent: null, clip: null, page: 'privacy', seo: PRIVACY_DOCUMENT_SEO }
+    return { pathNorm, intent: null, clip: null, article: null, page: 'privacy', seo: PRIVACY_DOCUMENT_SEO }
   }
   if (pathNorm === '/terms') {
-    return { pathNorm, intent: null, clip: null, page: 'terms', seo: TERMS_DOCUMENT_SEO }
+    return { pathNorm, intent: null, clip: null, article: null, page: 'terms', seo: TERMS_DOCUMENT_SEO }
   }
   if (pathNorm === '/pay') {
-    return { pathNorm, intent: null, clip: null, page: 'pay', seo: PAY_DOCUMENT_SEO }
+    return { pathNorm, intent: null, clip: null, article: null, page: 'pay', seo: PAY_DOCUMENT_SEO }
   }
   if (intent) {
-    return { pathNorm, intent, clip: null, page: 'intent', seo: intentDocumentSeo(intent) }
+    return { pathNorm, intent, clip: null, article: null, page: 'intent', seo: intentDocumentSeo(intent) }
   }
   if (pathNorm === USES_HUB_PATH) {
-    return { pathNorm, intent: null, clip: null, page: 'uses', seo: USES_DOCUMENT_SEO }
+    return { pathNorm, intent: null, clip: null, article: null, page: 'uses', seo: USES_DOCUMENT_SEO }
   }
   if (pathNorm === '/faq') {
-    return { pathNorm, intent: null, clip: null, page: 'faq', seo: FAQ_DOCUMENT_SEO }
+    return { pathNorm, intent: null, clip: null, article: null, page: 'faq', seo: FAQ_DOCUMENT_SEO }
   }
   if (pathNorm === '/how-to') {
-    return { pathNorm, intent: null, clip: null, page: 'how-to', seo: HOWTO_DOCUMENT_SEO }
+    return { pathNorm, intent: null, clip: null, article: null, page: 'how-to', seo: HOWTO_DOCUMENT_SEO }
   }
   if (pathNorm === '/demonstration') {
-    return { pathNorm, intent: null, clip: null, page: 'demonstration', seo: DEMONSTRATION_DOCUMENT_SEO }
+    return { pathNorm, intent: null, clip: null, article: null, page: 'demonstration', seo: DEMONSTRATION_DOCUMENT_SEO }
   }
   if (pathNorm === VIDEOS_HUB_PATH) {
-    return { pathNorm, intent: null, clip: null, page: 'videos', seo: VIDEOS_DOCUMENT_SEO }
+    return { pathNorm, intent: null, clip: null, article: null, page: 'videos', seo: VIDEOS_DOCUMENT_SEO }
   }
   if (clip) {
-    return { pathNorm, intent: null, clip, page: 'video', seo: videoClipDocumentSeo(clip) }
+    return { pathNorm, intent: null, clip, article: null, page: 'video', seo: videoClipDocumentSeo(clip) }
+  }
+  if (pathNorm === BLOG_HUB_PATH) {
+    return { pathNorm, intent: null, clip: null, article: null, page: 'blog', seo: BLOG_DOCUMENT_SEO }
+  }
+  if (article) {
+    return { pathNorm, intent: null, clip: null, article, page: 'article', seo: articleDocumentSeo(article) }
   }
   return null
 }

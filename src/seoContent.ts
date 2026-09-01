@@ -35,7 +35,10 @@ export const SEO_VIDEOS_DESCRIPTION =
   'Screen recordings of the Translate Chat workflow: upload screenshots, add guidance, configure settings, and view the translated conversation image.'
 
 export const SEO_USES_DESCRIPTION =
-  'Short guides for common search intents — same tool on the home page, with tips tailored to each chat app, language, or screenshot OCR workflow.'
+  'Short guides for common search intents — same tool on the home page, with tips for chat screenshot translation, several screenshots as one conversation, each messaging app, language, or OCR workflow.'
+
+export const SEO_BLOG_DESCRIPTION =
+  'How-to articles and comparisons: translating several chat screenshots, long WhatsApp threads, Thai LINE messages, and when Google Translate is enough.'
 
 export const SEO_HOWTO_STEPS: readonly { title: string; body: string }[] = [
   {

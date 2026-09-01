@@ -11,11 +11,21 @@ import {
   TERMS_DOCUMENT_SEO,
   USES_DOCUMENT_SEO,
   VIDEOS_DOCUMENT_SEO,
+  BLOG_DOCUMENT_SEO,
   intentDocumentSeo,
   videoClipDocumentSeo,
+  articleDocumentSeo,
 } from './documentSeo'
 import { GUIDE_VIDEO_BY_SRC, GUIDE_VIDEO_CLIPS, GUIDE_WORKFLOW_STEPS, VIDEOS_HUB_PATH } from './guideWorkflowSteps'
 import { INTENT_LANDINGS, USES_HUB_PATH, type IntentLanding } from './intentLandings'
+import {
+  BLOG_ARTICLES,
+  BLOG_HUB_PATH,
+  COMPARISON_ARTICLES,
+  SEO_ARTICLES,
+  type ArticleBlock,
+  type SeoArticle,
+} from './articles'
 import {
   SEO_CONTACT_DESCRIPTION,
   SEO_DEMONSTRATION_DESCRIPTION,
@@ -30,6 +40,7 @@ import {
   SEO_TERMS_SECTIONS,
   SEO_USES_DESCRIPTION,
   SEO_VIDEOS_DESCRIPTION,
+  SEO_BLOG_DESCRIPTION,
 } from './seoContent'
 import { SUPPORT_EMAIL } from './supportEmail'
 import type { DocumentSeo } from './seoTypes'
@@ -193,7 +204,7 @@ function usesBody(): string {
     <h1 class="support-page__title">Translation guides</h1>
     <p class="support-page__lead">${escHtml(SEO_USES_DESCRIPTION)}</p>
     <div class="guide-page__split">
-      ${workflowRailHtml('Quick walkthrough', 'Same four steps for every topic. Pick a guide on the right for app-specific tips.')}
+      ${workflowRailHtml('Quick walkthrough', 'Same four steps for every topic. Pick a guide on the right for the search you have in mind.')}
       <div class="guide-page__body">
         <ul class="intent-landing__hub-list">${links}</ul>
         <p class="intent-landing__cta-wrap"><a class="support-page__mailto intent-landing__cta" href="/">Open the translator</a></p>
@@ -210,9 +221,19 @@ function intentBody(intent: IntentLanding): string {
     .map((p) => `<p class="support-page__lead intent-landing__more">${escHtml(p)}</p>`)
     .join('')
   const tips = intent.tips.map((tip) => `<li>${escHtml(tip)}</li>`).join('')
-  const others = INTENT_LANDINGS.filter((entry) => entry.path !== intent.path)
-    .map((entry) => `<li><a href="${entry.path}">${escHtml(entry.h1)}</a></li>`)
-    .join('')
+  const workflow =
+    intent.workflow && intent.workflow.length > 0
+      ? `<h2 class="intent-landing__h2">Short workflow</h2><ol class="intent-landing__workflow">${intent.workflow
+          .map((step) => `<li>${escHtml(step)}</li>`)
+          .join('')}</ol>`
+      : ''
+  const relatedItems = intent.related ?? []
+  const related =
+    relatedItems.length > 0
+      ? `<nav class="intent-landing__related" aria-label="Related translation guides"><h2 class="intent-landing__h2">Related translation guides</h2><ul class="intent-landing__related-list">${relatedItems
+          .map((item) => `<li><a href="${escHtml(item.path)}">${escHtml(item.label)}</a></li>`)
+          .join('')}<li><a href="${USES_HUB_PATH}">Every guide on the hub</a></li></ul></nav>`
+      : ''
 
   return wrapSupportPage(
     `${breadcrumb([
@@ -226,6 +247,7 @@ function intentBody(intent: IntentLanding): string {
     <div class="guide-page__split">
       ${workflowRailHtml('How the translator flows', 'Left: the four steps in order. Right: tips for this guide.')}
       <div class="guide-page__body">
+        ${workflow}
         <h2 class="intent-landing__h2">Tips for better results</h2>
         <ul class="intent-landing__tips">${tips}</ul>
         ${
@@ -239,10 +261,7 @@ function intentBody(intent: IntentLanding): string {
             : ''
         }
         <p class="intent-landing__cta-wrap"><a class="support-page__mailto intent-landing__cta" href="/">Start translating — upload screenshots</a></p>
-        <nav class="intent-landing__related" aria-label="Other guides">
-          <h2 class="intent-landing__h2">Other guides</h2>
-          <ul class="intent-landing__related-list">${others}<li><a href="${USES_HUB_PATH}">All guides on one page</a></li></ul>
-        </nav>
+        ${related}
       </div>
     </div>`,
     USES_HUB_PATH,
@@ -297,6 +316,7 @@ function homeBody(): string {
         <div class="site-explore-bar__chips">
           <a class="site-explore-bar__chip site-explore-bar__chip--accent" href="/how-to">How to</a>
           <a class="site-explore-bar__chip" href="/uses">Guides</a>
+          <a class="site-explore-bar__chip" href="${BLOG_HUB_PATH}">Blog</a>
           <a class="site-explore-bar__chip" href="${VIDEOS_HUB_PATH}">Videos</a>
           <a class="site-explore-bar__chip" href="/faq">FAQ</a>
         </div>
@@ -341,6 +361,81 @@ function videoWatchBody(clip: (typeof GUIDE_VIDEO_CLIPS)[number]): string {
     VIDEOS_HUB_PATH,
     'All workflow videos',
     'video-watch',
+  )
+}
+
+function articleBlockHtml(block: ArticleBlock): string {
+  if (block.type === 'callout') {
+    const note = block.text ? `<span class="seo-article__callout-text">${escHtml(block.text)}</span>` : ''
+    return `<p class="seo-article__callout"><a class="support-page__mailto intent-landing__cta seo-article__callout-link" href="${escHtml(block.href)}">${escHtml(block.label)}</a>${note}</p>`
+  }
+  if (block.type === 'table') {
+    const heading = block.heading ? `<h2 class="intent-landing__h2">${escHtml(block.heading)}</h2>` : ''
+    const head = block.headers.map((h) => `<th scope="col">${escHtml(h)}</th>`).join('')
+    const body = block.rows
+      .map(
+        (row) =>
+          `<tr>${row
+            .map((cell, i) => (i === 0 ? `<th scope="row">${escHtml(cell)}</th>` : `<td>${escHtml(cell)}</td>`))
+            .join('')}</tr>`,
+      )
+      .join('')
+    return `${heading}<div class="seo-article__table-wrap"><table class="seo-article__table"><caption class="seo-article__caption">${escHtml(block.caption)}</caption><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`
+  }
+  const paras = block.paragraphs
+    .map((p) => `<p class="support-page__lead intent-landing__more">${escHtml(p)}</p>`)
+    .join('')
+  const bullets =
+    block.bullets && block.bullets.length > 0
+      ? `<ul class="intent-landing__tips">${block.bullets.map((item) => `<li>${escHtml(item)}</li>`).join('')}</ul>`
+      : ''
+  return `<section class="seo-article__section"><h2 class="intent-landing__h2">${escHtml(block.heading)}</h2>${paras}${bullets}</section>`
+}
+
+function articleBody(article: SeoArticle): string {
+  const blocks = article.blocks.map(articleBlockHtml).join('')
+  const related = article.related
+    .map((item) => `<li><a href="${escHtml(item.path)}">${escHtml(item.label)}</a></li>`)
+    .join('')
+  const ctaNote = article.cta.text ? `<span class="seo-article__cta-note">${escHtml(article.cta.text)}</span>` : ''
+  return wrapSupportPage(
+    `${breadcrumb([
+      { label: 'Home', href: '/' },
+      { label: 'Blog', href: BLOG_HUB_PATH },
+      { label: article.h1 },
+    ])}
+    <h1 class="support-page__title">${escHtml(article.h1)}</h1>
+    <p class="support-page__lead">${escHtml(article.lead)}</p>
+    ${blocks}
+    <p class="intent-landing__cta-wrap"><a class="support-page__mailto intent-landing__cta" href="${escHtml(article.cta.href)}">${escHtml(article.cta.label)}</a>${ctaNote}</p>
+    <nav class="intent-landing__related" aria-label="Related translation guides"><h2 class="intent-landing__h2">Related translation guides</h2><ul class="intent-landing__related-list">${related}<li><a href="${BLOG_HUB_PATH}">All articles</a></li></ul></nav>`,
+    BLOG_HUB_PATH,
+    'All articles',
+    'seo-article',
+  )
+}
+
+function blogHubBody(): string {
+  const howTo = BLOG_ARTICLES.map(
+    (article) =>
+      `<li><a href="${escHtml(article.path)}">${escHtml(article.h1)}</a><span class="blog-hub__blurb">${escHtml(article.lead)}</span></li>`,
+  ).join('')
+  const comparisons = COMPARISON_ARTICLES.map(
+    (article) =>
+      `<li><a href="${escHtml(article.path)}">${escHtml(article.h1)}</a><span class="blog-hub__blurb">${escHtml(article.lead)}</span></li>`,
+  ).join('')
+  return wrapSupportPage(
+    `${breadcrumb([{ label: 'Home', href: '/' }, { label: 'Blog' }])}
+    <h1 class="support-page__title">Articles</h1>
+    <p class="support-page__lead">${escHtml(SEO_BLOG_DESCRIPTION)}</p>
+    <h2 class="intent-landing__h2">How-to</h2>
+    <ul class="blog-hub__list">${howTo}</ul>
+    <h2 class="intent-landing__h2">Comparisons</h2>
+    <ul class="blog-hub__list">${comparisons}</ul>
+    <p class="support-page__note">Looking for the translator itself? <a href="${USES_HUB_PATH}">Translation guides</a> · <a href="/how-to">How to use Translate Chat</a></p>`,
+    '/',
+    'Back to Translate Chat',
+    'seo-article',
   )
 }
 
@@ -416,6 +511,18 @@ export const PRERENDER_ROUTES: readonly PrerenderRoute[] = [
     intent: null,
     seo: videoClipDocumentSeo(clip),
     bodyHtml: videoWatchBody(clip),
+  })),
+  {
+    pathNorm: BLOG_HUB_PATH,
+    intent: null,
+    seo: BLOG_DOCUMENT_SEO,
+    bodyHtml: blogHubBody(),
+  },
+  ...SEO_ARTICLES.map((article) => ({
+    pathNorm: article.path,
+    intent: null,
+    seo: articleDocumentSeo(article),
+    bodyHtml: articleBody(article),
   })),
 ]
 

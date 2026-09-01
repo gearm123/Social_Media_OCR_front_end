@@ -13,6 +13,7 @@ test.describe('home translator UI', () => {
     await expect(page.getByRole('navigation', { name: 'More pages' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'How to' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Guides' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Blog' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Videos' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'FAQ' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Featured on Launchory' })).toHaveAttribute(

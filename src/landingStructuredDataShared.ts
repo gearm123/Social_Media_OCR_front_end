@@ -13,6 +13,7 @@ import {
 import { GUIDE_VIDEO_BY_PATH, VIDEOS_HUB_PATH } from './guideWorkflowSteps'
 import type { IntentLanding } from './intentLandings'
 import { USES_HUB_PATH } from './intentLandings'
+import { ARTICLE_BY_PATH, BLOG_HUB_PATH, type SeoArticle } from './articles'
 import {
   SEO_FAQ_ITEMS,
   SEO_HOME_DESCRIPTION,
@@ -34,6 +35,7 @@ const ID_CRUMB = 'jsonld-landing-breadcrumb'
 const ID_VIDEOS = 'jsonld-landing-videos'
 const ID_SITE = 'jsonld-site-graph'
 const ID_DEMO = 'jsonld-demonstration-image'
+const ID_ARTICLE = 'jsonld-article'
 
 function faqPageJsonLd(
   origin: string,
@@ -104,6 +106,14 @@ function breadcrumbsForRoute(pathNorm: string, intent: IntentLanding | null): Cr
       { name: clip.title, path: clip.path },
     ]
   }
+  const article = ARTICLE_BY_PATH[pathNorm]
+  if (article) {
+    return [
+      home,
+      { name: 'Blog', path: BLOG_HUB_PATH },
+      { name: article.h1, path: article.path },
+    ]
+  }
   const tail: Record<string, Crumb> = {
     '/contact': { name: 'Contact us', path: '/contact' },
     '/feedback': { name: 'Feedback', path: '/feedback' },
@@ -115,6 +125,7 @@ function breadcrumbsForRoute(pathNorm: string, intent: IntentLanding | null): Cr
     '/pay': { name: 'Checkout', path: '/pay' },
     [USES_HUB_PATH]: { name: 'Translation guides', path: USES_HUB_PATH },
     [VIDEOS_HUB_PATH]: { name: 'Videos', path: VIDEOS_HUB_PATH },
+    [BLOG_HUB_PATH]: { name: 'Blog', path: BLOG_HUB_PATH },
   }
   const t = tail[pathNorm]
   if (t) return [home, t]
@@ -163,6 +174,32 @@ function demonstrationImageJsonLd(origin: string): Record<string, unknown> {
     name: 'Chat reconstruction demonstration',
     description: OG_IMAGE_ALT,
     inLanguage: 'en',
+  }
+}
+
+function articleJsonLd(origin: string, article: SeoArticle): Record<string, unknown> {
+  const pageUrl = absoluteSiteUrl(origin, article.path)
+  const siteHome = `${origin.replace(/\/+$/, '')}/`
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.h1,
+    description: article.seoDescription,
+    datePublished: article.datePublished,
+    dateModified: article.datePublished,
+    inLanguage: 'en',
+    url: pageUrl,
+    mainEntityOfPage: pageUrl,
+    author: {
+      '@type': 'Organization',
+      name: SEO_SITE_NAME,
+      url: siteHome,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: SEO_SITE_NAME,
+      url: siteHome,
+    },
   }
 }
 
@@ -290,6 +327,10 @@ export function buildLandingStructuredData(
   if (watchVideo) {
     entries.push({ id: ID_VIDEOS, data: watchVideo })
   }
+  const article = ARTICLE_BY_PATH[pathNorm]
+  if (article) {
+    entries.push({ id: ID_ARTICLE, data: articleJsonLd(origin, article) })
+  }
   entries.push({ id: ID_CRUMB, data: breadcrumbJsonLd(origin, pathNorm, intent) })
   return entries
 }
@@ -301,4 +342,5 @@ export const LANDING_STRUCTURED_DATA_IDS = [
   ID_VIDEOS,
   ID_SITE,
   ID_DEMO,
+  ID_ARTICLE,
 ] as const

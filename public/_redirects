@@ -8,3 +8,9 @@ https://www.chatreconstruct.com/* https://chatreconstruct.com/:splat 301!
 /chat-screenshot-ai-translation /uses 301
 /ai-conversation-screenshot-translator /uses 301
 /translate-chat-ui-screenshots-ai /uses 301
+/ai-screenshot-translator /translate-screenshot-to-english 301
+/ai-chat-translator /chat-screenshot-translator 301
+/translate-whatsapp-chat /translate-whatsapp-screenshots 301
+/whatsapp-chat-translator /translate-whatsapp-screenshots 301
+/line-chat-translator /translate-line-screenshots 301
+/thai-chat-translator /translate-thai-chat-screenshots 301

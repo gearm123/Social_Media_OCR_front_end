@@ -6,6 +6,7 @@ import { absoluteSiteUrl, CANONICAL_SITE_ORIGIN } from './src/canonicalSite'
 import { DEMO_RECONSTRUCTION_GIF_PATH } from './src/demoReconstructionMedia'
 import { INTENT_LANDINGS, USES_HUB_PATH } from './src/intentLandings'
 import { GUIDE_VIDEO_CLIPS, VIDEOS_HUB_PATH } from './src/guideWorkflowSteps'
+import { BLOG_HUB_PATH, SEO_ARTICLES } from './src/articles'
 import { buildLandingStructuredData } from './src/landingStructuredDataShared'
 import { PRERENDER_ROUTES } from './src/prerenderRoutes'
 import {
@@ -31,6 +32,24 @@ function escAttr(s: string): string {
 
 function escRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function intentSitemapPriority(path: string): string {
+  if (path === '/translate-multiple-chat-screenshots') return '0.89'
+  if (path === '/chat-screenshot-translator') return '0.88'
+  if (path === '/translate-entire-chat-conversation') return '0.86'
+  if (path === '/translate-screenshot-to-english') return '0.85'
+  if (path === '/translate-chat-screenshots-with-context') return '0.83'
+  if (path === '/batch-screenshot-translator') return '0.82'
+  return '0.85'
+}
+
+function articleSitemapPriority(path: string): string {
+  if (path === '/blog/how-to-translate-multiple-chat-screenshots') return '0.77'
+  if (path === '/blog/how-to-translate-thai-line-messages-to-english') return '0.76'
+  if (path === '/blog/how-to-translate-an-entire-whatsapp-conversation') return '0.72'
+  if (path === '/google-translate-chat-screenshots') return '0.75'
+  return '0.74'
 }
 
 function socialImageTags(base: string): string[] {
@@ -161,7 +180,7 @@ function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
         ...INTENT_LANDINGS.map((x) => ({
           loc: `${base}${x.path}`,
           changefreq: 'monthly',
-          priority: '0.85',
+          priority: intentSitemapPriority(x.path),
         })),
         { loc: `${base}${VIDEOS_HUB_PATH}`, changefreq: 'weekly', priority: '0.8' },
         ...GUIDE_VIDEO_CLIPS.map((clip) => ({
@@ -175,6 +194,12 @@ function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
             content: `${base}${clip.src}`,
             duration: clip.duration,
           },
+        })),
+        { loc: `${base}${BLOG_HUB_PATH}`, changefreq: 'weekly', priority: '0.76' },
+        ...SEO_ARTICLES.map((article) => ({
+          loc: `${base}${article.path}`,
+          changefreq: 'monthly' as const,
+          priority: articleSitemapPriority(article.path),
         })),
         { loc: `${base}/privacy`, changefreq: 'yearly', priority: '0.5' },
         { loc: `${base}/terms`, changefreq: 'yearly', priority: '0.5' },

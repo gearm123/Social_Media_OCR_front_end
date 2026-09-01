@@ -72,6 +72,36 @@
   status = 301
 
 [[redirects]]
+  from = "/ai-screenshot-translator"
+  to = "/translate-screenshot-to-english"
+  status = 301
+
+[[redirects]]
+  from = "/ai-chat-translator"
+  to = "/chat-screenshot-translator"
+  status = 301
+
+[[redirects]]
+  from = "/translate-whatsapp-chat"
+  to = "/translate-whatsapp-screenshots"
+  status = 301
+
+[[redirects]]
+  from = "/whatsapp-chat-translator"
+  to = "/translate-whatsapp-screenshots"
+  status = 301
+
+[[redirects]]
+  from = "/line-chat-translator"
+  to = "/translate-line-screenshots"
+  status = 301
+
+[[redirects]]
+  from = "/thai-chat-translator"
+  to = "/translate-thai-chat-screenshots"
+  status = 301
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

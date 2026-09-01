@@ -13,6 +13,9 @@ export default function SiteExploreBar() {
           <a className="site-explore-bar__chip" href="/uses">
             Guides
           </a>
+          <a className="site-explore-bar__chip" href="/blog">
+            Blog
+          </a>
           <a className="site-explore-bar__chip" href="/videos">
             Videos
           </a>

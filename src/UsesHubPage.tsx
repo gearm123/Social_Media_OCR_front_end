@@ -29,7 +29,7 @@ export default function UsesHubPage() {
             <GuideWorkflowSection
               variant="rail"
               heading="Quick walkthrough"
-              intro="Same four steps for every topic. Pick a guide on the right for app-specific tips."
+              intro="Same four steps for every topic. Pick a guide on the right for the search you have in mind."
             />
           </aside>
           <div className="guide-page__body">

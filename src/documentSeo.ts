@@ -1,6 +1,7 @@
 import { USES_HUB_PATH, type IntentLanding } from './intentLandings'
 import type { GuideWorkflowClip } from './guideWorkflowSteps'
 import { VIDEOS_HUB_PATH } from './guideWorkflowSteps'
+import { BLOG_HUB_PATH, type SeoArticle } from './articles'
 import {
   SEO_CONTACT_DESCRIPTION,
   SEO_DEMONSTRATION_DESCRIPTION,
@@ -14,6 +15,7 @@ import {
   SEO_TERMS_DESCRIPTION,
   SEO_USES_DESCRIPTION,
   SEO_VIDEOS_DESCRIPTION,
+  SEO_BLOG_DESCRIPTION,
 } from './seoContent'
 import type { DocumentSeo } from './seoTypes'
 
@@ -91,6 +93,20 @@ export const VIDEOS_DOCUMENT_SEO: DocumentSeo = {
   title: `Workflow videos · ${SEO_SITE_NAME}`,
   description: SEO_VIDEOS_DESCRIPTION,
   path: VIDEOS_HUB_PATH,
+}
+
+export function articleDocumentSeo(article: SeoArticle): DocumentSeo {
+  return {
+    title: `${article.seoTitle} · ${SEO_SITE_NAME}`,
+    description: article.seoDescription,
+    path: article.path,
+  }
+}
+
+export const BLOG_DOCUMENT_SEO: DocumentSeo = {
+  title: `Articles · ${SEO_SITE_NAME}`,
+  description: SEO_BLOG_DESCRIPTION,
+  path: BLOG_HUB_PATH,
 }
 
 export const PAY_DOCUMENT_SEO: DocumentSeo = {
