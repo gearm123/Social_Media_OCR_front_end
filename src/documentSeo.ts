@@ -1,4 +1,6 @@
-import { USES_HUB_PATH, isIntentIndexed, type IntentLanding } from './intentLandings'
+import { USES_HUB_PATH, type IntentLanding } from './intentLandings'
+import type { GuideWorkflowClip } from './guideWorkflowSteps'
+import { VIDEOS_HUB_PATH } from './guideWorkflowSteps'
 import {
   SEO_CONTACT_DESCRIPTION,
   SEO_DEMONSTRATION_DESCRIPTION,
@@ -11,18 +13,15 @@ import {
   SEO_SITE_NAME,
   SEO_TERMS_DESCRIPTION,
   SEO_USES_DESCRIPTION,
+  SEO_VIDEOS_DESCRIPTION,
 } from './seoContent'
 import type { DocumentSeo } from './seoTypes'
 
 export function intentDocumentSeo(intent: IntentLanding): DocumentSeo {
-  const indexed = isIntentIndexed(intent)
   return {
     title: `${intent.seoTitle} · ${SEO_SITE_NAME}`,
     description: intent.seoDescription,
     path: intent.path,
-    ...(indexed
-      ? {}
-      : { robots: 'noindex, follow', canonicalPath: USES_HUB_PATH }),
   }
 }
 
@@ -78,6 +77,20 @@ export const TERMS_DOCUMENT_SEO: DocumentSeo = {
   title: `Terms · ${SEO_SITE_NAME}`,
   description: SEO_TERMS_DESCRIPTION,
   path: '/terms',
+}
+
+export function videoClipDocumentSeo(clip: GuideWorkflowClip): DocumentSeo {
+  return {
+    title: `${clip.seoTitle} · ${SEO_SITE_NAME}`,
+    description: clip.seoDescription,
+    path: clip.path,
+  }
+}
+
+export const VIDEOS_DOCUMENT_SEO: DocumentSeo = {
+  title: `Workflow videos · ${SEO_SITE_NAME}`,
+  description: SEO_VIDEOS_DESCRIPTION,
+  path: VIDEOS_HUB_PATH,
 }
 
 export const PAY_DOCUMENT_SEO: DocumentSeo = {

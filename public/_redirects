@@ -2,3 +2,9 @@
 http://chatreconstruct.com/* https://chatreconstruct.com/:splat 301!
 http://www.chatreconstruct.com/* https://chatreconstruct.com/:splat 301!
 https://www.chatreconstruct.com/* https://chatreconstruct.com/:splat 301!
+/ai-chat-screenshot-translator /uses 301
+/ai-translate-chat-screenshots /uses 301
+/translate-chat-screenshots-with-ai /uses 301
+/chat-screenshot-ai-translation /uses 301
+/ai-conversation-screenshot-translator /uses 301
+/translate-chat-ui-screenshots-ai /uses 301

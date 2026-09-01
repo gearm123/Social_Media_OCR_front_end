@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { GUIDE_WORKFLOW_STEPS } from '../src/guideWorkflowSteps'
-import { INTENT_LANDINGS, USES_HUB_PATH } from '../src/intentLandings'
+import { GUIDE_VIDEO_CLIPS, GUIDE_WORKFLOW_STEPS, VIDEOS_HUB_PATH } from '../src/guideWorkflowSteps'
+import { INTENT_LANDINGS, LEGACY_LANDING_REDIRECTS, USES_HUB_PATH } from '../src/intentLandings'
 import { attachPageGuards, gotoReady } from './helpers'
 
 const CONTENT_PAGES: { path: string; h1: string | RegExp; title: RegExp }[] = [
@@ -14,6 +14,12 @@ const CONTENT_PAGES: { path: string; h1: string | RegExp; title: RegExp }[] = [
   { path: '/privacy', h1: 'Privacy', title: /Privacy/i },
   { path: '/terms', h1: 'Terms of use', title: /Terms/i },
   { path: '/pay', h1: 'Checkout', title: /Checkout|Translate Chat/i },
+  { path: VIDEOS_HUB_PATH, h1: 'Workflow videos', title: /Workflow videos/i },
+  ...GUIDE_VIDEO_CLIPS.map((clip) => ({
+    path: clip.path,
+    h1: clip.title,
+    title: new RegExp(clip.seoTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+  })),
   ...INTENT_LANDINGS.map((entry) => ({
     path: entry.path,
     h1: entry.h1,
@@ -33,10 +39,21 @@ test.describe('public pages', () => {
     })
   }
 
+  for (const [from, to] of Object.entries(LEGACY_LANDING_REDIRECTS)) {
+    test(`${from} redirects to ${to}`, async ({ page, baseURL }) => {
+      const guards = attachPageGuards(page, new URL(baseURL!).origin)
+      await gotoReady(page, from)
+      await expect(page).toHaveURL(new RegExp(`${to.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/?$`))
+      await expect(page.locator('h1').first()).toHaveText('Translation guides')
+      guards.assertClean()
+    })
+  }
+
   test('guide workflow videos and demonstration gif are reachable', async ({ request, baseURL }) => {
     const origin = new URL(baseURL!).origin
     const assets = [
       ...GUIDE_WORKFLOW_STEPS.flatMap((step) => [step.mainSrc, step.microSrc].filter(Boolean)),
+      ...GUIDE_VIDEO_CLIPS.map((clip) => clip.poster),
       '/demonstration-chat-reconstruction.gif',
       '/translate-chat-mark.svg',
       '/og-image.png',

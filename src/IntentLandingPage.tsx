@@ -1,6 +1,6 @@
 import GuideWorkflowSection from './GuideWorkflowSection'
 import type { IntentLanding } from './intentLandings'
-import { INTENT_LANDINGS, USES_HUB_PATH, isIntentIndexed } from './intentLandings'
+import { INTENT_LANDINGS, USES_HUB_PATH } from './intentLandings'
 
 type Props = {
   intent: IntentLanding
@@ -79,9 +79,7 @@ export default function IntentLandingPage({ intent }: Props) {
               <ul className="intent-landing__related-list">
                 {others.map((x) => (
                   <li key={x.path}>
-                    <a href={x.path} rel={isIntentIndexed(x) ? undefined : 'nofollow'}>
-                      {x.h1}
-                    </a>
+                    <a href={x.path}>{x.h1}</a>
                   </li>
                 ))}
                 <li>

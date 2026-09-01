@@ -1,5 +1,5 @@
 import GuideWorkflowSection from './GuideWorkflowSection'
-import { INTENT_LANDINGS, isIntentIndexed } from './intentLandings'
+import { INTENT_LANDINGS } from './intentLandings'
 import { SEO_USES_DESCRIPTION } from './seoContent'
 
 export default function UsesHubPage() {
@@ -36,9 +36,7 @@ export default function UsesHubPage() {
             <ul className="intent-landing__hub-list">
               {INTENT_LANDINGS.map((x) => (
                 <li key={x.path}>
-                  <a href={x.path} rel={isIntentIndexed(x) ? undefined : 'nofollow'}>
-                    {x.h1}
-                  </a>
+                  <a href={x.path}>{x.h1}</a>
                 </li>
               ))}
             </ul>

@@ -31,8 +31,11 @@ export const SEO_PRIVACY_DESCRIPTION =
 export const SEO_TERMS_DESCRIPTION =
   'Terms of use for Translate Chat: the translator service, acceptable use, billing through Paddle, and limits of the automated output.'
 
+export const SEO_VIDEOS_DESCRIPTION =
+  'Screen recordings of the Translate Chat workflow: upload screenshots, add guidance, configure settings, and view the translated conversation image.'
+
 export const SEO_USES_DESCRIPTION =
-  'Short guides for common search intents — same tool on the home page, with tips tailored to each chat app or language.'
+  'Short guides for common search intents — same tool on the home page, with tips tailored to each chat app, language, or screenshot OCR workflow.'
 
 export const SEO_HOWTO_STEPS: readonly { title: string; body: string }[] = [
   {

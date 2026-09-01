@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { GUIDE_WORKFLOW_STEPS } from './guideWorkflowSteps'
+import { GUIDE_VIDEO_BY_SRC, GUIDE_WORKFLOW_STEPS } from './guideWorkflowSteps'
 
 export type { GuideWorkflowStep } from './guideWorkflowSteps'
 export { GUIDE_WORKFLOW_STEPS } from './guideWorkflowSteps'
@@ -38,18 +38,29 @@ function GuideClip({
   micro?: boolean
   autoPlay: boolean
 }) {
+  const watch = GUIDE_VIDEO_BY_SRC[src]
   return (
-    <video
-      className={micro ? 'guide-workflow__clip guide-workflow__clip--micro' : 'guide-workflow__clip'}
-      src={src}
-      muted
-      playsInline
-      loop
-      controls
-      autoPlay={autoPlay}
-      preload="metadata"
-      aria-label={label}
-    />
+    <>
+      <video
+        className={micro ? 'guide-workflow__clip guide-workflow__clip--micro' : 'guide-workflow__clip'}
+        src={src}
+        poster={watch?.poster}
+        muted
+        playsInline
+        loop
+        controls
+        autoPlay={autoPlay}
+        preload="metadata"
+        aria-label={label}
+      />
+      {watch ? (
+        <p className="guide-workflow__watch-wrap">
+          <a className="guide-workflow__watch-link" href={watch.path}>
+            Open watch page
+          </a>
+        </p>
+      ) : null}
+    </>
   )
 }
 

@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react'
 import { absoluteSiteUrl, CANONICAL_SITE_ORIGIN } from './src/canonicalSite'
 import { DEMO_RECONSTRUCTION_GIF_PATH } from './src/demoReconstructionMedia'
 import { INTENT_LANDINGS, USES_HUB_PATH } from './src/intentLandings'
+import { GUIDE_VIDEO_CLIPS, VIDEOS_HUB_PATH } from './src/guideWorkflowSteps'
 import { buildLandingStructuredData } from './src/landingStructuredDataShared'
 import { PRERENDER_ROUTES } from './src/prerenderRoutes'
 import {
@@ -134,7 +135,13 @@ function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
       if (!fs.existsSync(distDir)) return
 
       const lastmod = new Date().toISOString().slice(0, 10)
-      type Row = { loc: string; changefreq: string; priority: string; images?: { loc: string; title: string }[] }
+      type Row = {
+        loc: string
+        changefreq: string
+        priority: string
+        images?: { loc: string; title: string }[]
+        video?: { thumbnail: string; title: string; description: string; content: string; duration: string }
+      }
       const rows: Row[] = [
         {
           loc: `${base}/`,
@@ -151,10 +158,23 @@ function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
           priority: '0.8',
           images: [{ loc: `${base}${DEMO_RECONSTRUCTION_GIF_PATH}`, title: 'Demonstration' }],
         },
-        ...INTENT_LANDINGS.filter((x) => x.includeInSitemap !== false).map((x) => ({
+        ...INTENT_LANDINGS.map((x) => ({
           loc: `${base}${x.path}`,
           changefreq: 'monthly',
           priority: '0.85',
+        })),
+        { loc: `${base}${VIDEOS_HUB_PATH}`, changefreq: 'weekly', priority: '0.8' },
+        ...GUIDE_VIDEO_CLIPS.map((clip) => ({
+          loc: `${base}${clip.path}`,
+          changefreq: 'monthly',
+          priority: '0.82',
+          video: {
+            thumbnail: `${base}${clip.poster}`,
+            title: clip.title,
+            description: clip.seoDescription,
+            content: `${base}${clip.src}`,
+            duration: clip.duration,
+          },
         })),
         { loc: `${base}/privacy`, changefreq: 'yearly', priority: '0.5' },
         { loc: `${base}/terms`, changefreq: 'yearly', priority: '0.5' },
@@ -168,12 +188,23 @@ function seoBuildPlugin(siteUrl: string, mode: string): Plugin {
               `    <image:image>\n      <image:loc>${img.loc}</image:loc>\n      <image:title>${escAttr(img.title)}</image:title>\n    </image:image>`,
           )
           .join('\n')
-        const extra = images ? `\n${images}` : ''
+        const video = r.video
+          ? [
+              '    <video:video>',
+              `      <video:thumbnail_loc>${escAttr(r.video.thumbnail)}</video:thumbnail_loc>`,
+              `      <video:title>${escAttr(r.video.title)}</video:title>`,
+              `      <video:description>${escAttr(r.video.description)}</video:description>`,
+              `      <video:content_loc>${escAttr(r.video.content)}</video:content_loc>`,
+              `      <video:duration>${Number(r.video.duration.replace(/[^\d]/g, '')) || 0}</video:duration>`,
+              '    </video:video>',
+            ].join('\n')
+          : ''
+        const extra = [images, video].filter(Boolean).map((block) => `\n${block}`).join('')
         return `  <url>\n    <loc>${r.loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${r.changefreq}</changefreq>\n    <priority>${r.priority}</priority>${extra}\n  </url>`
       })
       const sitemap =
         `<?xml version="1.0" encoding="UTF-8"?>\n` +
-        `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n` +
+        `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n` +
         `${urlBlocks.join('\n')}\n</urlset>\n`
       fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemap, 'utf8')
       fs.writeFileSync(

@@ -9,14 +9,12 @@ export type IntentLanding = {
   /** Meta description — must equal {@link lead} (single paragraph). */
   seoDescription: string
   h1: string
-  /** Whether this landing should be promoted in sitemap.xml. */
-  includeInSitemap?: boolean
   /** First paragraph; duplicated in seoDescription. */
   lead: string
   /** Extra paragraphs (optional). */
   more?: string[]
   tips: string[]
-  /** Page-specific questions shown on this URL (and FAQ JSON-LD when indexed). */
+  /** Page-specific questions shown on this URL (and FAQ JSON-LD). */
   faq?: readonly { question: string; answer: string }[]
 }
 
@@ -269,105 +267,114 @@ export const INTENT_LANDINGS: IntentLanding[] = [
     ],
   },
   {
-    path: '/ai-chat-screenshot-translator',
-    seoTitle: 'AI chat screenshot translator',
+    path: '/ocr-chat-screenshots',
+    seoTitle: 'OCR chat screenshots to English',
     seoDescription:
-      'Use AI to translate chat screenshots into English: upload images, get structured dialogue and a rendered chat image powered by vision models and OCR hints.',
-    h1: 'AI chat screenshot translator',
-    includeInSitemap: false,
-    lead: 'Use AI to translate chat screenshots into English: upload images, get structured dialogue and a rendered chat image powered by vision models and OCR hints.',
+      'OCR chat screenshots to read bubble text from Messenger, WhatsApp, LINE, and similar apps, then turn that text into a translated English conversation image.',
+    h1: 'OCR chat screenshots to English',
+    lead: 'OCR chat screenshots to read bubble text from Messenger, WhatsApp, LINE, and similar apps, then turn that text into a translated English conversation image.',
     more: [
-      'Built for real screenshots — glare, compression, and UI chrome — not just clean mockups.',
+      'Generic OCR tools (document scanners, PDF readers, camera live text) are built for paragraphs on a page. Chat screenshots are different: short lines, rounded bubbles, timestamps, ticks, and two speakers stacked in one photo.',
+      'Translate Chat runs optical character recognition as part of reading the screenshot, together with vision that looks at bubble sides and order. The goal is not a raw dump of every pixel of UI chrome — it is a reconstructed thread you can actually read.',
+      'Glare, cracked glass, compressed JPEGs, and dark mode all reduce OCR accuracy. Native-resolution captures with both sides of the thread visible give the recognizer more pixels and clearer left-versus-right cues.',
+      'This page is for extract-text-from-a-chat-screenshot searches. If you already know the app, the Messenger, WhatsApp, LINE, Instagram, Telegram, and iMessage guides add layout-specific tips. Upload on the home page either way.',
     ],
     tips: [
-      'Works across common chat apps; pick the guide for your app from the links below if you want tailored tips.',
-      'You can start on the home page with no account for light use; sign in when you need more runs or billing.',
-      'Feedback welcome if a layout misparses — it helps improve the model prompts.',
+      'Export or share the screenshot at the phone’s full resolution; OCR on chat bubbles fails first on tiny type.',
+      'Keep the full width of the thread so sent vs received bubbles stay obvious after OCR.',
+      'Skip document-style crops that cut the bubble outline — the outline is a layout signal, not noise.',
+      'When one conversation spans several captures, upload them in scroll order so OCR lines stitch into one thread.',
+    ],
+    faq: [
+      {
+        question: 'Is this the same as Google Lens or Live Text?',
+        answer:
+          'Those tools copy lines of text. Translate Chat OCRs the screenshot, infers who said what from the chat layout, translates, and outputs a conversation image.',
+      },
+      {
+        question: 'Does OCR work on dark mode screenshots?',
+        answer:
+          'Yes. Dark and light themes both work. Higher contrast and less compression usually read small type more reliably.',
+      },
+      {
+        question: 'Can I OCR a PDF of a chat export?',
+        answer:
+          'No. Upload PNG, JPEG, WebP, or BMP screenshots of the message list — not PDF transcripts or .txt chat exports.',
+      },
     ],
   },
   {
-    path: '/ai-translate-chat-screenshots',
-    seoTitle: 'AI translate chat screenshots',
+    path: '/ocr-whatsapp-screenshots',
+    seoTitle: 'WhatsApp screenshot OCR',
     seoDescription:
-      'Use AI to translate chat screenshots: upload images from messaging apps and get English dialogue in a clean chat-style layout with vision and OCR-backed parsing.',
-    h1: 'AI translate chat screenshots',
-    includeInSitemap: false,
-    lead: 'Use AI to translate chat screenshots: upload images from messaging apps and get English dialogue in a clean chat-style layout with vision and OCR-backed parsing.',
+      'WhatsApp screenshot OCR: read compressed chat bubbles, quoted replies, and group names from WhatsApp captures, then reconstruct a translated English conversation image.',
+    h1: 'WhatsApp screenshot OCR',
+    lead: 'WhatsApp screenshot OCR: read compressed chat bubbles, quoted replies, and group names from WhatsApp captures, then reconstruct a translated English conversation image.',
     more: [
-      'Built for real threads — timestamps, avatars, and app chrome help the model infer who said what before translation.',
+      'WhatsApp often saves in-app shares as compressed JPEGs. That is hard on OCR: antialiased edges on small Latin or non-Latin type, plus the green and gray bubbles and check marks that sit next to the words.',
+      'Quoted replies are a WhatsApp-specific OCR trap. The quoted snippet is smaller and lighter than the reply. If the quote carries the meaning, leave it in frame — cropping to the reply line only hides the text the recognizer needs.',
+      'Group chats print sender names above bubbles. Those names are useful OCR targets because they label speakers after translation. Status, Channels, and in-app browsers are out of scope; capture the message list with both bubble sides visible.',
+      'This OCR guide is for reading WhatsApp pixels. For translation-focused tips (stitching a long thread, dark vs light), see Translate WhatsApp chat screenshots. Same home-page upload either way.',
     ],
     tips: [
-      'Upload in scroll order when one conversation spans several captures.',
-      'Avoid cropping the outer bubble margin; alignment cues matter for left vs right speakers.',
-      'Higher-resolution exports usually improve small-text recognition.',
+      'Prefer the original screenshot in Photos or Files over a re-shared, recompressed image.',
+      'Include quoted reply blocks when they hold names, times, or the sentence you need translated.',
+      'In groups, keep sender names in frame so OCR can attach lines to the right person.',
+      'WhatsApp Business uses the same bubble layout; capture the thread, not the catalog or status screen.',
+    ],
+    faq: [
+      {
+        question: 'Why did a double-check or timestamp get treated as text?',
+        answer:
+          'Delivery ticks and clock labels sit close to bubbles. They are usually treated as chrome. If a tick overlaps a letter, recapture with a slightly wider crop.',
+      },
+      {
+        question: 'Does voice-note duration text get OCRed?',
+        answer:
+          'Duration labels can be read as UI, not dialogue. The pipeline is tuned for message bubbles. Include neighboring bubbles so order stays clear.',
+      },
+      {
+        question: 'Can I OCR a WhatsApp chat export (.txt)?',
+        answer:
+          'No. This tool OCRs screenshots of the chat UI. Use PNG, JPEG, WebP, or BMP captures of the conversation.',
+      },
     ],
   },
   {
-    path: '/translate-chat-screenshots-with-ai',
-    seoTitle: 'Translate chat screenshots with AI',
+    path: '/ocr-thai-chat-screenshots',
+    seoTitle: 'OCR Thai chat screenshots',
     seoDescription:
-      'Translate chat screenshots with AI: turn phone captures into readable English while preserving bubble order, replies, and typical messenger UI structure.',
-    h1: 'Translate chat screenshots with AI',
-    includeInSitemap: false,
-    lead: 'Translate chat screenshots with AI: turn phone captures into readable English while preserving bubble order, replies, and typical messenger UI structure.',
+      'OCR Thai chat screenshots from LINE, Messenger, WhatsApp, and similar apps: read Thai script in message bubbles, then output a translated English conversation image.',
+    h1: 'OCR Thai chat screenshots',
+    lead: 'OCR Thai chat screenshots from LINE, Messenger, WhatsApp, and similar apps: read Thai script in message bubbles, then output a translated English conversation image.',
     more: [
-      'The same pipeline powers every guide here — this page focuses on the general “chat + AI translation” workflow.',
+      'Thai script is demanding for OCR: no spaces between words, vowels stacked above and below consonants, and tone marks that sit on tiny screenshots. A recognizer that works on printed documents often drops those marks on a phone capture.',
+      'LINE is the most common source of Thai chat screenshots. Stickers beside text, date separators, and mixed Thai–English slang in one bubble are all expected. Capture the full bubble, including stacked vowels at the top and bottom of the line.',
+      'This site’s menus are in English. You still upload Thai-script screenshots; the result is an English chat image. Raise difficulty in the app (level 2–3) when the thread is dense or heavily mixed with English.',
+      'Use this page when the problem is reading Thai glyphs off the screenshot. For translation-oriented tips (difficulty, output language), see Translate Thai chat screenshots to English.',
     ],
     tips: [
-      'If replies are threaded, include the quoted snippet in the screenshot when it carries meaning.',
-      'Dark mode and compressed images are OK; sharper text still helps.',
-      'After the first result, you can run again with clearer crops if something misread.',
+      'Use the highest resolution export your phone allows — stacked Thai vowels need extra pixels.',
+      'Do not crop the top or bottom of a bubble; tone marks and below-line vowels live there.',
+      'If a message mixes Thai and English, include the whole bubble so OCR does not split the line.',
+      'Name files in scroll order (01, 02…) when uploading a long LINE or Messenger thread.',
     ],
-  },
-  {
-    path: '/chat-screenshot-ai-translation',
-    seoTitle: 'Chat screenshot AI translation',
-    seoDescription:
-      'Chat screenshot AI translation for busy threads: extract text from UI bubbles, translate with AI, and export a single stitched conversation image you can share.',
-    h1: 'Chat screenshot AI translation',
-    includeInSitemap: false,
-    lead: 'Chat screenshot AI translation for busy threads: extract text from UI bubbles, translate with AI, and export a single stitched conversation image you can share.',
-    more: [
-      'Suited to DMs and small groups where reading order follows the on-screen stack.',
-    ],
-    tips: [
-      'For group chats, keep sender names or avatars visible when they disambiguate speakers.',
-      'Long banners or “pinned” messages can sit above bubbles — include them if they affect context.',
-      'Name files with a numeric prefix (01, 02…) when batch-uploading.',
-    ],
-  },
-  {
-    path: '/ai-conversation-screenshot-translator',
-    seoTitle: 'AI conversation screenshot translator',
-    seoDescription:
-      'AI conversation screenshot translator: convert back-and-forth chat captures into fluent English while keeping the feel of a natural messaging transcript.',
-    h1: 'AI conversation screenshot translator',
-    includeInSitemap: false,
-    lead: 'AI conversation screenshot translator: convert back-and-forth chat captures into fluent English while keeping the feel of a natural messaging transcript.',
-    more: [
-      'Helpful when you need the whole exchange, not isolated phrases — the output stays in conversational order.',
-    ],
-    tips: [
-      'Skip heavy zoom; show enough width that both sides of the thread are visible.',
-      'If the app shows “edited” or delivery states, leaving them in frame can reduce ambiguity.',
-      'Mixing languages in one bubble is fine; capture the full bubble text.',
-    ],
-  },
-  {
-    path: '/translate-chat-ui-screenshots-ai',
-    seoTitle: 'Translate chat UI screenshots with AI',
-    seoDescription:
-      'Translate chat UI screenshots with AI: menus, headers, and bubble chrome stay visually familiar while message text is translated for quick reading.',
-    h1: 'Translate chat UI screenshots with AI',
-    includeInSitemap: false,
-    lead: 'Translate chat UI screenshots with AI: menus, headers, and bubble chrome stay visually familiar while message text is translated for quick reading.',
-    more: [
-      'Useful when you want context from the surrounding interface, not just raw extracted lines.',
-    ],
-    tips: [
-      'Do not crop out the status bar if it anchors time-of-day for the thread.',
-      'Keyboard-open screenshots are OK if the message list is still readable.',
-      'When in doubt, one wider screenshot beats several ultra-tight crops.',
+    faq: [
+      {
+        question: 'Why is Thai OCR harder than English OCR?',
+        answer:
+          'Thai has no word spaces and uses stacked vowels and tone marks. Those marks are easy to lose on compressed or low-resolution screenshots.',
+      },
+      {
+        question: 'Does this OCR Thai from LINE stickers?',
+        answer:
+          'Text inside or beside a sticker can be read. Stickers with no letters stay as layout. Prefer bubbles that contain the words you need.',
+      },
+      {
+        question: 'Can the OCR output stay in Thai?',
+        answer:
+          'The product is built to produce an English conversation image after OCR. Set the target language on the home page if you need a different output language.',
+      },
     ],
   },
 ]
@@ -376,6 +383,12 @@ export const INTENT_BY_PATH: Record<string, IntentLanding> = Object.fromEntries(
   INTENT_LANDINGS.map((entry) => [entry.path, entry]),
 )
 
-export function isIntentIndexed(intent: IntentLanding): boolean {
-  return intent.includeInSitemap !== false
+/** Retired keyword URLs; send crawlers and bookmarks to the guides hub. */
+export const LEGACY_LANDING_REDIRECTS: Readonly<Record<string, string>> = {
+  '/ai-chat-screenshot-translator': USES_HUB_PATH,
+  '/ai-translate-chat-screenshots': USES_HUB_PATH,
+  '/translate-chat-screenshots-with-ai': USES_HUB_PATH,
+  '/chat-screenshot-ai-translation': USES_HUB_PATH,
+  '/ai-conversation-screenshot-translator': USES_HUB_PATH,
+  '/translate-chat-ui-screenshots-ai': USES_HUB_PATH,
 }

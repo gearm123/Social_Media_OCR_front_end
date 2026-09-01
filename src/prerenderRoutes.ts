@@ -10,10 +10,12 @@ import {
   PRIVACY_DOCUMENT_SEO,
   TERMS_DOCUMENT_SEO,
   USES_DOCUMENT_SEO,
+  VIDEOS_DOCUMENT_SEO,
   intentDocumentSeo,
+  videoClipDocumentSeo,
 } from './documentSeo'
-import { GUIDE_WORKFLOW_STEPS } from './guideWorkflowSteps'
-import { INTENT_LANDINGS, USES_HUB_PATH, isIntentIndexed, type IntentLanding } from './intentLandings'
+import { GUIDE_VIDEO_BY_SRC, GUIDE_VIDEO_CLIPS, GUIDE_WORKFLOW_STEPS, VIDEOS_HUB_PATH } from './guideWorkflowSteps'
+import { INTENT_LANDINGS, USES_HUB_PATH, type IntentLanding } from './intentLandings'
 import {
   SEO_CONTACT_DESCRIPTION,
   SEO_DEMONSTRATION_DESCRIPTION,
@@ -27,6 +29,7 @@ import {
   SEO_TERMS_DESCRIPTION,
   SEO_TERMS_SECTIONS,
   SEO_USES_DESCRIPTION,
+  SEO_VIDEOS_DESCRIPTION,
 } from './seoContent'
 import { SUPPORT_EMAIL } from './supportEmail'
 import type { DocumentSeo } from './seoTypes'
@@ -69,12 +72,21 @@ function wrapSupportPage(
   return `<div class="${cls}"><header class="support-page__header"><a class="support-page__back" href="${backHref}">${escHtml(backLabel)}</a></header><main class="support-page__main">${content}</main></div>`
 }
 
+function workflowClipHtml(src: string, ariaLabel: string, micro: boolean): string {
+  const watch = GUIDE_VIDEO_BY_SRC[src]
+  const poster = watch ? ` poster="${escHtml(watch.poster)}"` : ''
+  const cls = micro ? 'guide-workflow__clip guide-workflow__clip--micro' : 'guide-workflow__clip'
+  const video = `<video class="${cls}" src="${escHtml(src)}"${poster} muted playsinline controls preload="metadata" aria-label="${escHtml(ariaLabel)}"></video>`
+  if (!watch) return video
+  return `${video}<p class="guide-workflow__watch-wrap"><a class="guide-workflow__watch-link" href="${escHtml(watch.path)}">Open watch page</a></p>`
+}
+
 function workflowRailHtml(heading: string, intro: string): string {
   const steps = GUIDE_WORKFLOW_STEPS.map((step, index) => {
     const micro = step.microSrc
-      ? `<div class="guide-workflow__micro-wrap"><p class="guide-workflow__micro-label">Detail</p><video class="guide-workflow__clip guide-workflow__clip--micro" src="${escHtml(step.microSrc)}" muted playsinline controls preload="metadata" aria-label="${escHtml(`${step.title}: detail`)}"></video></div>`
+      ? `<div class="guide-workflow__micro-wrap"><p class="guide-workflow__micro-label">Detail</p>${workflowClipHtml(step.microSrc, `${step.title}: detail`, true)}</div>`
       : ''
-    return `<li class="guide-workflow__step"><div class="guide-workflow__step-head"><span class="guide-workflow__step-badge" aria-hidden>${index + 1}</span><div><h3 class="guide-workflow__step-title">${escHtml(step.title)}</h3><p class="guide-workflow__step-desc">${escHtml(step.description)}</p></div></div><div class="guide-workflow__media"><div class="guide-workflow__primary"><video class="guide-workflow__clip" src="${escHtml(step.mainSrc)}" muted playsinline controls preload="metadata" aria-label="${escHtml(`${step.title}: overview`)}"></video></div>${micro}</div></li>`
+    return `<li class="guide-workflow__step"><div class="guide-workflow__step-head"><span class="guide-workflow__step-badge" aria-hidden>${index + 1}</span><div><h3 class="guide-workflow__step-title">${escHtml(step.title)}</h3><p class="guide-workflow__step-desc">${escHtml(step.description)}</p></div></div><div class="guide-workflow__media"><div class="guide-workflow__primary">${workflowClipHtml(step.mainSrc, `${step.title}: overview`, false)}</div>${micro}</div></li>`
   }).join('')
   return `<aside class="guide-page__rail" aria-label="Screen recordings of the translator workflow"><section id="visual-walkthrough" class="guide-workflow guide-workflow--rail" aria-labelledby="guide-workflow-heading"><h2 id="guide-workflow-heading" class="guide-workflow__heading">${escHtml(heading)}</h2><p class="guide-workflow__intro">${escHtml(intro)}</p><ol class="guide-workflow__steps">${steps}</ol></section></aside>`
 }
@@ -137,7 +149,7 @@ function howToBody(): string {
       ${workflowRailHtml('See the flow in the app', 'Videos on the left; detailed written steps on the right.')}
       <div class="guide-page__body">
         <ol class="howto-page__steps">${steps}</ol>
-        <p class="support-page__note"><a href="${USES_HUB_PATH}">App-specific tips (Messenger, WhatsApp, LINE, Thai, …) →</a> · <a href="/faq">FAQ →</a> · <a href="/demonstration">Demonstration →</a></p>
+        <p class="support-page__note"><a href="${USES_HUB_PATH}">App-specific tips (Messenger, WhatsApp, LINE, Thai, …) →</a> · <a href="${VIDEOS_HUB_PATH}">Workflow videos →</a> · <a href="/faq">FAQ →</a> · <a href="/demonstration">Demonstration →</a></p>
       </div>
     </div>`,
     '/',
@@ -175,10 +187,7 @@ function demonstrationBody(): string {
 }
 
 function usesBody(): string {
-  const links = INTENT_LANDINGS.map((entry) => {
-    const rel = isIntentIndexed(entry) ? '' : ' rel="nofollow"'
-    return `<li><a href="${entry.path}"${rel}>${escHtml(entry.h1)}</a></li>`
-  }).join('')
+  const links = INTENT_LANDINGS.map((entry) => `<li><a href="${entry.path}">${escHtml(entry.h1)}</a></li>`).join('')
   return wrapSupportPage(
     `${breadcrumb([{ label: 'Home', href: '/' }, { label: 'Translation guides' }])}
     <h1 class="support-page__title">Translation guides</h1>
@@ -202,10 +211,7 @@ function intentBody(intent: IntentLanding): string {
     .join('')
   const tips = intent.tips.map((tip) => `<li>${escHtml(tip)}</li>`).join('')
   const others = INTENT_LANDINGS.filter((entry) => entry.path !== intent.path)
-    .map((entry) => {
-      const rel = isIntentIndexed(entry) ? '' : ' rel="nofollow"'
-      return `<li><a href="${entry.path}"${rel}>${escHtml(entry.h1)}</a></li>`
-    })
+    .map((entry) => `<li><a href="${entry.path}">${escHtml(entry.h1)}</a></li>`)
     .join('')
 
   return wrapSupportPage(
@@ -291,11 +297,51 @@ function homeBody(): string {
         <div class="site-explore-bar__chips">
           <a class="site-explore-bar__chip site-explore-bar__chip--accent" href="/how-to">How to</a>
           <a class="site-explore-bar__chip" href="/uses">Guides</a>
+          <a class="site-explore-bar__chip" href="${VIDEOS_HUB_PATH}">Videos</a>
           <a class="site-explore-bar__chip" href="/faq">FAQ</a>
         </div>
       </div>
     </nav>
+    <p class="product-wing-badge"><a target="_blank" rel="noopener noreferrer" href="https://productwing.com/product/chatreconstruct"><img src="https://productwing.com/assets/images/badge.png" alt="Product Wing" height="54" loading="lazy" /></a><a target="_blank" rel="noopener noreferrer" href="https://submitmysaas.com"><img src="https://submitmysaas.com/featured-badge.png" alt="Featured on SubmitMySaas" height="54" loading="lazy" /></a></p>
   </div></main>`
+}
+
+function videosHubBody(): string {
+  const cards = GUIDE_VIDEO_CLIPS.map(
+    (clip) =>
+      `<li class="video-watch-hub__item"><a class="video-watch-hub__card" href="${escHtml(clip.path)}"><img class="video-watch-hub__thumb" src="${escHtml(clip.poster)}" alt="" width="480" height="270" loading="lazy" decoding="async" /><span class="video-watch-hub__card-title">${escHtml(clip.title)}</span><span class="video-watch-hub__card-desc">${escHtml(clip.lead)}</span></a></li>`,
+  ).join('')
+  return wrapSupportPage(
+    `${breadcrumb([{ label: 'Home', href: '/' }, { label: 'Videos' }])}
+    <h1 class="support-page__title">Workflow videos</h1>
+    <p class="support-page__lead">${escHtml(SEO_VIDEOS_DESCRIPTION)}</p>
+    <ul class="video-watch-hub__list">${cards}</ul>
+    <p class="support-page__note">Prefer written steps? Open the <a href="/how-to">how-to guide</a>.</p>`,
+    '/how-to',
+    'How to use Translate Chat',
+    'video-watch-hub',
+  )
+}
+
+function videoWatchBody(clip: (typeof GUIDE_VIDEO_CLIPS)[number]): string {
+  const others = GUIDE_VIDEO_CLIPS.filter((entry) => entry.path !== clip.path)
+    .map((entry) => `<li><a href="${escHtml(entry.path)}">${escHtml(entry.title)}</a></li>`)
+    .join('')
+  return wrapSupportPage(
+    `${breadcrumb([
+      { label: 'Home', href: '/' },
+      { label: 'Videos', href: VIDEOS_HUB_PATH },
+      { label: clip.title },
+    ])}
+    <h1 class="support-page__title video-watch__title">${escHtml(clip.title)}</h1>
+    <div class="video-watch__player-wrap"><video class="video-watch__player" src="${escHtml(clip.src)}" poster="${escHtml(clip.poster)}" controls playsinline preload="metadata" width="960" height="540">Your browser does not support this video.</video></div>
+    <p class="support-page__lead video-watch__lead">${escHtml(clip.lead)}</p>
+    <p class="support-page__note">This clip is step “${escHtml(clip.stepTitle)}” in the translator. See the <a href="/how-to">written how-to</a> for the full sequence.</p>
+    <nav class="video-watch__related" aria-label="Other workflow videos"><h2 class="intent-landing__h2">Other clips</h2><ul class="video-watch__related-list">${others}</ul></nav>`,
+    VIDEOS_HUB_PATH,
+    'All workflow videos',
+    'video-watch',
+  )
 }
 
 export const PRERENDER_ROUTES: readonly PrerenderRoute[] = [
@@ -358,6 +404,18 @@ export const PRERENDER_ROUTES: readonly PrerenderRoute[] = [
     intent,
     seo: intentDocumentSeo(intent),
     bodyHtml: intentBody(intent),
+  })),
+  {
+    pathNorm: VIDEOS_HUB_PATH,
+    intent: null,
+    seo: VIDEOS_DOCUMENT_SEO,
+    bodyHtml: videosHubBody(),
+  },
+  ...GUIDE_VIDEO_CLIPS.map((clip) => ({
+    pathNorm: clip.path,
+    intent: null,
+    seo: videoClipDocumentSeo(clip),
+    bodyHtml: videoWatchBody(clip),
   })),
 ]
 

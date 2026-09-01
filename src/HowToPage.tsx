@@ -33,6 +33,8 @@ export default function HowToPage() {
             <p className="support-page__note">
               <a href="/uses">App-specific tips (Messenger, WhatsApp, LINE, Thai, …) →</a>
               {' · '}
+              <a href="/videos">Workflow videos →</a>
+              {' · '}
               <a href="/faq">FAQ →</a>
               {' · '}
               <a href="/demonstration">Demonstration →</a>

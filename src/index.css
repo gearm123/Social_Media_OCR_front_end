@@ -275,6 +275,27 @@ a {
   color: var(--accent);
 }
 
+.product-wing-badge {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.65rem 0.85rem;
+  margin: 0.65rem 0 0.15rem;
+  padding: 0;
+}
+
+.product-wing-badge a {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.product-wing-badge img {
+  display: block;
+  height: 54px;
+  width: auto;
+}
+
 /* /demonstration — wide centered media (default .support-page max-width is too narrow) */
 .support-page.demonstration-page {
   max-width: min(52rem, 100%);
@@ -872,4 +893,101 @@ a {
     max-height: none;
     overflow: visible;
   }
+}
+
+.guide-workflow__watch-wrap {
+  margin: 0.3rem 0.4rem 0.4rem;
+}
+
+.guide-workflow__watch-link {
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.video-watch__main {
+  max-width: 52rem;
+}
+
+.video-watch__title {
+  margin-bottom: 0.85rem;
+}
+
+.video-watch__player-wrap {
+  margin: 0 0 1rem;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0f172a;
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+}
+
+.video-watch__player {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 12rem;
+  background: #0f172a;
+}
+
+.video-watch__lead {
+  margin-top: 0.35rem;
+}
+
+.video-watch__related {
+  margin-top: 1.5rem;
+}
+
+.video-watch__related-list {
+  margin: 0.4rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.video-watch-hub__list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+@media (min-width: 720px) {
+  .video-watch-hub__list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.video-watch-hub__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.55rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+  text-decoration: none;
+  color: inherit;
+  min-height: 100%;
+}
+
+.video-watch-hub__card:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.video-watch-hub__thumb {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  background: #0f172a;
+}
+
+.video-watch-hub__card-title {
+  font-weight: 750;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+}
+
+.video-watch-hub__card-desc {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--muted);
 }

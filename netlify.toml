@@ -42,6 +42,36 @@
   force = true
 
 [[redirects]]
+  from = "/ai-chat-screenshot-translator"
+  to = "/uses"
+  status = 301
+
+[[redirects]]
+  from = "/ai-translate-chat-screenshots"
+  to = "/uses"
+  status = 301
+
+[[redirects]]
+  from = "/translate-chat-screenshots-with-ai"
+  to = "/uses"
+  status = 301
+
+[[redirects]]
+  from = "/chat-screenshot-ai-translation"
+  to = "/uses"
+  status = 301
+
+[[redirects]]
+  from = "/ai-conversation-screenshot-translator"
+  to = "/uses"
+  status = 301
+
+[[redirects]]
+  from = "/translate-chat-ui-screenshots-ai"
+  to = "/uses"
+  status = 301
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

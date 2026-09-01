@@ -1,7 +1,7 @@
 import { type Page, expect } from '@playwright/test'
 
 const THIRD_PARTY_HOST_RE =
-  /googletagmanager|google-analytics|google\.com|gstatic\.com|googleapis\.com|facebook\.net|facebook\.com|flagcdn\.com|paddle\.com|onrender\.com|doubleclick|analytics\.google/i
+  /googletagmanager|google-analytics|google\.com|gstatic\.com|googleapis\.com|facebook\.net|facebook\.com|flagcdn\.com|paddle\.com|onrender\.com|doubleclick|analytics\.google|productwing\.com|submitmysaas\.com/i
 
 export function isFirstPartyUrl(url: string, origin: string): boolean {
   try {

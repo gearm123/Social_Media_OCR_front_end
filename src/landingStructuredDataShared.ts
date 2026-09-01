@@ -10,9 +10,9 @@ import {
   OG_IMAGE_PATH,
   OG_IMAGE_WIDTH,
 } from './seoAssets'
-import { GUIDE_WORKFLOW_STEPS } from './guideWorkflowSteps'
+import { GUIDE_VIDEO_BY_PATH, VIDEOS_HUB_PATH } from './guideWorkflowSteps'
 import type { IntentLanding } from './intentLandings'
-import { isIntentIndexed, USES_HUB_PATH } from './intentLandings'
+import { USES_HUB_PATH } from './intentLandings'
 import {
   SEO_FAQ_ITEMS,
   SEO_HOME_DESCRIPTION,
@@ -96,6 +96,14 @@ function breadcrumbsForRoute(pathNorm: string, intent: IntentLanding | null): Cr
       { name: intent.h1, path: intent.path },
     ]
   }
+  const clip = GUIDE_VIDEO_BY_PATH[pathNorm]
+  if (clip) {
+    return [
+      home,
+      { name: 'Videos', path: VIDEOS_HUB_PATH },
+      { name: clip.title, path: clip.path },
+    ]
+  }
   const tail: Record<string, Crumb> = {
     '/contact': { name: 'Contact us', path: '/contact' },
     '/feedback': { name: 'Feedback', path: '/feedback' },
@@ -106,6 +114,7 @@ function breadcrumbsForRoute(pathNorm: string, intent: IntentLanding | null): Cr
     '/terms': { name: 'Terms', path: '/terms' },
     '/pay': { name: 'Checkout', path: '/pay' },
     [USES_HUB_PATH]: { name: 'Translation guides', path: USES_HUB_PATH },
+    [VIDEOS_HUB_PATH]: { name: 'Videos', path: VIDEOS_HUB_PATH },
   }
   const t = tail[pathNorm]
   if (t) return [home, t]
@@ -126,26 +135,22 @@ function breadcrumbJsonLd(origin: string, pathNorm: string, intent: IntentLandin
   }
 }
 
-function workflowVideoJsonLd(origin: string): Record<string, unknown> {
-  const thumb = `${origin}${OG_IMAGE_PATH}`
+function watchPageVideoJsonLd(origin: string, pathNorm: string): Record<string, unknown> | null {
+  const clip = GUIDE_VIDEO_BY_PATH[pathNorm]
+  if (!clip) return null
+  const pageUrl = absoluteSiteUrl(origin, clip.path)
   return {
     '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `${SEO_SITE_NAME} workflow videos`,
+    '@type': 'VideoObject',
+    name: clip.title,
+    description: clip.seoDescription,
+    thumbnailUrl: `${origin}${clip.poster}`,
+    contentUrl: `${origin}${clip.src}`,
+    embedUrl: pageUrl,
+    uploadDate: GUIDE_VIDEO_UPLOAD_DATE,
+    duration: clip.duration,
     inLanguage: 'en',
-    itemListElement: GUIDE_WORKFLOW_STEPS.map((step, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      item: {
-        '@type': 'VideoObject',
-        name: step.title,
-        description: step.description,
-        thumbnailUrl: thumb,
-        contentUrl: `${origin}${step.mainSrc}`,
-        uploadDate: GUIDE_VIDEO_UPLOAD_DATE,
-        inLanguage: 'en',
-      },
-    })),
+    url: pageUrl,
   }
 }
 
@@ -260,11 +265,6 @@ export function buildHomeStructuredData(origin: string): StructuredDataEntry[] {
   ]
 }
 
-function routeHasWorkflowVideo(pathNorm: string, intent: IntentLanding | null): boolean {
-  if (intent) return true
-  return pathNorm === '/how-to' || pathNorm === USES_HUB_PATH || pathNorm === '/demonstration'
-}
-
 export function buildLandingStructuredData(
   pathNorm: string,
   intent: IntentLanding | null,
@@ -277,7 +277,7 @@ export function buildLandingStructuredData(
   if (pathNorm === '/faq') {
     entries.push({ id: ID_FAQ, data: faqPageJsonLd(origin, '/faq', SEO_FAQ_ITEMS) })
   }
-  if (intent && isIntentIndexed(intent) && intent.faq && intent.faq.length > 0) {
+  if (intent && intent.faq && intent.faq.length > 0) {
     entries.push({ id: ID_FAQ, data: faqPageJsonLd(origin, intent.path, intent.faq) })
   }
   if (pathNorm === '/how-to') {
@@ -286,8 +286,9 @@ export function buildLandingStructuredData(
   if (pathNorm === '/demonstration') {
     entries.push({ id: ID_DEMO, data: demonstrationImageJsonLd(origin) })
   }
-  if (routeHasWorkflowVideo(pathNorm, intent)) {
-    entries.push({ id: ID_VIDEOS, data: workflowVideoJsonLd(origin) })
+  const watchVideo = watchPageVideoJsonLd(origin, pathNorm)
+  if (watchVideo) {
+    entries.push({ id: ID_VIDEOS, data: watchVideo })
   }
   entries.push({ id: ID_CRUMB, data: breadcrumbJsonLd(origin, pathNorm, intent) })
   return entries

@@ -77,7 +77,25 @@
   </url>
   <url>
     <loc>https://chatreconstruct.com/translate-imessage-screenshots</loc>
-    <lastmod>2026-08-31</lastmod>
+    <lastmod>2026-09-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://chatreconstruct.com/ocr-chat-screenshots</loc>
+    <lastmod>2026-09-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://chatreconstruct.com/ocr-whatsapp-screenshots</loc>
+    <lastmod>2026-09-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://chatreconstruct.com/ocr-thai-chat-screenshots</loc>
+    <lastmod>2026-09-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>

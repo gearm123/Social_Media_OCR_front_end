@@ -51,6 +51,7 @@ import { ChatReconstructHoverPreview } from './ChatReconstructHoverPreview'
 import { InfoPopover } from './InfoPopover'
 import { PaywallModal } from './PaywallModal'
 import { PricingModal } from './PricingModal'
+import ProductWingBadge from './ProductWingBadge'
 import SiteExploreBar from './SiteExploreBar'
 import { applyDocumentSeo, SEO_HOME_DESCRIPTION, SEO_HOME_H1, SEO_HOME_TITLE } from './seo'
 import { DEFAULT_TARGET_LANGUAGE_CODE } from './supportedTargetLanguages'
@@ -1728,6 +1729,7 @@ function App() {
           </div>
 
           <SiteExploreBar />
+          <ProductWingBadge />
 
           <label htmlFor={inputId} className="sr-only">
             Choose chat screenshot images

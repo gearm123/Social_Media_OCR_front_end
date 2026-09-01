@@ -44,6 +44,14 @@ export async function loadRouteElement(route: ResolvedSeoRoute): Promise<ReactEl
       const { default: Page } = await import('./DemonstrationPage')
       return createElement(Page)
     }
+    case 'videos': {
+      const { default: Page } = await import('./VideosHubPage')
+      return createElement(Page)
+    }
+    case 'video': {
+      const { default: Page } = await import('./VideoWatchPage')
+      return createElement(Page, { clip: route.clip! })
+    }
   }
 }
 
